@@ -1,0 +1,30 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+    //output = "../src/generated/client"
+    features = ["uncheckedScalarInputs"]
+}
+
+datasource db {
+    provider = "sqlite"
+    url      = env("DATABASE_URL")
+}
+
+model God {
+    id                      Int               @id @unique @default(autoincrement())
+    name                    String            @unique
+    gender                  String            // m or f
+    father_id               Int?
+    mother_id               Int?
+    died                    Boolean
+    type                    Int
+
+    father                  God?              @relation("father", references: [id], fields: [father_id], onDelete: Cascade)
+    mother                  God?              @relation("mother", references: [id], fields: [mother_id], onDelete: Cascade)
+
+    children_as_father      God[]             @relation("father")
+    children_as_mother      God[]             @relation("mother")
+}
+
