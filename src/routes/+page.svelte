@@ -6,7 +6,7 @@
     import type { CombiTableColumn } from '$lib/combitabletypes';
 
     let columns : CombiTableColumn[] = [
-        {name: "Name", col: "name", type: "string", primaryKey: true},
+        {name: "Name", col: "name", type: "string"},
         {name: "Gender", col: "gender", type: "select:string", values: ["m", "f"], names: ["m", "f"], minWidth: "[4rem]"},
         {name: "Died", col: "died", type: "boolean"},
         {name: "Type", col: "type", type: "select:integer", values: [0,1,2], names: ["God", "Titan", "Personification"]},
@@ -24,7 +24,8 @@
 <CombiTable 
     rows={rows} 
     columns={columns} 
-    defaultSort="id" 
+    primaryKey="name"
+    defaultSort="name" 
     enableSort={true}
     enableFilter={true}
     editUrl={"edit"}

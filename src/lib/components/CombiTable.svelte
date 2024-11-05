@@ -29,6 +29,7 @@
     export let deleteUrl : string|undefined = undefined;
     export let presets : {[key:string]:any}|undefined = undefined;
     export let widthType : "auto"|"fixed" = "auto";
+    export let primaryKey : string = "";
 
     // SVG wants to display with a new line.  Depending on what icons
     // we are displaying in the actions column set how far to offset
@@ -38,11 +39,10 @@
 
     // put the name of the primary key in pk
     // also save select maps
-    let pk  = "";
+    let pk  = primaryKey;
     let selectMap : {[key:string] : {[key:string|number]:string}} = {}
     let selectReverseMap : {[key:string] : {[key:string]:string|number}} = {}
     for (let column of columns) {
-        if (column.primaryKey) pk = column.col;
         if ((column.type == "select:string" || column.type == "select:integer") && column.names && column.values) {
             selectMap[column.col] = {};
             selectReverseMap[column.col] = {};
@@ -713,7 +713,8 @@
             <tr>
                 {#each columns as col}
                     {@const minw = col.minWidth ? "min-w-" + col.minWidth : ""}
-                    <th class="{minw}">
+                    {@const maxw = col.maxWidth ? "max-w-" + col.maxWidth : ""}
+                    <th class="{minw} {maxw}">
                         {#if enableSort}
                             <!-- svelte-ignore a11y-invalid-attribute -->
                             <a href="#" on:click={() => sort(col.col)}>
@@ -747,6 +748,7 @@
                 <tr class="0">
                     {#each columns as col, colidx}
                         {@const editminw = col.editMinWidth ? "min-w-" + col.editMinWidth : ""}
+                        {@const editmaxw = col.editMaxWidth ? "max-w-" + col.editMaxWidth : ""}
                         {@const dropdownwidth = col.dropdownWidth ? "w-" + col.dropdownWidth : ""}
                         <td class="align-bottom">
                             {#if colidx == 0}
@@ -754,7 +756,7 @@
                             {/if}
                             {#if col.type == "boolean"}
                             <details class="dropdown" bind:open={filterMenusOpen[col.col]}>
-                                <summary class="btn m-0 -mb-1 w-full {editminw}">{filterText[col.col] ?? ""}</summary>
+                                <summary class="btn m-0 -mb-1 w-full {editminw} {editmaxw}">{filterText[col.col] ?? ""}</summary>
                                 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                 <ul class="menu dropdown-content bg-base-200 rounded-box z-[1] {dropdownwidth} p-2 mt-2 shadow">
                                     <!-- svelte-ignore a11y-missing-attribute -->
@@ -773,7 +775,7 @@
                             </details>  
                             {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
                                 <details class="dropdown" bind:open={filterMenusOpen[col.col]}>
-                                    <summary class="btn m-0 -mb-1 w-full {editminw}">{filterText[col.col] ?? ""}</summary>
+                                    <summary class="btn m-0 -mb-1 w-full {editminw} {editmaxw}">{filterText[col.col] ?? ""}</summary>
                                     <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                     <ul class="menu dropdown-content bg-base-200 rounded-box z-[1] {dropdownwidth} p-2 mt-2 shadow">
                                         <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -789,7 +791,7 @@
                                     </ul>
                                 </details>
                             {:else}
-                                <input type="text" class="input bg-base-200 w-full {editminw}" 
+                                <input type="text" class="input bg-base-200 w-full {editminw} {editmaxw}" 
                                     bind:value={filterText[col.col]} 
                                     on:blur={() => filter(col, filterText[col.col])} 
                                     on:keypress={(evt) => filterKeyPress(evt, col, filterText[col.col])}/>
@@ -816,6 +818,7 @@
                     {#if editRow == -1}
                         {#each columns as col, colidx}
                             {@const editminw = col.editMinWidth ? "min-w-" + col.editMinWidth : ""}
+                            {@const editmaxw = col.editMaxWidth ? "max-w-" + col.editMaxWidth : ""}
                             {@const dropdownwidth = col.dropdownWidth ? "w-" + col.dropdownWidth : ""}
                             <td class="align-bottom">
                                 {#if colidx == 0}
@@ -824,7 +827,7 @@
                                 {#if !col.readOnly}
                                     {#if col.type == "boolean"}
                                         <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
-                                            <summary class="btn m-0 -mb-1 w-full {editminw}">{editRowText[col.col] ?? ""}</summary>
+                                            <summary class="btn m-0 -mb-1 w-full {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
                                             <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                             <ul class="menu dropdown-content bg-base-200 rounded-box z-[1] {dropdownwidth} p-2 mt-2 shadow">
                                                 {#if col.nullable == true}
@@ -845,7 +848,7 @@
                                         </details>  
                                     {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
                                         <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
-                                            <summary class="btn m-0 -mb-1 w-full {editminw}">{editRowText[col.col] ?? ""}</summary>
+                                            <summary class="btn m-0 -mb-1 w-full {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
                                             <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                             <ul class="menu dropdown-content bg-base-200 rounded-box z-[1] {dropdownwidth} p-2 mt-2 shadow">
                                                 {#if col.nullable == true}
@@ -863,7 +866,7 @@
                                             </ul>
                                         </details>
                                     {:else}
-                                        <input type="text" class="input bg-base-200 w-full {editminw}" 
+                                        <input type="text" class="input bg-base-200 w-full {editminw} {editmaxw}" 
                                             bind:value={editRowText[col.col]} 
                                             on:keyup={(evt) => editInputUpdate(evt, col)}
                                         />
@@ -904,7 +907,9 @@
                     {#each columns as col, colidx}
                         {@const minw = col.minWidth ? "min-w-" + col.minWidth : ""}
                         {@const editminw = col.editMinWidth ? "min-w-" + col.editMinWidth : ""}
-                        {@const dropdownwidth = col.dropdownWidth ? "min-w-" + col.dropdownWidth : ""}
+                        {@const maxw = col.maxWidth ? "max-w-" + col.maxWidth : ""}
+                        {@const editmaxw = col.editMaxWidth ? "max-w-" + col.editMaxWidth : ""}
+                        {@const dropdownwidth = col.dropdownWidth ? "w-" + col.dropdownWidth : ""}
                         {#if editRow == undefined || editRow != rowidx}
                             {@const value = formatColumn(getColumn(row, col.col), col)}
                             <td>
@@ -930,7 +935,7 @@
                                 {#if !col.readOnly}
                                 {#if col.type == "boolean"}
                                     <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
-                                        <summary class="btn m-0 -mb-1 w-full {editminw}">{editRowText[col.col] ?? ""}</summary>
+                                        <summary class="btn m-0 -mb-1 w-full {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
                                         <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                         <ul class="menu dropdown-content bg-base-200 rounded-box z-[1] {dropdownwidth} p-2 mt-2 shadow">
                                             {#if col.nullable == true}
@@ -951,7 +956,7 @@
                                     </details>  
                                 {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
                                     <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
-                                        <summary class="btn m-0 -mb-1 w-full {editminw}">{editRowText[col.col] ?? ""}</summary>
+                                        <summary class="btn m-0 -mb-1 w-full {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
                                         <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                         <ul class="menu dropdown-content bg-base-200 rounded-box z-[1] {dropdownwidth} p-2 mt-2 shadow">
                                             {#if col.nullable == true}
@@ -969,7 +974,7 @@
                                         </ul>
                                     </details>
                                 {:else}
-                                    <input type="text" class="input bg-base-200 w-full {editminw}" 
+                                    <input type="text" class="input bg-base-200 w-full {editminw} {editmaxw}" 
                                         bind:value={editRowText[col.col]} 
                                         on:keyup={(evt) => editInputUpdate(evt, col)}
                                         />
