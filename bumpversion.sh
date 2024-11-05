@@ -24,7 +24,7 @@ fi
 echo "$version1.$version2.$version3" > VERSION
 
 
-for file in app/package.json ; do
+for file in package.json ; do
     echo "Settng version in $file to $version1.$version2.$version3..."
     sed -E -i "" "s/\"version\": \"[0-9]+\.[0-9]+\.[0-9]+\"/\"version\": \"$version1\.$version2\.$version3\"/" $file 
 done
