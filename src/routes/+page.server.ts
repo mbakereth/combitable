@@ -9,6 +9,7 @@ export async function load({ params, url, depends }) {
     const prisma = new PrismaClient();
 
     const searchUrl = new SearchUrl(url, 5);
+    searchUrl.setDefaultSortCol("name");
     const fields = searchUrl.getPrismaFields(Prisma.dmmf.datamodel.models, "God", "name");
     const gods = await prisma.god.findMany({
         include: {
