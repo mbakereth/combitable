@@ -128,7 +128,7 @@
                 res = undefined;
             } else if (Array.isArray(res[part])) {
                 if (res[part].length == 0) res = undefined;
-                else res = res[part][0]
+                else res = res[part].join(", ");
             } else {
                 res = res && part in res ? res[part] : undefined;
             }
@@ -1064,6 +1064,7 @@
 
 <!-- Modal to display validation errors -->
 <CombiTableConfirmDeleteDialog id="confirmDelete" okFn={confirmDeleteRow}/>
+<div class="hidden -mt-[21px] ml-1 -ml-6 table-fixed table-auto "></div>
 
 <style>
 .tail-icon {
