@@ -92,7 +92,11 @@ export class SearchUrl {
 
     setDefaultSortCol(col : string) {
         const curCol = this.url.searchParams.get("s");
-        if (curCol == null || curCol == "") this.sort(col, "ascending");
+        if (curCol == null || curCol == "") {
+            if (col.startsWith("-")) this.sort(col.substring(1), "descending");
+            else if (col.startsWith("+")) this.sort(col.substring(1), "ascending");
+            else this.sort(col, "ascending");
+        }
     }
 
     ///// filtering
