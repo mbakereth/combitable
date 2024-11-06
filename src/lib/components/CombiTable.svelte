@@ -123,12 +123,18 @@
     function getColumn(obj : {[key:string]:any}, name : string) : any|undefined{
         const parts = name.split(".");
         let res : any|undefined = obj;
-        for (let part of parts) {
+        for (let i=0; i<parts.length; ++i) {
+            const part = parts[i];
             if (!res || !(part in res)) {
                 res = undefined;
             } else if (Array.isArray(res[part])) {
                 if (res[part].length == 0) res = undefined;
-                else res = res[part].join(", ");
+                else if (i == parts.length-2) {
+                    res = res[part].map((row) => row[parts[i+1]]).filter((row) => row != undefined && row !== null && row != "").join(", ");
+                    break;
+                } else {
+                    res = res[part][0]
+                }
             } else {
                 res = res && part in res ? res[part] : undefined;
             }
@@ -215,8 +221,9 @@
     async function sort(col : string, dir? : "ascending"|"descending") {
         const url = new SearchUrl($page.url, paginate);
         url.setDefaultSortCol(defaultSort);
+        let { sortCol, sortDirection } = url.getSort();
         url.sort(col, dir);
-            
+        if (col == sortCol) url.skip(0);    
         await invalidateAll()
         searchParams = `?${url.url.searchParams.toString()}`;
         goto(searchParams);
