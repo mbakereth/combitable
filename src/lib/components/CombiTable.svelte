@@ -827,6 +827,7 @@
                             {@const editminw = col.editMinWidth ? "min-w-" + col.editMinWidth : ""}
                             {@const editmaxw = col.editMaxWidth ? "max-w-" + col.editMaxWidth : ""}
                             {@const dropdownwidth = col.dropdownWidth ? "w-" + col.dropdownWidth : ""}
+                            {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
                             <td class="align-bottom">
                                 {#if colidx == 0}
                                 <p class="small m-0 p-0 pb-1 text-primary ml-1">New</p>
@@ -834,7 +835,7 @@
                                 {#if !col.readOnly}
                                     {#if col.type == "boolean"}
                                         <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
-                                            <summary class="btn m-0 -mb-1 w-full {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
+                                            <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
                                             <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                             <ul class="menu dropdown-content bg-base-200 rounded-box z-[1] {dropdownwidth} p-2 mt-2 shadow">
                                                 {#if col.nullable == true}
@@ -855,7 +856,7 @@
                                         </details>  
                                     {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
                                         <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
-                                            <summary class="btn m-0 -mb-1 w-full {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
+                                            <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
                                             <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                             <ul class="menu dropdown-content bg-base-200 rounded-box z-[1] {dropdownwidth} p-2 mt-2 shadow">
                                                 {#if col.nullable == true}
@@ -873,7 +874,7 @@
                                             </ul>
                                         </details>
                                     {:else}
-                                        <input type="text" class="input bg-base-200 w-full {editminw} {editmaxw}" 
+                                        <input type="text" class="input w-full {editminw} {editmaxw} {bg}" 
                                             bind:value={editRowText[col.col]} 
                                             on:keyup={(evt) => editInputUpdate(evt, col)}
                                         />
@@ -917,6 +918,7 @@
                         {@const maxw = col.maxWidth ? "max-w-" + col.maxWidth : ""}
                         {@const editmaxw = col.editMaxWidth ? "max-w-" + col.editMaxWidth : ""}
                         {@const dropdownwidth = col.dropdownWidth ? "w-" + col.dropdownWidth : ""}
+                        {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
                         {#if editRow == undefined || editRow != rowidx}
                             {@const value = formatColumn(getColumn(row, col.col), col)}
                             <td>
@@ -942,7 +944,7 @@
                                 {#if !col.readOnly}
                                 {#if col.type == "boolean"}
                                     <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
-                                        <summary class="btn m-0 -mb-1 w-full {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
+                                        <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
                                         <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                         <ul class="menu dropdown-content bg-base-200 rounded-box z-[1] {dropdownwidth} p-2 mt-2 shadow">
                                             {#if col.nullable == true}
@@ -963,7 +965,7 @@
                                     </details>  
                                 {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
                                     <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
-                                        <summary class="btn m-0 -mb-1 w-full {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
+                                        <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
                                         <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                         <ul class="menu dropdown-content bg-base-200 rounded-box z-[1] {dropdownwidth} p-2 mt-2 shadow">
                                             {#if col.nullable == true}
@@ -981,7 +983,7 @@
                                         </ul>
                                     </details>
                                 {:else}
-                                    <input type="text" class="input bg-base-200 w-full {editminw} {editmaxw}" 
+                                    <input type="text" class="input {bg} w-full {editminw} {editmaxw}" 
                                         bind:value={editRowText[col.col]} 
                                         on:keyup={(evt) => editInputUpdate(evt, col)}
                                         />
