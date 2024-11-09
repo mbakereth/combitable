@@ -1082,4 +1082,8 @@
   display: inline-flex;
   flex-wrap: wrap; 
 }
+.bg-required {
+  background-color : #282c42;
+}
+
 </style>
