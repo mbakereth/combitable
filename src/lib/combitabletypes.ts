@@ -16,3 +16,8 @@ export interface CombiTableColumn {
     readOnly? : boolean,
     link?: (row:{[key:string]:any}) => string,
 }
+
+export interface CombiTableOp {
+    label: string,
+    fn: (pks: (string|number)[]) => Promise<{error? : string, info? : string}>
+} 

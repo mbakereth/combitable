@@ -2,7 +2,7 @@
     // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
     import { page } from '$app/stores';
     import { goto, invalidateAll } from '$app/navigation'
-    import type { CombiTableColumn } from '$lib/combitabletypes';
+    import type { CombiTableColumn, CombiTableOp } from '$lib/combitabletypes';
     import { SearchUrl } from '$lib/searchurl';
     import upIcon from "$lib/assets/prime--sort-up-fill.svg?raw"
     import downIcon from "$lib/assets/prime--sort-down-fill.svg?raw"
@@ -10,6 +10,7 @@
     import crossIcon from "$lib/assets/bitcoin-icons--cross-filled.svg?raw"
     import trashIcon from "$lib/assets/bitcoin-icons--trash-outline.svg?raw"
     import editIcon from "$lib/assets/bitcoin-icons--edit-outline.svg?raw"
+    import exitIcon from "$lib/assets/bitcoin-icons--exit-outline.svg?raw"
     import CombiTableDiscardChanges from '$lib/components/CombiTableDiscardChanges.svelte';
     import CombiTableValidateDialog from '$lib/components/CombiTableErrorDialog.svelte';
     import CombiTableInfoDialog from '$lib/components/CombiTableInfoDialog.svelte';
@@ -25,17 +26,29 @@
     export let havePrevious = false;
     export let haveNext = false;
     export let addUrl : string|undefined = undefined;
+    export let linkUrl : string|undefined = undefined;
+    export let unlinkUrl : string|undefined = undefined;
     export let editUrl : string|undefined = undefined;
     export let deleteUrl : string|undefined = undefined;
     export let presets : {[key:string]:any}|undefined = undefined;
     export let widthType : "auto"|"fixed" = "auto";
     export let primaryKey : string = "";
+    export let ops : CombiTableOp[] = [];
+    let haveOps = ops.length > 0;
+
+    $: rowChecked = rows.map((row) => false);
+    $: rowsAreChecked = rowChecked.reduce(
+        (accumulator, currentValue) => accumulator || currentValue,
+        false,
+    );
 
     // SVG wants to display with a new line.  Depending on what icons
     // we are displaying in the actions column set how far to offset
     // the delete icon
-    let trashHeightClass = editUrl ? "-mt-[21px]" : "";
-    let trashWidthClass = editUrl ? "ml-1" : "-ml-6";
+    let exitHeightClass = editUrl ? "-mt-[18px]" : "";
+    let exitWidthClass = editUrl ? "ml-1" : "-ml-6";
+    let trashHeightClass = editUrl && unlinkUrl ? "-mt-[20px]" : (editUrl || unlinkUrl ? "-mt-[21px]" : "");
+    let trashWidthClass = editUrl && unlinkUrl ? "ml-6" :  (editUrl || unlinkUrl ? "-ml-1" : "-ml-6");
 
     // put the name of the primary key in pk
     // also save select maps
@@ -187,7 +200,7 @@
         url.skip(skip);
             
         await invalidateAll();
-        searchParams = `?${url.url.searchParams.toString()}`;
+        searchParams = `?${url.searchParamsAsString()}`;
         goto(searchParams);
     
     }
@@ -210,7 +223,7 @@
         url.skip(skip);
             
         await invalidateAll();
-        searchParams = `?${url.url.searchParams.toString()}`;
+        searchParams = `?${url.searchParamsAsString()}`;
         goto(searchParams);
     
     }
@@ -225,7 +238,7 @@
         url.sort(col, dir);
         if (col == sortCol) url.skip(0);    
         await invalidateAll()
-        searchParams = `?${url.url.searchParams.toString()}`;
+        searchParams = `?${url.searchParamsAsString()}`;
         goto(searchParams);
     
     }
@@ -247,7 +260,7 @@
         const url = new SearchUrl($page.url, paginate);
         url.setFilters(filters);
         await invalidateAll()
-        searchParams = `?${url.url.searchParams.toString()}`;
+        searchParams = `?${url.searchParamsAsString()}`;
         goto(searchParams);
     }
 
@@ -313,7 +326,7 @@
         const url = new SearchUrl($page.url, paginate);
         url.setFilters(filters);
         await invalidateAll()
-        searchParams = `?${url.url.searchParams.toString()}`;
+        searchParams = `?${url.searchParamsAsString()}`;
         goto(searchParams);
 
     }
@@ -330,7 +343,7 @@
         const resp = url.getSort();
         sortCol = resp.sortCol;
         sortDirection = resp.sortDirection;
-        searchParams = `?${url.url.searchParams.toString()}`;
+        searchParams = `?${url.searchParamsAsString()}`;
         filters = url.getFilters();
         haveFilters = Object.keys(filters).length > 0
     }
@@ -430,7 +443,7 @@
                 editRowText = {...editRowText}
             }
 
-        } else if (editRow == -1) {
+        } else if (editRow == -1 || editRow == -2) {
             
             // set columns to contents of presets or blank if preset not present for a column
             for (let col of columns) {
@@ -539,7 +552,7 @@
     }
 
     function editInputUpdate(evt : KeyboardEvent, col : CombiTableColumn) {
-        if (editRow == -1) {
+        if (editRow == -1 || editRow == -2) {
             if (editRowText[col.col] != "") dirty = true;
         } else if (editRow !== undefined) {
             if (editRowText[col.col] != rrows[editRow][col.col]) dirty = true;
@@ -554,7 +567,7 @@
         if (validationErrors.length > 0) {
             (document.querySelector('#validateDialog') as HTMLDialogElement)?.showModal(); 
         } else {
-            let url = editRow == -1 ? addUrl : editUrl;
+            let url = editRow == -1 ? addUrl : (editRow == -2 ? linkUrl : editUrl);
             if (url == undefined) {
                 console.log("saveEdit called but edit/add url is not set");
                 return;
@@ -562,12 +575,12 @@
             try {
                 let data : {[key:string]:any} = {};
                 for (let col of columns) {
+                    if (editRow == -2 && col.col != primaryKey) continue;
                     if (col.type == "select:string") {
                         data[col.col] = editRowSelectValue[col.col];
                     } else if (col.type == "select:integer") {
                         data[col.col] = asNumberOrUndefined(editRowSelectValue[col.col]);
                     } else if (col.type == "boolean") {
-                        console.log("asBooleanOrUndefined", col.col, editRowSelectValue[col.col], typeof(editRowSelectValue[col.col]))
                         data[col.col] = asBooleanOrUndefined(editRowSelectValue[col.col]);
                     } else if (col.type == "integer") {
                         data[col.col] = asNumberOrUndefined(editRowText[col.col]);
@@ -606,8 +619,9 @@
                                 body.row[column.col] = new Date(body.row[column.col]);
                             }
                         }
-                        if (editRow == -1) {
+                        if (editRow == -1 || editRow == -2) {
                             rrows = [body.row, ...rrows]
+                            rowChecked.unshift(false);
                         } else if (editRow !== undefined) {
                             rrows[editRow] = body.row;
                             rrows = [...rrows];
@@ -616,8 +630,7 @@
                         editRow = undefined;
                         dirty = false;
                         if (body.info) {
-                            opInfo = body.info;
-                            showInfo();
+                            showInfo(body.info);
                         }  
                     }
                 }
@@ -631,6 +644,7 @@
     function validate() {
         let errors : string[] = [];
         for (let col of columns) {
+            if (editRow == -2 && col.col != primaryKey) continue;
             if (!col.nullable && col.type != "string" && editRowText[col.col] == "") {
                 errors.push("Must enter a value for " + col.name);
             } else if (editRowText[col.col]) {
@@ -695,20 +709,100 @@
                 if (!resp.ok) {
                     showError("Error deleting row");
                 } else {
-                    rrows = rrows.filter((_el, i) => i != deleteIdx);
+                    const body = await resp.json();
+                    if (body.error) {
+                        showError("Error deleting row");
+                    } else {
+                        rrows = rrows.filter((_el, i) => i != deleteIdx);
+                        rowChecked = rowChecked.filter((_el, i) => i != deleteIdx);
+                    }
                 }
         }
         deleteIdx = -1;
     }
 
     // show dialogs
-    function showInfo() {
+    function showInfo(info : string) {
+        opInfo = info;
         (document.querySelector('#infoDialog') as HTMLDialogElement)?.showModal(); 
     }
 
     function showError(errors: string[]|string) {
         validationErrors = errors;
         (document.querySelector('#validateDialog') as HTMLDialogElement)?.showModal(); 
+    }
+
+    // show dialogs
+    function showReload(info : string) {
+        opInfo = info;
+        (document.querySelector('#reloadDialog') as HTMLDialogElement)?.showModal(); 
+    }
+
+    ///// Custom operations
+
+    async function reload() {
+        const url = new SearchUrl($page.url, paginate);            
+        await invalidateAll();
+        searchParams = `?${url.searchParamsAsString()}`;
+        goto(searchParams);
+    }
+
+    function clearSelection() {
+        rowChecked.forEach((row, i) => {rowChecked[i] = false})
+    }
+
+    async function execOp(op: CombiTableOp) {
+        let pks : (string|number)[] = [];
+        for (let i=0; i<rowChecked.length; ++i) {
+            if (rowChecked[i]) pks.push(rrows[i][primaryKey]);
+        }
+        if (pks.length > 0) {
+            let ret = await op.fn(pks);
+            if (ret.error) {
+                showError(ret.error)
+            } else if (ret.info) {
+                showReload(ret.info);
+            } else {
+                showReload("Operation successful")
+            }
+        }
+    }
+
+    /////
+    // Unlinking
+    let unlinkIdx = -1;
+    function unlinkRow(idx : number) {
+        unlinkIdx = idx;
+        (document.querySelector('#confirmUnlink') as HTMLDialogElement)?.showModal(); 
+    }
+    async function confirmUnlinkRow() {
+        if (unlinkUrl === undefined) {
+            console.log("No unlink URL provided");
+        } else if (!pk) {
+            console.log("Cannot unlink as no primary key defined in columns");
+        } else if (unlinkIdx == -1) {
+            console.log("Unlink not initiated");
+        } else {
+            const data = {_pk: rrows[unlinkIdx][pk]}
+            const resp = await fetch(unlinkUrl, {
+                    method: "POST",
+                    headers: {"content-type": "application/json"},
+                    body: JSON.stringify(data),
+                });
+                if (!resp.ok) {
+                    showError("Error deleting row");
+                } else {
+                    let body = await resp.json();
+                    if (body.error) {
+                        console.log(body.error);
+                        showError("Error deleting row");
+                    } else {
+                        rrows = rrows.filter((_el, i) => i != unlinkIdx);
+                        rowChecked = rowChecked.filter((_el, i) => i != unlinkIdx);
+                    }
+                }
+        }
+        unlinkIdx = -1;
     }
 
 </script>
@@ -718,6 +812,10 @@
         <thead>
             <!-- header row -->
             <tr>
+                {#if haveOps}
+                    <!-- checkbox column -->
+                    <td class="w-10"></td>
+                {/if}
                 {#each columns as col}
                     {@const minw = col.minWidth ? "min-w-" + col.minWidth : ""}
                     {@const maxw = col.maxWidth ? "max-w-" + col.maxWidth : ""}
@@ -741,8 +839,9 @@
                 {/each}
 
                 <!-- actions column-->
-                {#if enableFilter || addUrl || editUrl || deleteUrl}
-                    <td class="w-[60px]"></td>
+                {#if enableFilter || addUrl || editUrl || deleteUrl || linkUrl || unlinkUrl}
+                {@const width = deleteUrl && unlinkUrl ? "80px" : "60px"}
+                    <td class="w-[{width}]"></td>
                 {/if}
             </tr>
         </thead>
@@ -753,6 +852,10 @@
             <!-- filter row -->
             {#if enableFilter}
                 <tr class="0">
+                    {#if haveOps}
+                        <!-- checkbox column -->
+                        <td></td>
+                    {/if}
                     {#each columns as col, colidx}
                         {@const editminw = col.editMinWidth ? "min-w-" + col.editMinWidth : ""}
                         {@const editmaxw = col.editMaxWidth ? "max-w-" + col.editMaxWidth : ""}
@@ -805,7 +908,7 @@
                             {/if}
                         </td>
                     {/each}
-                    {#if enableFilter || addUrl || editUrl || deleteUrl}
+                    {#if enableFilter || addUrl || editUrl || deleteUrl || linkUrl}
                         <td>
                             <!-- svelte-ignore a11y-click-events-have-key-events -->
                             <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -820,69 +923,75 @@
             {/if}
 
             <!-- add row -->
-            {#if addUrl}
+            {#if addUrl || linkUrl}
                 <tr class="0">
-                    {#if editRow == -1}
+                    {#if editRow == -1 || editRow == -2}
+                        {#if haveOps}
+                            <!-- checkbox column -->
+                            <td></td>
+                        {/if}
                         {#each columns as col, colidx}
                             {@const editminw = col.editMinWidth ? "min-w-" + col.editMinWidth : ""}
                             {@const editmaxw = col.editMaxWidth ? "max-w-" + col.editMaxWidth : ""}
                             {@const dropdownwidth = col.dropdownWidth ? "w-" + col.dropdownWidth : ""}
                             {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
-                            <td class="align-bottom">
-                                {#if colidx == 0}
-                                <p class="small m-0 p-0 pb-1 text-primary ml-1">New</p>
-                                {/if}
-                                {#if !col.readOnly}
-                                    {#if col.type == "boolean"}
-                                        <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
-                                            <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
-                                            <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                            <ul class="menu dropdown-content bg-base-200 rounded-box z-[1] {dropdownwidth} p-2 mt-2 shadow">
-                                                {#if col.nullable == true}
-                                                    <!-- svelte-ignore a11y-missing-attribute -->
-                                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                                    <li><a on:click={() => editRowUpdate(col, null)}>Unset</a></li>
-                                                {/if}
-                                                <!-- svelte-ignore a11y-missing-attribute -->
-                                                <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                                <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                                <li><a on:click={() => editRowUpdate(col, false)}>No</a></li>
-                                                <!-- svelte-ignore a11y-missing-attribute -->
-                                                <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                                <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                                <li><a on:click={() => editRowUpdate(col, true)}>Yes</a></li>
-                                            </ul>
-                                        </details>  
-                                    {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
-                                        <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
-                                            <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
-                                            <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                            <ul class="menu dropdown-content bg-base-200 rounded-box z-[1] {dropdownwidth} p-2 mt-2 shadow">
-                                                {#if col.nullable == true}
-                                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                                    <!-- svelte-ignore a11y-missing-attribute -->
-                                                    <li><a on:click={() => editRowUpdate(col, "")}>Unset</a></li>
-                                                {/if}
-                                                {#each col.names as name, i}
-                                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                                    <!-- svelte-ignore a11y-missing-attribute -->
-                                                    <li><a on:click={() => editRowUpdate(col, col.values ? col.values[i]+"" : name)}>{name}</a></li>
-                                                {/each}
-                                            </ul>
-                                        </details>
-                                    {:else}
-                                        <input type="text" class="input w-full {editminw} {editmaxw} {bg}" 
-                                            bind:value={editRowText[col.col]} 
-                                            on:keyup={(evt) => editInputUpdate(evt, col)}
-                                        />
+                            {#if editRow == -1 || col.col == primaryKey}
+                                <td class="align-bottom">
+                                    {#if colidx == 0}
+                                        <p class="small m-0 p-0 pb-1 text-primary ml-1">New</p>
                                     {/if}
-                                {/if}
-                            </td>
+                                    {#if !col.readOnly}
+                                        {#if col.type == "boolean"}
+                                            <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
+                                                <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
+                                                <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+                                                <ul class="menu dropdown-content bg-base-200 rounded-box z-[1] {dropdownwidth} p-2 mt-2 shadow">
+                                                    {#if col.nullable == true}
+                                                        <!-- svelte-ignore a11y-missing-attribute -->
+                                                        <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                                        <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                                        <li><a on:click={() => editRowUpdate(col, null)}>Unset</a></li>
+                                                    {/if}
+                                                    <!-- svelte-ignore a11y-missing-attribute -->
+                                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                                    <li><a on:click={() => editRowUpdate(col, false)}>No</a></li>
+                                                    <!-- svelte-ignore a11y-missing-attribute -->
+                                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                                    <li><a on:click={() => editRowUpdate(col, true)}>Yes</a></li>
+                                                </ul>
+                                            </details>  
+                                        {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
+                                            <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
+                                                <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
+                                                <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+                                                <ul class="menu dropdown-content bg-base-200 rounded-box z-[1] {dropdownwidth} p-2 mt-2 shadow">
+                                                    {#if col.nullable == true}
+                                                        <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                                        <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                                        <!-- svelte-ignore a11y-missing-attribute -->
+                                                        <li><a on:click={() => editRowUpdate(col, "")}>Unset</a></li>
+                                                    {/if}
+                                                    {#each col.names as name, i}
+                                                        <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                                        <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                                        <!-- svelte-ignore a11y-missing-attribute -->
+                                                        <li><a on:click={() => editRowUpdate(col, col.values ? col.values[i]+"" : name)}>{name}</a></li>
+                                                    {/each}
+                                                </ul>
+                                            </details>
+                                        {:else}
+                                            <input type="text" class="input w-full {editminw} {editmaxw} {bg}" 
+                                                bind:value={editRowText[col.col]} 
+                                                on:keyup={(evt) => editInputUpdate(evt, col)}
+                                            />
+                                        {/if}
+                                    {/if}
+                                </td>
+                            {/if}
                         {/each}
-                        {#if enableFilter || addUrl || editUrl || deleteUrl}
+                        {#if enableFilter || addUrl || editUrl || deleteUrl || linkUrl}
                             <td class="w-4">
                                 {#if dirty}
                                     <!-- svelte-ignore missing-declaration -->
@@ -902,8 +1011,16 @@
                             </td>
                         {/if}
                     {:else}
+                        {#if haveOps}
+                            <td></td>
+                        {/if}
                         <td>
-                            <button class="btn btn-sm" on:click={() => edit(-1)}>Add</button>
+                        {#if addUrl}
+                            <button class="btn btn-sm mr-2" on:click={() => edit(-1)}>Add</button>
+                        {/if}
+                        {#if linkUrl}
+                            <button class="btn btn-sm" on:click={() => edit(-2)}>Link</button>
+                        {/if}
                         </td>
                     {/if}
                 </tr>
@@ -912,6 +1029,17 @@
             <!-- data rows -->
             {#each rrows as row, rowidx}
                 <tr class="hover:bg-neutral">
+                    {#if haveOps}
+                        <!-- checkbox column -->
+                        <td>
+                            {#if editRow == undefined || editRow != rowidx}
+                            <div class="form-control">
+                                <label class="label cursor-pointer">
+                                  <input type="checkbox" bind:checked={rowChecked[rowidx]} class="checkbox" />
+                              </div>
+                            {/if}                            
+                        </td>
+                    {/if}
                     {#each columns as col, colidx}
                         {@const minw = col.minWidth ? "min-w-" + col.minWidth : ""}
                         {@const editminw = col.editMinWidth ? "min-w-" + col.editMinWidth : ""}
@@ -1006,8 +1134,15 @@
                                 {/if}
                                 <!-- svelte-ignore a11y-click-events-have-key-events -->
                                 <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                {#if unlinkUrl !== undefined}
+                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                    <span 
+                                    class="text-error {exitWidthClass} flex {exitHeightClass} cursor-pointer" on:click={() => unlinkRow(rowidx)}>{@html exitIcon}</span>
+                                {/if}
+                                <!-- svelte-ignore a11y_no_static_element_interactions -->
                                 {#if deleteUrl !== undefined}
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                    <!-- svelte-ignore a11y_no_static_element_interactions -->
                                     <span 
                                     class="text-error {trashWidthClass} flex {trashHeightClass} cursor-pointer" on:click={() => deleteRow(rowidx)}>{@html trashIcon}</span>
                                 {/if}
@@ -1041,17 +1176,27 @@
     </table>
 </div>
 
-{#if paginate > 0}
+{#if paginate > 0 || haveOps}
 <div class="ml-3 mt-2">
-    {#if havePrevious}
-        <button class="btn btn-primary" on:click={() => previous()}>Previous</button>
-    {:else}
-        <button class="btn btn-disabled">Previous</button>
-    {/if}
-    {#if haveNext}
-        <button class="btn btn-primary ml-4" on:click={() => next()}>Next</button>
-    {:else}
-        <button class="btn btn-disabled ml-4">Next</button>
+    {#if paginate > 0}
+        {#if havePrevious}
+            <button class="btn btn-primary" on:click={() => previous()}>Previous</button>
+        {:else}
+            <button class="btn btn-disabled">Previous</button>
+        {/if}
+        {#if haveNext}
+            <button class="btn btn-primary ml-3" on:click={() => next()}>Next</button>
+        {:else}
+            <button class="btn btn-disabled ml-3">Next</button>
+        {/if}
+
+        {#if haveOps}
+            {@const disabled = rowsAreChecked? "" : "btn-disabled"}
+            {#each ops as op}
+                <button class="btn btn-secondary {disabled} ml-3" on:click={() => execOp(op) }>{op.label}</button>
+            {/each}
+            <button class="btn btn-neutral {disabled} ml-3" on:click={() => clearSelection() }>Clear Selection</button>
+        {/if}
     {/if}
 </div>
 {/if}
@@ -1065,15 +1210,21 @@
 <!-- Modal to confirm discarding edit when clicking previous -->
 <CombiTableDiscardChanges id="confirmNextDiscard" okFn={confirmNext}/>
 
+<!-- Modal to confirm discarding edit when clicking previous -->
+<CombiTableDiscardChanges id="confirmUnlink" title="Unlink god from Olympus?" okFn={confirmUnlinkRow}/>
+
 <!-- Modal to display validation errors -->
 <CombiTableValidateDialog id="validateDialog" errors={validationErrors}/>
 
-<!-- Modal to display validation errors -->
+<!-- Modal to display information after executing a function -->
 <CombiTableInfoDialog id="infoDialog" info={opInfo}/>
+
+<!-- Modal to display info message then reload -->
+<CombiTableInfoDialog id="reloadDialog" info={opInfo} okFn={reload}/>
 
 <!-- Modal to display validation errors -->
 <CombiTableConfirmDeleteDialog id="confirmDelete" okFn={confirmDeleteRow}/>
-<div class="hidden -mt-[21px] ml-1 -ml-6 table-fixed table-auto "></div>
+<div class="hidden -mt-[21px] ml-1 -ml-6 table-fixed table-auto -mt-[21px] -mt-[42px] ml-1 ml-6 ml-12 w-[80px] w-[60px] w-[48px] -mt-[20px] -mt-[18px] ml-6 -ml-6 -ml-1"></div>
 
 <style>
 .tail-icon {

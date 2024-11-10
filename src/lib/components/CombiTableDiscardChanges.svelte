@@ -2,12 +2,13 @@
     // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
     export let okFn : () => void;
     export let id : string;
+    export let title = "Do you want to discard changes?"
 </script>
 
 
 <dialog id={id} class="modal">
     <div class="modal-box">
-        <p class="py-4">Do you want to discard changes?</p>
+        <p class="py-4">{title}</p>
         <div class="modal-action">
             <form method="dialog">
                 <!-- if there is a button in form, it will close the modal -->

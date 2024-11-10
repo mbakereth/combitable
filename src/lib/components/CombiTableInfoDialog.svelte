@@ -2,6 +2,7 @@
     // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
     export let id : string;
     export let info : string
+    export let okFn : () => void = () => {};
 </script>
     
     
@@ -11,7 +12,7 @@
         <div class="modal-action">
             <form method="dialog">
                 <!-- if there is a button in form, it will close the modal -->
-                <button class="btn btn-neutral">OK</button>&nbsp;
+                <button class="btn btn-neutral" on:click={() => okFn()}>OK</button>&nbsp;
             </form>
         </div>
     </div>

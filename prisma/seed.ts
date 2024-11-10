@@ -7,7 +7,11 @@ interface God extends Prisma.GodUncheckedCreateInput {
     father_name : string|undefined,
     mother_name: string|undefined,
 }
-export const godsData : God[] = [
+
+interface Home extends Prisma.HomeUncheckedCreateInput {
+}
+
+const godsData : God[] = [
     {
         name: "Cronus",
         father_name: undefined,
@@ -137,11 +141,25 @@ export const godsData : God[] = [
         type: 0,
     },
 ];
+
+const homeData : Home[] = [
+    {
+        name: "Olympus"
+    }
+];
 async function main() {
 
     await prisma.god.deleteMany();
+    await prisma.home.deleteMany();
 
     let godName2Id : {[key:string]:number} = {};
+
+    for (let home of homeData) {
+        let ret = await prisma.home.create({
+            data: home
+        });
+        console.log("Created", home.name)
+    }
 
     for (let god of godsData) {
         if (god.father_name) {

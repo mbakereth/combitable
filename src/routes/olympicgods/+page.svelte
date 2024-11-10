@@ -16,29 +16,13 @@
 
     $: rows = data.gods;
 
-    async function killGods(pks : (string|number)[]) : Promise<{error? : string, info? : string}> {
-        try {
-            let ret = await fetch("/killgods", {
-                method: "POST",
-                body: JSON.stringify({pks})
-            });
-            if (!ret.ok) throw new Error("/killgods returned " + ret.status + " " + ret.statusText);
-            const resp = await ret.json();
-            if (!resp.error) return {info: resp.info};
-            return {error: resp.error};
-        } catch (e) {
-            console.log(e);
-            return {error: typeof(e) == "object" && e && "message" in e ? e.message as string : "Unknown error"}
-        }
-    }
-
 </script>
 
 <svelte:head>
-    <title>Greek Gods</title>
+    <title>Olympic Gods</title>
 </svelte:head>
 
-<h2 class="ml-4">Greek Gods</h2>
+<h2 class="ml-4">Olympic Gods</h2>
 
 <CombiTable 
     rows={rows} 
@@ -49,15 +33,14 @@
     enableFilter={true}
     editUrl={"edit"}
     addUrl={"add"}
+    linkUrl={"olympicgods/link"}
+    unlinkUrl={"olympicgods/unlink"}
     deleteUrl={"delete" }
     paginate={5}
     havePrevious={data.havePrevious}
-    haveNext={data.haveNext}    
+    haveNext={data.haveNext}
     widthType={"fixed"}
-    ops={[{label: "Kill", fn: killGods}]}
 />
-
-<p class="mt-4"><a href="/olympicgods" class="ml-4">Olympic Gods</a></p>
 
 <div class="hidden min-w-16 max-w-16"></div>
 <div class="hidden min-w-[4rem]"></div>

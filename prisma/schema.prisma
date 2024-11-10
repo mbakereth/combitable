@@ -20,11 +20,18 @@ model God {
     mother_id               Int?
     died                    Boolean
     type                    Int
+    home_id                 Int?              
 
     father                  God?              @relation("father", references: [id], fields: [father_id], onDelete: Cascade)
     mother                  God?              @relation("mother", references: [id], fields: [mother_id], onDelete: Cascade)
 
     children_as_father      God[]             @relation("father")
     children_as_mother      God[]             @relation("mother")
+    home                    Home?             @relation("home", references: [id], fields: [home_id], onDelete: Cascade)
 }
 
+model Home {
+    id                      Int               @id @unique @default(autoincrement())
+    name                    String            @unique
+    gods                    God[]             @relation("home")
+}

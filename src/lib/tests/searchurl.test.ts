@@ -10,7 +10,7 @@ test('utils.searchUrl.sortAscending', async () => {
     let sort = searchUrl.getSort();
     expect(sort.sortCol).toBe("name");
     expect(sort.sortDirection).toBe("ascending");
-    expect(searchUrl.url.searchParams.get("s")).toBe("+name");
+    expect(searchUrl.url?.searchParams.get("s")).toBe("+name");
 })
 
 test('utils.searchUrl.sortDescending', async () => {
@@ -20,7 +20,7 @@ test('utils.searchUrl.sortDescending', async () => {
     let sort = searchUrl.getSort();
     expect(sort.sortCol).toBe("name");
     expect(sort.sortDirection).toBe("descending");
-    expect(searchUrl.url.searchParams.get("s")).toBe("-name");
+    expect(searchUrl.url?.searchParams.get("s")).toBe("-name");
 })
 
 test('utils.searchUrl.filter', async () => {
@@ -28,7 +28,7 @@ test('utils.searchUrl.filter', async () => {
     let searchUrl = new SearchUrl(url);
     searchUrl.setFilters({name: "XXX"});
     expect(searchUrl.getFilters().name).toBe("XXX");
-    expect(searchUrl.url.searchParams.get("f")).toBe("name:XXX")
+    expect(searchUrl.url?.searchParams.get("f")).toBe("name:XXX")
 })
 
 test('utils.searchUrl.takeDefault', async () => {
@@ -42,7 +42,7 @@ test('utils.searchUrl.take', async () => {
     let searchUrl = new SearchUrl(url);
     searchUrl.take(10);
     expect(searchUrl.getTake()).toBe(10);
-    expect(searchUrl.url.searchParams.get("t")).toBe("10")
+    expect(searchUrl.url?.searchParams.get("t")).toBe("10")
 })
 
 test('utils.searchUrl.skipDefault', async () => {
@@ -56,7 +56,7 @@ test('utils.searchUrl.skip', async () => {
     let searchUrl = new SearchUrl(url);
     searchUrl.skip(10);
     expect(searchUrl.getSkip()).toBe(10);
-    expect(searchUrl.url.searchParams.get("k")).toBe("10")
+    expect(searchUrl.url?.searchParams.get("k")).toBe("10")
 })
 
 test('utils.searchUrl.back', async () => {
@@ -76,7 +76,7 @@ test('utils.searchUrl.back', async () => {
     let poppedBackSearchUrl = searchUrl.popBack();
     expect(poppedBackSearchUrl).not.toBeNull();
     if (poppedBackSearchUrl) {
-        expect(poppedBackSearchUrl.url.pathname).toBe("/backpage");
+        expect(poppedBackSearchUrl.url?.pathname).toBe("/backpage");
         let sort = poppedBackSearchUrl.getSort();
         expect(sort.sortCol).toBe("name");
         expect(sort.sortDirection).toBe("descending");
@@ -112,7 +112,7 @@ test('utils.searchUrl.doubleBack', async () => {
     let poppedBackSearchUrl2 = searchUrl.popBack();
     expect(poppedBackSearchUrl2).not.toBeNull();
     if (poppedBackSearchUrl2) {
-        expect(poppedBackSearchUrl2.url.pathname).toBe("/backpage2");
+        expect(poppedBackSearchUrl2.url?.pathname).toBe("/backpage2");
         let sort = poppedBackSearchUrl2.getSort();
         expect(sort.sortCol).toBe("sex");
         expect(sort.sortDirection).toBe("ascending");
@@ -147,3 +147,38 @@ test('utils.searchUrl.prismaFields', async () => {
     expect(fields.where?.key2.is.key3.is.key4).toBe("val2");
 })
 
+test('utils.searchUrl.defineSortAscendingFromBody', async () => {
+    let searchUrl = new SearchUrl({});
+    searchUrl.sort("name", "ascending");
+    let sort = searchUrl.getSort();
+    expect(sort.sortCol).toBe("name");
+    expect(sort.sortDirection).toBe("ascending");
+    expect(searchUrl.body?.s).toBe("+name");
+})
+
+test('utils.searchUrl.redefineSortFromBody', async () => {
+    let searchUrl = new SearchUrl({s: "sex"});
+    let sort = searchUrl.getSort();
+    expect(sort.sortCol).toBe("sex");
+    searchUrl.sort("name", "ascending");
+    sort = searchUrl.getSort();
+    expect(sort.sortCol).toBe("name");
+    expect(sort.sortDirection).toBe("ascending");
+    expect(searchUrl.body?.s).toBe("+name");
+})
+
+test('utils.searchUrl.filterFromBody', async () => {
+    let url = new URL("http://server.com/page");
+    let searchUrl = new SearchUrl({});
+    searchUrl.setFilters({name: "XXX"});
+    expect(searchUrl.getFilters().name).toBe("XXX");
+    expect(searchUrl.body?.f).toBe("name:XXX")
+})
+
+test('utils.searchUrl.preFilterFromBody', async () => {
+    let url = new URL("http://server.com/page");
+    let searchUrl = new SearchUrl({});
+    searchUrl.setPreFilters({name: "XXX"});
+    expect(searchUrl.getPreFilters().name).toBe("XXX");
+    expect(searchUrl.body?.pf).toBe("name:XXX")
+})

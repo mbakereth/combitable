@@ -41,18 +41,19 @@ export class SearchUrl {
 
     defaultTake;
 
-    readonly url : URL;
+    readonly url : URL|undefined;
     readonly body : {[key:string]:any}|undefined = undefined;
 
-    constructor(url : URL, defaultTake = 20) {
-        this.url = url
+    constructor(url : URL|{[key:string]:any}, defaultTake = 20) {
+        this.url = url instanceof URL ? url : undefined;
+        this.body = url instanceof URL ? undefined : url;
         this.defaultTake = defaultTake;
     }
 
     ///// sorting
 
     sort(col : string, direction? : "ascending"|"descending") {
-        const curCol = this.url.searchParams.get("s");
+        const curCol = this.url ? this.url.searchParams.get("s") : this.body?.s;
         let sortCol = curCol;
         if (sortCol?.startsWith("+") || sortCol?.startsWith("-")) {
             sortCol = sortCol.substring(1);
@@ -70,15 +71,12 @@ export class SearchUrl {
                 dir = "-";
             }
         }
-        if (this.body) {
-            this.body.sort = dir + col
-        } else {
-            this.url.searchParams.set("s", dir + col);
-        }
+        if (this.url) this.url.searchParams.set("s", dir + col);
+        else if (this.body) this.body.s = dir + col;
     }
 
     getSort(defaultCol : string="") : {sortCol: string, sortDirection : "ascending"|"descending"} {
-        const curCol = this.url.searchParams.get("s");
+        const curCol = this.url ? this.url.searchParams.get("s") : this.body?.s;
         if (curCol == null) return {sortCol: defaultCol, sortDirection : "ascending"};
         if (curCol.length >= 2 && curCol.substring(0,1) == "-") {
             return {sortCol: curCol.substring(1), sortDirection: "descending"};
@@ -91,7 +89,7 @@ export class SearchUrl {
     }
 
     setDefaultSortCol(col : string) {
-        const curCol = this.url.searchParams.get("s");
+        const curCol = this.url ? this.url.searchParams.get("s") : this.body?.s;
         if (curCol == null || curCol == "") {
             if (col.startsWith("-")) this.sort(col.substring(1), "descending");
             else if (col.startsWith("+")) this.sort(col.substring(1), "ascending");
@@ -101,8 +99,15 @@ export class SearchUrl {
 
     ///// filtering
 
-    setFilterComponent(col : string, value : string) {
-        let filters = this.url.searchParams.get("f");
+    setFilterComponent(col : string, value : string, label: string) {
+        return this.setFilterComponent_internal(col, value, "f");
+    }
+    setPreFilterComponent(col : string, value : string, label: string) {
+        return this.setFilterComponent_internal(col, value, "pf");
+    }
+
+    private setFilterComponent_internal(col : string, value : string, label: string) {
+        let filters : string|undefined = this.url ? this.url.searchParams.get(label) : (this.body ? this.body[label] : undefined);
         if (value == "") {
             if (filters == undefined) return;
             let filtersArray = filters == "" ? [] : filters?.split(",");
@@ -112,7 +117,8 @@ export class SearchUrl {
                 if (components[0] == col) {
                     filtersArray = filtersArray.filter(
                         (val : any, index : number) => index != i);
-                    this.url.searchParams.set("f", filtersArray.join(","));
+                    if (this.url) this.url.searchParams.set(label, filtersArray.join(","));
+                    else if (this.body) this.body[label] = filtersArray.join(",");
                     return;
                 }
             }
@@ -134,26 +140,43 @@ export class SearchUrl {
             if (!found) {
                 filtersArray.push(col + ":" + value)
             }    
-            this.url.searchParams.set("f", filtersArray.join(","));
+            if (this.url) this.url.searchParams.set(label, filtersArray.join(","));
+            else if (this.body) this.body[label] =  filtersArray.join(",");
         }
     }
 
     setFilters(values: {[key:string]:string}) {
+        return this.setFilters_internal(values, "f");
+    }
+    setPreFilters(values: {[key:string]:string}) {
+        return this.setFilters_internal(values, "pf");
+    }
+
+    private setFilters_internal(values: {[key:string]:string}, label: string) {
         let filters = "";
         for (let key in values) {
             if (filters != "") filters += ",";
             filters += key + ":" + values[key]
         }
         if (Object.keys(values).length == 0) {
-            this.url.searchParams.delete("f")
+            if (this.url) this.url.searchParams.delete(label);
+            else if (this.body) delete this.body[label];
         } else {
-            this.url.searchParams.set("f", filters);
+            if (this.url) this.url.searchParams.set(label, filters);
+            else if (this.body) this.body[label] = filters;
         }
 
     }
 
     getFilters() : {[key:string]:string} {
-        const filters = this.url.searchParams.get("f");
+        return this.getFilters_internal("f");
+    }
+    getPreFilters() : {[key:string]:string} {
+        return this.getFilters_internal("pf");
+    }
+
+    private getFilters_internal(label: string) : {[key:string]:string} {
+        const filters = this.url ? this.url.searchParams.get(label) : (this.body? this.body[label] : undefined);
         if (filters == undefined) return {};
         let filtersArray = filters?.split(",");
         let ret : {[key:string]:string} = {}
@@ -169,7 +192,7 @@ export class SearchUrl {
     ///// take and skip
 
     getTake() : number {
-        const take = this.url.searchParams.get("t");
+        const take = this.url ? this.url.searchParams.get("t") : this.body?.t;
         if (take) {
             try {
                 return Number(take);
@@ -181,7 +204,7 @@ export class SearchUrl {
     }
 
     getSkip() : number {
-        const skip = this.url.searchParams.get("k");
+        const skip = this.url ? this.url.searchParams.get("k") : this.body?.k;
         if (skip) {
             try {
                 return Number(skip);
@@ -193,24 +216,29 @@ export class SearchUrl {
     }
 
     take(val : number) : void {
-        this.url.searchParams.set("t", encodeURIComponent(""+val));
+        if (this.url) this.url.searchParams.set("t", encodeURIComponent(""+val));
+        else if (this.body) this.body.t = encodeURIComponent(""+val);
     }
 
     skip(val : number) : void {
-        this.url.searchParams.set("k", encodeURIComponent(""+val));
+        if (this.url) this.url.searchParams.set("k", encodeURIComponent(""+val));
+        else if (this.body) this.body.k = encodeURIComponent(""+val);
     }
 
     encode() : string {
-        return encodeURIComponent(this.url.search);
+        if (!this.url) return ""; // doesn't make sense for body
+       return encodeURIComponent(this.url.search);
     }
 
     setBack(back : SearchUrl) {
+        if (!this.url || !back.url) return; // only supported for query params
         let partialBackUrl = back.url.pathname + back.url.search;
         let encodedBack = encodeURIComponent(partialBackUrl);
         this.url.searchParams.set("b", encodedBack);
     }
 
     popBack() : SearchUrl|null {
+        if (!this.url) return null; // only supported for query params
         let back = this.url.searchParams.get("b");
         if (!back) return null;
         back = decodeURIComponent(back);
@@ -249,9 +277,13 @@ export class SearchUrl {
             };    
         }
         let filters = this.getFilters();
+        let prefilters = this.getPreFilters();
         let where : {[key:string]:any} = {}
         for (let filter in filters) {
             where = {...where, ...SearchUrl.makePrismaWhere(filter, filters[filter], map, modelName)};
+        }
+        for (let filter in prefilters) {
+            where = {...where, ...SearchUrl.makePrismaWhere(filter, prefilters[filter], map, modelName)};
         }
         if (Object.keys(where).length !== 0) {
             ret.where = where;
@@ -265,6 +297,11 @@ export class SearchUrl {
         const parts = name.split(".");
         let type : string|undefined = undefined;
         let modelName1 = modelName;
+        let invert = false;
+        if (value.startsWith("!") && value.length > 1) {
+            value = value.substring(1);
+            invert = true;
+        }
         for (let part of parts) {
             if (!(modelName1 in models) || !(part in models[modelName1].fields)) break;
             let field = models[modelName1].fields[part];
@@ -291,7 +328,8 @@ export class SearchUrl {
         }
         if (parts.length == 1) return {[name]: value1}
         let where : {[key:string]:any} = {};
-        where[parts[parts.length-1]] = value1;
+        if (invert) where[parts[parts.length-1]] = {not: value1};
+        else where[parts[parts.length-1]] = value1;
         for (let i=parts.length-2; i>=0; --i) {
             const part = parts[i];
             where = {[part]: {is: where}};
@@ -299,5 +337,9 @@ export class SearchUrl {
         return where;
     }
 
+    searchParamsAsString() : string {
+        if (!this.url) return "";
+        return this.url.searchParams.toString();
 
+    }
 }

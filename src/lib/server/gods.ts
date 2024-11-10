@@ -32,20 +32,19 @@ export class GodsOps extends Ops {
 
             const body = await event.request.json();
             if (Ops.isEmpty(body._pk)) {
-                return json({errors: "Primary key invalid"});
+                return json({error: "Primary key invalid"});
             }
             const prisma = new PrismaClient();
             await prisma.god.delete({where: {name: body._pk}});
             return json({pk: body._pk});
         } catch (e) {
             console.log(e);
-            return json({errors: "Unexpected error: " + Ops.errorMessage(e)})
+            return json({error: "Unexpected error: " + Ops.errorMessage(e)})
         }
     }
 
     static async addOrUpdateGod(event : RequestEvent, add: boolean)  : Promise<{row? : God, errors?: string[]|string, info? : string}>  {
         const body =  await event.request.json();
-        console.log(body);
 
         if (!add && (Ops.isEmpty(body._pk))) {
             return {errors: "Primary key missing or invalid"};
@@ -142,5 +141,91 @@ export class GodsOps extends Ops {
             mother_id: Ops.isEmpty(body["mother.name"]) ? null : mother_id,
         }
         return { god };
+    }
+
+    static async killGodsPost(event : RequestEvent)  : Promise<Response>  {
+
+        try {
+            const body = await event.request.json();
+            if (Ops.isEmpty(body.pks)) {
+                return json({errors: "Primary key invalid"});
+            }
+            const prisma = new PrismaClient();
+            const pks = body.pks as string[];
+            await prisma.god.updateMany({
+                data: {
+                    died: true
+                },
+                where: {
+                    name: { in: pks }
+                }
+            });    
+            return json({info: "Successful"})
+        } catch (e) {
+            console.log(e);
+            return json({error: "Unexpected error: " + Ops.errorMessage(e)})
+        }
+    }
+
+    static async linkToOlympusPost(event : RequestEvent) : Promise<Response>  {
+        const body =  await event.request.json();
+
+        if ((Ops.isEmpty(body.name))) {
+            return json({errors: "Name missing"});
+        }
+
+        try {
+            const prisma = new PrismaClient();
+            const olympus = await prisma.home.findUniqueOrThrow({
+                where: { name: "Olympus"}
+            });
+            const god = await prisma.god.findUniqueOrThrow({
+                where: { name:body.name}
+            });
+            if (god.home_id == olympus.id) {
+                return json({error: "That god is already linked"})
+            }
+            await prisma.god.updateMany({
+                data: { home_id: olympus.id},
+                where: { name: body.name},
+            });
+            const ret = await prisma.god.findFirstOrThrow({where: {name: body.name, home_id: olympus.id}});
+            return json({row: ret});
+
+        } catch (e) {
+            console.log(e);
+            return json({ error: Ops.errorMessage(e)});
+        }
+    }
+
+    static async unlinkToOlympusPost(event : RequestEvent) : Promise<Response>  {
+        const body =  await event.request.json();
+
+        if ((Ops.isEmpty(body._pk))) {
+            return json({errors: "Name missing"});
+        }
+
+        try {
+            const prisma = new PrismaClient();
+            const olympus = await prisma.home.findUniqueOrThrow({
+                where: { name: "Olympus"}
+            });
+            const god = await prisma.god.findUniqueOrThrow({
+                where: { name: body._pk}
+            });
+            if (god.home_id != olympus.id) {
+                return json({error: "That god is not linked"})
+            }
+            await prisma.god.updateMany({
+                data: { home_id: null},
+                where: { name: body._pk},
+            });
+            const ret = await prisma.god.findFirstOrThrow({where: {name: body._pk}});
+            return json({row: ret});
+
+        } catch (e) {
+            console.log(e);
+            return json({ error: Ops.errorMessage(e)});
+        }
     }
 }
