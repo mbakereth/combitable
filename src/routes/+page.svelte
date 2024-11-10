@@ -32,6 +32,9 @@
         }
     }
 
+    $: primaryKeysChecked = [];
+    let table : CombiTable;
+
 </script>
 
 <svelte:head>
@@ -55,6 +58,7 @@
     haveNext={data.haveNext}    
     widthType={"fixed"}
     ops={[{label: "Kill", fn: killGods}]}
+    bind:primaryKeysChecked={primaryKeysChecked}
 />
 
 <p class="mt-4"><a href="/olympicgods" class="ml-4">Olympic Gods</a></p>

@@ -41,6 +41,15 @@
         (accumulator, currentValue) => accumulator || currentValue,
         false,
     );
+    export let primaryKeysChecked : (string|number)[] = [];
+    $: {
+        if (primaryKey) {
+            primaryKeysChecked = [];
+            rowChecked.forEach((checked, i) => {
+                if (checked) primaryKeysChecked.push(rrows[i][primaryKey]);
+            });
+        }
+    }
 
     // SVG wants to display with a new line.  Depending on what icons
     // we are displaying in the actions column set how far to offset
