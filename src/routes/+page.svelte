@@ -56,8 +56,9 @@
     paginate={5}
     havePrevious={data.havePrevious}
     haveNext={data.haveNext}    
-    widthType={"fixed"}
+    widthType={"auto"}
     ops={[{label: "Kill", fn: killGods}]}
+    urlSuffix=""
     bind:primaryKeysChecked={primaryKeysChecked}
 />
 

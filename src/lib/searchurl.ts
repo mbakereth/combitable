@@ -43,6 +43,7 @@ export class SearchUrl {
 
     readonly url : URL|undefined;
     readonly body : {[key:string]:any}|undefined = undefined;
+    private suffix = "";
 
     constructor(url : URL|{[key:string]:any}, defaultTake = 20) {
         this.url = url instanceof URL ? url : undefined;
@@ -50,10 +51,18 @@ export class SearchUrl {
         this.defaultTake = defaultTake;
     }
 
+    setSuffix(val : string|undefined) {
+        this.suffix = val ?? "";
+    }
+
+    getSuffix() : string {
+        return this.suffix;
+    }
+
     ///// sorting
 
     sort(col : string, direction? : "ascending"|"descending") {
-        const curCol = this.url ? this.url.searchParams.get("s") : this.body?.s;
+        const curCol = this.url ? this.url.searchParams.get("s"+this.suffix) : (this.body?this.body["s"+this.suffix]:undefined);
         let sortCol = curCol;
         if (sortCol?.startsWith("+") || sortCol?.startsWith("-")) {
             sortCol = sortCol.substring(1);
@@ -71,12 +80,12 @@ export class SearchUrl {
                 dir = "-";
             }
         }
-        if (this.url) this.url.searchParams.set("s", dir + col);
+        if (this.url) this.url.searchParams.set("s"+this.suffix, dir + col);
         else if (this.body) this.body.s = dir + col;
     }
 
     getSort(defaultCol : string="") : {sortCol: string, sortDirection : "ascending"|"descending"} {
-        const curCol = this.url ? this.url.searchParams.get("s") : this.body?.s;
+        const curCol = this.url ? this.url.searchParams.get("s"+this.suffix) : (this.body?this.body["s"+this.suffix]:undefined);
         if (curCol == null) return {sortCol: defaultCol, sortDirection : "ascending"};
         if (curCol.length >= 2 && curCol.substring(0,1) == "-") {
             return {sortCol: curCol.substring(1), sortDirection: "descending"};
@@ -89,7 +98,7 @@ export class SearchUrl {
     }
 
     setDefaultSortCol(col : string) {
-        const curCol = this.url ? this.url.searchParams.get("s") : this.body?.s;
+        const curCol = this.url ? this.url.searchParams.get("s"+this.suffix) : (this.body?this.body["s"+this.suffix]:undefined);
         if (curCol == null || curCol == "") {
             if (col.startsWith("-")) this.sort(col.substring(1), "descending");
             else if (col.startsWith("+")) this.sort(col.substring(1), "ascending");
@@ -100,10 +109,10 @@ export class SearchUrl {
     ///// filtering
 
     setFilterComponent(col : string, value : string, label: string) {
-        return this.setFilterComponent_internal(col, value, "f");
+        return this.setFilterComponent_internal(col, value, "f"+this.suffix);
     }
     setPreFilterComponent(col : string, value : string, label: string) {
-        return this.setFilterComponent_internal(col, value, "pf");
+        return this.setFilterComponent_internal(col, value, "pf"+this.suffix);
     }
 
     private setFilterComponent_internal(col : string, value : string, label: string) {
@@ -146,10 +155,10 @@ export class SearchUrl {
     }
 
     setFilters(values: {[key:string]:string}) {
-        return this.setFilters_internal(values, "f");
+        return this.setFilters_internal(values, "f"+this.suffix);
     }
     setPreFilters(values: {[key:string]:string}) {
-        return this.setFilters_internal(values, "pf");
+        return this.setFilters_internal(values, "pf"+this.suffix);
     }
 
     private setFilters_internal(values: {[key:string]:string}, label: string) {
@@ -169,10 +178,10 @@ export class SearchUrl {
     }
 
     getFilters() : {[key:string]:string} {
-        return this.getFilters_internal("f");
+        return this.getFilters_internal("f"+this.suffix);
     }
     getPreFilters() : {[key:string]:string} {
-        return this.getFilters_internal("pf");
+        return this.getFilters_internal("pf"+this.suffix);
     }
 
     private getFilters_internal(label: string) : {[key:string]:string} {
@@ -192,7 +201,7 @@ export class SearchUrl {
     ///// take and skip
 
     getTake() : number {
-        const take = this.url ? this.url.searchParams.get("t") : this.body?.t;
+        const take = this.url ? this.url.searchParams.get("t"+this.suffix) : (this.body?this.body["t"+this.suffix]:undefined);
         if (take) {
             try {
                 return Number(take);
@@ -204,7 +213,7 @@ export class SearchUrl {
     }
 
     getSkip() : number {
-        const skip = this.url ? this.url.searchParams.get("k") : this.body?.k;
+        const skip = this.url ? this.url.searchParams.get("k"+this.suffix) : (this.body?this.body["k"+this.suffix]:undefined);
         if (skip) {
             try {
                 return Number(skip);
@@ -216,12 +225,12 @@ export class SearchUrl {
     }
 
     take(val : number) : void {
-        if (this.url) this.url.searchParams.set("t", encodeURIComponent(""+val));
+        if (this.url) this.url.searchParams.set("t"+this.suffix, encodeURIComponent(""+val));
         else if (this.body) this.body.t = encodeURIComponent(""+val);
     }
 
     skip(val : number) : void {
-        if (this.url) this.url.searchParams.set("k", encodeURIComponent(""+val));
+        if (this.url) this.url.searchParams.set("k"+this.suffix, encodeURIComponent(""+val));
         else if (this.body) this.body.k = encodeURIComponent(""+val);
     }
 
@@ -280,10 +289,10 @@ export class SearchUrl {
         let prefilters = this.getPreFilters();
         let where : {[key:string]:any} = {}
         for (let filter in filters) {
-            where = {...where, ...SearchUrl.makePrismaWhere(filter, filters[filter], map, modelName)};
+            where = {...where, ...SearchUrl.makePrismaWhere(filter, filters[filter], map, modelName, this.suffix)};
         }
         for (let filter in prefilters) {
-            where = {...where, ...SearchUrl.makePrismaWhere(filter, prefilters[filter], map, modelName)};
+            where = {...where, ...SearchUrl.makePrismaWhere(filter, prefilters[filter], map, modelName, this.suffix)};
         }
         if (Object.keys(where).length !== 0) {
             ret.where = where;
@@ -292,7 +301,7 @@ export class SearchUrl {
     
     }
 
-    static makePrismaWhere(name : string, value : string, models : PrismaModelMaps, modelName: string) : {[key:string]:any} {
+    private static makePrismaWhere(name : string, value : string, models : PrismaModelMaps, modelName: string, suffix : string="") : {[key:string]:any} {
         if (name == "") return {};
         const parts = name.split(".");
         let type : string|undefined = undefined;
@@ -320,7 +329,7 @@ export class SearchUrl {
         }
         let value1 : string|number|boolean|null = value;
         if (type == "Boolean") {
-            value1 = ["1", "yes", "y", "true", "t", "on"].includes(value.toLocaleLowerCase());
+            value1 = ["1", "yes", "y", "true", "t"+suffix, "on"].includes(value.toLocaleLowerCase());
         } else if (type == "Int") {
             value1 = value == "" ? null : parseInt(value);
         } else if (type == "Float") {

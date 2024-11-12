@@ -31,6 +31,7 @@
     export let editUrl : string|undefined = undefined;
     export let deleteUrl : string|undefined = undefined;
     export let presets : {[key:string]:any}|undefined = undefined;
+    export let urlSuffix : string = "";
     export let widthType : "auto"|"fixed" = "auto";
     export let primaryKey : string = "";
     export let ops : CombiTableOp[] = [];
@@ -198,6 +199,7 @@
     async function confirmPrevious() {
         confirmCancelEdit();
         const url = new SearchUrl($page.url, paginate);
+        url.setSuffix(urlSuffix);
         let skip = url.getSkip();
         if (skip <= 0) return;
         let take = url.getTake();
@@ -225,6 +227,7 @@
     async function confirmNext() {
         confirmCancelEdit();
         const url = new SearchUrl($page.url, paginate);
+        url.setSuffix(urlSuffix);
         let skip = url.getSkip();
         let take = url.getTake();
         skip += take;
@@ -237,11 +240,43 @@
     
     }
 
+    function colMaxWidth(col : CombiTableColumn) : string {
+        if (col.maxWidth == undefined && col.editMaxWidth == undefined) return "";
+        if (col.maxWidth != undefined && col.editMaxWidth == undefined) return col.maxWidth;
+        if (col.maxWidth == undefined && col.editMaxWidth != undefined) return col.editMaxWidth;
+        if (col.maxWidth != undefined && col.editMaxWidth != undefined) {
+            const isNumber = (/[0-9]+/.test(col.maxWidth) && /[0-9]+/.test(col.editMaxWidth));
+            const isRem = (/\[[0-9]+px\]/.test(col.maxWidth) && /\[[0-9]+px\]/.test(col.editMaxWidth));
+            const isPx = (/\[[0-9]+rem\]/.test(col.maxWidth) && /\[[0-9]+rem\]/.test(col.editMaxWidth));
+            if (isNumber || isRem || isNumber) {
+                let editMaxWidthMatch = /([0-9]+)/.exec(col.editMaxWidth);
+                let maxWidthMatch = /([0-9]+)/.exec(col.maxWidth);
+                if (editMaxWidthMatch == null || editMaxWidthMatch.length == 0) return "";
+                if (maxWidthMatch == null || maxWidthMatch.length == 0) return "";
+                let editMaxWidth = parseInt(editMaxWidthMatch[0]);
+                let maxWidth = parseInt(maxWidthMatch[0]);
+                let maxMax = editMaxWidth > maxWidth ? editMaxWidth : maxWidth;
+                let maxMaxStr = "";
+                if (isNumber)  maxMaxStr = "max-w-"+maxMax;
+                else if (isRem) maxMaxStr = `max-w-[${maxMax}rem]`;
+                else maxMaxStr = `max-w-[${maxMax}px]`;
+                return maxMaxStr;
+            }
+
+        }
+        return "";
+    }
+    let maxWidth : {[key:string]: string} = {}
+    for (let col of columns) {
+        maxWidth[col.col] = colMaxWidth(col);
+    }
+
     /////
     // sorting and filtering
 
     async function sort(col : string, dir? : "ascending"|"descending") {
         const url = new SearchUrl($page.url, paginate);
+        url.setSuffix(urlSuffix);
         url.setDefaultSortCol(defaultSort);
         let { sortCol, sortDirection } = url.getSort();
         url.sort(col, dir);
@@ -267,6 +302,7 @@
         }
 
         const url = new SearchUrl($page.url, paginate);
+        url.setSuffix(urlSuffix);
         url.setFilters(filters);
         await invalidateAll()
         searchParams = `?${url.searchParamsAsString()}`;
@@ -333,6 +369,7 @@
         }
 
         const url = new SearchUrl($page.url, paginate);
+        url.setSuffix(urlSuffix);
         url.setFilters(filters);
         await invalidateAll()
         searchParams = `?${url.searchParamsAsString()}`;
@@ -348,6 +385,7 @@
     $: dirty = false;
     $: {
         const url = new SearchUrl($page.url, paginate);
+        url.setSuffix(urlSuffix);
         url.setDefaultSortCol(defaultSort);
         const resp = url.getSort();
         sortCol = resp.sortCol;
@@ -361,6 +399,7 @@
     let filterMenusOpen : {[key:string]:boolean} = {}
     columns.forEach((val: CombiTableColumn, i: number) => {filterMenusOpen[val.col] = false})
     const url = new SearchUrl($page.url, paginate);
+    url.setSuffix(urlSuffix);
     let urlfilters = url.getFilters();
     for (let col in urlfilters) {
         if (col in filterText || true) {
@@ -654,7 +693,7 @@
         let errors : string[] = [];
         for (let col of columns) {
             if (editRow == -2 && col.col != primaryKey) continue;
-            if (!col.nullable && col.type != "string" && editRowText[col.col] == "") {
+            if (!col.nullable && !col.readOnly && col.type != "string" && editRowText[col.col] == "") {
                 errors.push("Must enter a value for " + col.name);
             } else if (editRowText[col.col]) {
                 if (col.type == "integer") {
@@ -751,6 +790,7 @@
 
     async function reload() {
         const url = new SearchUrl($page.url, paginate);            
+        url.setSuffix(urlSuffix);
         await invalidateAll();
         searchParams = `?${url.searchParamsAsString()}`;
         goto(searchParams);
@@ -868,8 +908,9 @@
                     {#each columns as col, colidx}
                         {@const editminw = col.editMinWidth ? "min-w-" + col.editMinWidth : ""}
                         {@const editmaxw = col.editMaxWidth ? "max-w-" + col.editMaxWidth : ""}
+                        {@const cmaxw = maxWidth[col.col]}
                         {@const dropdownwidth = col.dropdownWidth ? "w-" + col.dropdownWidth : ""}
-                        <td class="align-bottom">
+                        <td class="align-bottom {cmaxw}">
                             {#if colidx == 0}
                                 <p class="small m-0 p-0 pb-1 text-primary ml-1">Filter</p>
                             {/if}
@@ -943,9 +984,10 @@
                             {@const editminw = col.editMinWidth ? "min-w-" + col.editMinWidth : ""}
                             {@const editmaxw = col.editMaxWidth ? "max-w-" + col.editMaxWidth : ""}
                             {@const dropdownwidth = col.dropdownWidth ? "w-" + col.dropdownWidth : ""}
+                            {@const cmaxw = maxWidth[col.col]}
                             {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
                             {#if editRow == -1 || col.col == primaryKey}
-                                <td class="align-bottom">
+                                <td class="align-bottom {cmaxw}">
                                     {#if colidx == 0}
                                         <p class="small m-0 p-0 pb-1 text-primary ml-1">New</p>
                                     {/if}
@@ -1053,12 +1095,13 @@
                         {@const minw = col.minWidth ? "min-w-" + col.minWidth : ""}
                         {@const editminw = col.editMinWidth ? "min-w-" + col.editMinWidth : ""}
                         {@const maxw = col.maxWidth ? "max-w-" + col.maxWidth : ""}
+                        {@const cmaxw = maxWidth[col.col]}
                         {@const editmaxw = col.editMaxWidth ? "max-w-" + col.editMaxWidth : ""}
                         {@const dropdownwidth = col.dropdownWidth ? "w-" + col.dropdownWidth : ""}
                         {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
                         {#if editRow == undefined || editRow != rowidx}
                             {@const value = formatColumn(getColumn(row, col.col), col)}
-                            <td>
+                            <td class="{cmaxw}">
                                 {#if (col.type == "date" || col.type == "datetime" || col.nowrap)}
                                     {#if col.link}
                                         <span class="text-nowrap text-neutral-content"><a class="text-neutral-content" href={col.link(row)}>{value}</a></span>
@@ -1074,7 +1117,7 @@
                                 {/if}
                             </td>
                         {:else}
-                            <td class="align-bottom">
+                            <td class="align-bottom {cmaxw}">
                                 {#if colidx == 0}
                                 <p class="small m-0 p-0 pb-1 text-primary ml-1">Edit</p>
                                 {/if}

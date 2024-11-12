@@ -147,6 +147,9 @@ test('utils.searchUrl.prismaFields', async () => {
     expect(fields.where?.key2.is.key3.is.key4).toBe("val2");
 })
 
+////////////////////////
+// test body
+
 test('utils.searchUrl.defineSortAscendingFromBody', async () => {
     let searchUrl = new SearchUrl({});
     searchUrl.sort("name", "ascending");
@@ -181,4 +184,85 @@ test('utils.searchUrl.preFilterFromBody', async () => {
     searchUrl.setPreFilters({name: "XXX"});
     expect(searchUrl.getPreFilters().name).toBe("XXX");
     expect(searchUrl.body?.pf).toBe("name:XXX")
+})
+
+///////////////////
+// Test suffix
+
+test('utils.searchUrl.sortAscendingWithSuffix', async () => {
+    let url = new URL("http://server.com/page");
+    let searchUrl = new SearchUrl(url);
+    searchUrl.setSuffix("1")
+    searchUrl.sort("name", "ascending");
+    let sort = searchUrl.getSort();
+    expect(sort.sortCol).toBe("name");
+    expect(sort.sortDirection).toBe("ascending");
+    expect(searchUrl.url?.searchParams.get("s1")).toBe("+name");
+})
+
+test('utils.searchUrl.sortDescendingWithSuffix', async () => {
+    let url = new URL("http://server.com/page");
+    let searchUrl = new SearchUrl(url);
+    searchUrl.setSuffix("1")
+    searchUrl.sort("name", "descending");
+    let sort = searchUrl.getSort();
+    expect(sort.sortCol).toBe("name");
+    expect(sort.sortDirection).toBe("descending");
+    expect(searchUrl.url?.searchParams.get("s1")).toBe("-name");
+})
+
+test('utils.searchUrl.filterWithSuffix', async () => {
+    let url = new URL("http://server.com/page");
+    let searchUrl = new SearchUrl(url);
+    searchUrl.setSuffix("1")
+    searchUrl.setFilters({name: "XXX"});
+    expect(searchUrl.getFilters().name).toBe("XXX");
+    expect(searchUrl.url?.searchParams.get("f1")).toBe("name:XXX")
+})
+
+test('utils.searchUrl.takeDefaultWithSuffix', async () => {
+    let url = new URL("http://server.com/page");
+    let searchUrl = new SearchUrl(url);
+    searchUrl.setSuffix("1")
+    expect(searchUrl.getTake()).toBe(searchUrl.defaultTake);
+})
+
+test('utils.searchUrl.takeWithSuffix', async () => {
+    let url = new URL("http://server.com/page");
+    let searchUrl = new SearchUrl(url);
+    searchUrl.setSuffix("1")
+    searchUrl.take(10);
+    expect(searchUrl.getTake()).toBe(10);
+    expect(searchUrl.url?.searchParams.get("t1")).toBe("10")
+})
+
+test('utils.searchUrl.skipDefaultWithSuffix', async () => {
+    let url = new URL("http://server.com/page");
+    let searchUrl = new SearchUrl(url);
+    searchUrl.setSuffix("1")
+    expect(searchUrl.getSkip()).toBe(0);
+})
+
+test('utils.searchUrl.skipWithSuffix', async () => {
+    let url = new URL("http://server.com/page");
+    let searchUrl = new SearchUrl(url);
+    searchUrl.setSuffix("1")
+    searchUrl.skip(10);
+    expect(searchUrl.getSkip()).toBe(10);
+    expect(searchUrl.url?.searchParams.get("k1")).toBe("10")
+})
+
+test('utils.searchUrl.prismaFieldsWithSuffix', async () => {
+    let url = new URL("http://server.com/page");
+    let searchUrl = new SearchUrl(url, 20);
+    searchUrl.setSuffix("1")
+    searchUrl.skip(10);
+    searchUrl.setFilters({"key1": "val1", "key2.key3.key4": "val2"});
+    searchUrl.sort("col1", "descending");
+    const fields = searchUrl.getPrismaFields([], "");
+    expect(fields.take).toBe(20);
+    expect(fields.skip).toBe(10);
+    expect(fields.orderBy?.col1).toBe("desc");
+    expect(fields.where?.key1).toBe("val1");
+    expect(fields.where?.key2.is.key3.is.key4).toBe("val2");
 })
