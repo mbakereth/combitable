@@ -34,8 +34,10 @@
     export let urlSuffix : string = "";
     export let widthType : "auto"|"fixed" = "auto";
     export let primaryKey : string = "";
+    export let select : boolean = false;
     export let ops : CombiTableOp[] = [];
     let haveOps = ops.length > 0;
+    if (haveOps) select = true;
 
     $: rowChecked = rows.map((row) => false);
     $: rowsAreChecked = rowChecked.reduce(
@@ -856,12 +858,12 @@
 
 </script>
 
-<div class="overflow-x-auto">
-    <table class="table table-{widthType}">
+<div class="overflow-x-auto overflow-y-visible">
+    <table class="table table-{widthType} overflow-y-visible">
         <thead>
             <!-- header row -->
             <tr>
-                {#if haveOps}
+                {#if select}
                     <!-- checkbox column -->
                     <td class="w-10"></td>
                 {/if}
@@ -901,7 +903,7 @@
             <!-- filter row -->
             {#if enableFilter}
                 <tr class="0">
-                    {#if haveOps}
+                    {#if select}
                         <!-- checkbox column -->
                         <td></td>
                     {/if}
@@ -915,10 +917,10 @@
                                 <p class="small m-0 p-0 pb-1 text-primary ml-1">Filter</p>
                             {/if}
                             {#if col.type == "boolean"}
-                            <details class="dropdown" bind:open={filterMenusOpen[col.col]}>
+                            <details class="dropdown overflow:visible" bind:open={filterMenusOpen[col.col]}>
                                 <summary class="btn m-0 -mb-1 w-full {editminw} {editmaxw}">{filterText[col.col] ?? ""}</summary>
                                 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                <ul class="menu dropdown-content bg-base-200 rounded-box z-[1] {dropdownwidth} p-2 mt-2 shadow">
+                                <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
                                     <!-- svelte-ignore a11y-missing-attribute -->
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -934,10 +936,10 @@
                                 </ul>
                             </details>  
                             {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
-                                <details class="dropdown" bind:open={filterMenusOpen[col.col]}>
+                                <details class="dropdown overflow:visible" bind:open={filterMenusOpen[col.col]}>
                                     <summary class="btn m-0 -mb-1 w-full {editminw} {editmaxw}">{filterText[col.col] ?? ""}</summary>
                                     <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                    <ul class="menu dropdown-content bg-base-200 rounded-box z-[1] {dropdownwidth} p-2 mt-2 shadow">
+                                    <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
                                         <!-- svelte-ignore a11y-click-events-have-key-events -->
                                         <!-- svelte-ignore a11y-no-static-element-interactions -->
                                         <!-- svelte-ignore a11y-missing-attribute -->
@@ -976,7 +978,7 @@
             {#if addUrl || linkUrl}
                 <tr class="0">
                     {#if editRow == -1 || editRow == -2}
-                        {#if haveOps}
+                        {#if select}
                             <!-- checkbox column -->
                             <td></td>
                         {/if}
@@ -993,10 +995,10 @@
                                     {/if}
                                     {#if !col.readOnly}
                                         {#if col.type == "boolean"}
-                                            <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
+                                            <details class="dropdown overflow:visible" bind:open={editRowMenusOpen[col.col]}>
                                                 <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
                                                 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                                <ul class="menu dropdown-content bg-base-200 rounded-box z-[1] {dropdownwidth} p-2 mt-2 shadow">
+                                                <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
                                                     {#if col.nullable == true}
                                                         <!-- svelte-ignore a11y-missing-attribute -->
                                                         <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -1014,10 +1016,10 @@
                                                 </ul>
                                             </details>  
                                         {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
-                                            <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
+                                            <details class="dropdown overflow:visible" bind:open={editRowMenusOpen[col.col]}>
                                                 <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
                                                 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                                <ul class="menu dropdown-content bg-base-200 rounded-box z-[1] {dropdownwidth} p-2 mt-2 shadow">
+                                                <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
                                                     {#if col.nullable == true}
                                                         <!-- svelte-ignore a11y-click-events-have-key-events -->
                                                         <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -1062,7 +1064,7 @@
                             </td>
                         {/if}
                     {:else}
-                        {#if haveOps}
+                        {#if select}
                             <td></td>
                         {/if}
                         <td>
@@ -1080,7 +1082,7 @@
             <!-- data rows -->
             {#each rrows as row, rowidx}
                 <tr class="hover:bg-neutral">
-                    {#if haveOps}
+                    {#if select}
                         <!-- checkbox column -->
                         <td>
                             {#if editRow == undefined || editRow != rowidx}
@@ -1123,10 +1125,10 @@
                                 {/if}
                                 {#if !col.readOnly}
                                 {#if col.type == "boolean"}
-                                    <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
+                                    <details class="dropdown overflow:visible" bind:open={editRowMenusOpen[col.col]}>
                                         <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
                                         <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                        <ul class="menu dropdown-content bg-base-200 rounded-box z-[1] {dropdownwidth} p-2 mt-2 shadow">
+                                        <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
                                             {#if col.nullable == true}
                                                 <!-- svelte-ignore a11y-missing-attribute -->
                                                 <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -1144,10 +1146,10 @@
                                         </ul>
                                     </details>  
                                 {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
-                                    <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
+                                    <details class="dropdown overflow:visible" bind:open={editRowMenusOpen[col.col]}>
                                         <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
                                         <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                        <ul class="menu dropdown-content bg-base-200 rounded-box z-[1] {dropdownwidth} p-2 mt-2 shadow">
+                                        <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
                                             {#if col.nullable == true}
                                                 <!-- svelte-ignore a11y-missing-attribute -->
                                                 <!-- svelte-ignore a11y-click-events-have-key-events -->
