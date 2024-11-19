@@ -871,7 +871,7 @@
                     {@const minw = col.minWidth ? "min-w-" + col.minWidth : ""}
                     {@const maxw = col.maxWidth ? "max-w-" + col.maxWidth : ""}
                     <th class="{minw} {maxw}">
-                        {#if enableSort}
+                        {#if enableSort && (col.sortable === undefined || col.sortable == true)}
                             <!-- svelte-ignore a11y-invalid-attribute -->
                             <a href="#" on:click={() => sort(col.col)}>
                                 {col.name}</a>&nbsp;{#if col.col == sortCol}
@@ -1286,9 +1286,6 @@
   /* Make sure last word and icon will break ultimately */
   display: inline-flex;
   flex-wrap: wrap; 
-}
-.bg-required {
-  background-color : #282c42;
 }
 
 </style>

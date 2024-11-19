@@ -14,6 +14,7 @@ export interface CombiTableColumn {
     editMaxWidth? : string,
     dropdownWidth? : string,
     readOnly? : boolean,
+    sortable? : boolean,
     link?: (row:{[key:string]:any}) => string,
 }
 

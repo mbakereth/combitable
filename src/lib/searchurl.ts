@@ -26,7 +26,12 @@ interface PrismaModelMaps {
     [key:string]: PrismaModelMap
 }
 
+interface OrderByObj {[key:string]: "asc"|"desc"}
+
+type OrderBy = "asc"|"desc"|{[key:string]: OrderByObj|OrderBy}
+
 /**
+ * 
  * Creates and parses URLs which have the following:
  * 
  *   - `s` sort field optionally prefixed with `+` or `-`
@@ -281,9 +286,10 @@ export class SearchUrl {
         }
         if (!sortCol) sortCol = defaultSearch;
         if (sortCol != "") {
-            ret.orderBy = {
+            /*ret.orderBy = {
                 [sortCol]: sortDirection == "ascending" ? "asc" : "desc",
-            };    
+            };   */
+            ret.orderBy = SearchUrl.makePrismaOrderBy(sortCol, sortDirection == "ascending" ? "asc" : "desc") 
         }
         let filters = this.getFilters();
         let prefilters = this.getPreFilters();
@@ -344,6 +350,19 @@ export class SearchUrl {
             where = {[part]: {is: where}};
         }
         return where;
+    }
+
+    private static makePrismaOrderBy(name : string, direction : "asc"|"desc", suffix : string="") : {[key:string]:any} {
+        if (name == "") return {};
+        const parts = name.split(".");
+        let type : string|undefined = undefined;
+        if (parts.length == 1) return {[name]: direction};
+        let orderBy : OrderBy = {[parts[parts.length-1]]: direction};
+        for (let i = parts.length-2; i>=0; --i) {
+            const part = parts[i];
+            orderBy = {[part]: orderBy}
+        }
+        return orderBy;
     }
 
     searchParamsAsString() : string {
