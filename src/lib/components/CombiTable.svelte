@@ -22,6 +22,7 @@
     export let enableSort = false;
     export let enableFilter = false;
     export let defaultSort : string;
+    export let dateFormat = "yyyy-mm-dd"; // or "yyyy-mm-dd" or "mm-dd-yyyy"
     export let paginate = 0;
     export let havePrevious = false;
     export let haveNext = false;
@@ -52,6 +53,43 @@
                 if (checked) primaryKeysChecked.push(rrows[i][primaryKey]);
             });
         }
+    }
+
+    export function printDate(date : Date|undefined|null) : string {
+        if (!date) return "";
+        if (!date) return "-";
+        let s = date.toISOString();
+        if (s.indexOf("T") > 0) s = s.split("T")[0];
+        const parts = s.split("-");
+        if (parts.length == 3) {
+            if (dateFormat == "yyyy-mm-dd") {
+                return parts[2] + "-" + parts[1] + "-" + parts[0];
+            }
+            if (dateFormat == "mm-dd-yyyy") {
+                return parts[2] + "-" + parts[0] + "-" + parts[1];
+            }
+            return parts[2] + "-" + parts[1] + "-" + parts[0];
+        }
+        return s;
+    }
+
+    export function stringIsDate(val : string) {
+        if (dateFormat == "yyyy-mm-dd") return /^( *[0-9][0-9][0-9][0-9]-[0-9][0-9]?-[0-9][0-9] *?)$/.test(val);
+        return /^( *[0-9][0-9]-[0-9][0-9]?-[0-9][0-9][0-9][0-9] *?)$/.test(val) ;
+    }
+
+    export function parseDate(val : string) : Date {
+        val = val.trim();
+        if (val.indexOf("T") > 0) {
+            val = val.split("T")[0];
+            return new Date(val);
+        }
+        const parts = val.trim().split("-");
+        if (parts.length != 3) throw Error("Date " + val + " should be " + dateFormat);
+        let dateStr = parts[2] + "-" + parts[1] + "-" + parts[0];
+        if (dateFormat == "yyyy-mm-dd") dateStr = val;
+        if (dateFormat == "mm-dd-yyyy") dateStr = parts[2] + "-" + parts[0] + "-" + parts[1];
+        return new Date(dateStr);
     }
 
     // SVG wants to display with a new line.  Depending on what icons
@@ -123,8 +161,8 @@
         if (typeof(val) == "boolean") return val ? "Yes" : "No";
         if (typeof(val) == "number") return val+"";
         if (typeof(val) == "string") return val;
-        if (val instanceof Date && type=="date") return val.toISOString().split("T")[0];
-        if (val instanceof Date) return val.toISOString();
+        if (val instanceof Date && type=="date") printDate(val)
+        if (val instanceof Date) return printDate(val);
         if (typeof(val) == "object" && "name" in val) return val["name"];
         return ""+val;
     }
@@ -135,7 +173,14 @@
 
     function asDate(val : string|Date) : Date {
         if (val == undefined) return new Date();
-        if (typeof(val) == "string") return new Date(val.trim());
+        if (typeof(val) == "string") {
+            const dateString = val.trim();
+            if (dateFormat == "yyyy-mm-dd") return new Date(dateString);
+            const parts = dateString.split("-");
+            if (parts.length != 3) return new Date();
+            if (dateFormat == "mm-dd-yyyy") return new Date(parts[2] + "-" + parts[0] + "-" + parts[1]);
+            return new Date(parts[2] + "-" + parts[1] + "-" + parts[0]);
+        } 
         return val;
     }
     function asDateOrUndefined(val : string|Date|undefined) : Date|undefined {
@@ -176,7 +221,7 @@
         }
         if (col.type == "date") {
             if (val instanceof Date) {
-                return val.toISOString().split("T")[0];
+                return printDate(val);
             }
         }
         if (col.type == "datetime") {
@@ -659,12 +704,7 @@
                     } else {
                         for (let column of columns) {
                             if (column.type == "date" && typeof(body.row[column.col]) == "string") {
-                                if (body.row[column.col].indexOf("T") > 0) {
-                                    const parts = body.row[column.col].split("T");
-                                    body.row[column.col] = new Date(parts[0]);
-                                } else {
-                                    body.row[column.col] = new Date(body.row[column.col]);
-                                }
+                                body.row[column.col] = parseDate(body.row[column.col]);
                             } else if (column.type == "datetime" && typeof(body.row[column.col]) == "string") {
                                 body.row[column.col] = new Date(body.row[column.col]);
                             }
@@ -707,8 +747,8 @@
                         errors.push(col.name + " must be a number");
                     }
                 } else if (col.type == "date") {
-                    if (!/^( *[0-9][0-9][0-9][0-9]-[0-9][0-9]?-[0-9][0-9] *?)$/.test(editRowText[col.col])) {
-                        errors.push(col.name + " must be in the form yyyy-mm-dd");
+                    if (!stringIsDate(editRowText[col.col])) {
+                        errors.push(col.name + " must be in the form " + dateFormat);
                     }
 
                 }
