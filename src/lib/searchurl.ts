@@ -324,6 +324,7 @@ export class SearchUrl {
                 if (field.type == "Int") type = "Int";
                 else if (field.type == "Float") type = "Float";
                 else if (field.type == "Boolean") type = "Boolean";
+                else if (field.type == "DateTime") type = "DateTime";
                 else type = "String";
                 break;
             } else {
@@ -333,15 +334,17 @@ export class SearchUrl {
         if (type == undefined) {
             console.log("Warning: type for " + name + " not found - setting to String");
         }
-        let value1 : string|number|boolean|null = value;
+        let value1 : string|number|boolean|Date|null = value;
         if (type == "Boolean") {
             value1 = ["1", "yes", "y", "true", "t"+suffix, "on"].includes(value.toLocaleLowerCase());
         } else if (type == "Int") {
             value1 = value == "" ? null : parseInt(value);
         } else if (type == "Float") {
             value1 = value == "" ? null : parseFloat(value);
+        } else if (type == "DateTime") {
+            value1 = value == "" ? null : new Date(value);
         }
-        if (parts.length == 1) return {[name]: value1}
+    if (parts.length == 1) return {[name]: value1}
         let where : {[key:string]:any} = {};
         if (invert) where[parts[parts.length-1]] = {not: value1};
         else where[parts[parts.length-1]] = value1;

@@ -404,6 +404,27 @@
                 }
                 
             }
+        } else if (col.type == "date") {
+            if (value == undefined || value == "") {
+                delete filters[col.col];
+                filters = {...filters};
+            } else {
+                try {
+                    if (typeof(value) == "boolean" || (value && !stringIsDate(value))) {
+                        throw new Error("Date format")
+                    };
+                    if (typeof(value) == "boolean") filters[col.col] = value ? "Yes" : "No";
+                    else filters[col.col] = value ?? "";
+                    const val = filters[col.col];
+                    const dateTime = new Date(parseDate(val)).toISOString();
+                    let parts = dateTime.split("T")
+                    filters = {...filters, [col.col]: parts[0]}
+                } catch (e) {
+                    console.log(e);
+                    validationErrors = "Dates must be " + dateFormat;
+                    (document.querySelector('#validateDialog') as HTMLDialogElement)?.showModal(); 
+                }
+            }
         } else {
             if (value == undefined || value == "") {
                 delete filters[col.col];
@@ -411,7 +432,7 @@
             } else {
                 if (typeof(value) == "boolean") filters[col.col] = value ? "Yes" : "No";
                 else filters[col.col] = value ?? "";
-                    filters = {...filters, [col.col]: filters[col.col]}
+                filters = {...filters, [col.col]: filters[col.col]}
             }
         }
 
