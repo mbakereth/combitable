@@ -59,12 +59,12 @@
         if (!date) return "";
         if (!date) return "-";
         if (dateFormat == "yyyy-mm-dd") {
-            return String(date.getFullYear()) + "-" + String((date.getMonth())+1) + "-" + String(date.getFullYear())
+            return String(date.getFullYear()) + "-" + String((date.getMonth())+1) + "-" + String(date.getDate())
         }
         if (dateFormat == "mm-dd-yyyy") {
-            return String(date.getMonth()) + "-" + String((date.getDay())+1) + "-" + String(date.getFullYear())
+            return String(date.getMonth()) + "-" + String((date.getDate())+1) + "-" + String(date.getFullYear())
         }
-        return String(date.getDay()) + "-" + String((date.getMonth())+1) + "-" + String(date.getFullYear())
+        return String(date.getDate()) + "-" + String((date.getMonth())+1) + "-" + String(date.getFullYear())
     }
 
     export function stringIsDate(val : string) {
