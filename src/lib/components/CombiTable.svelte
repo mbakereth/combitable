@@ -58,19 +58,13 @@
     export function printDate(date : Date|undefined|null) : string {
         if (!date) return "";
         if (!date) return "-";
-        let s = date.toISOString();
-        if (s.indexOf("T") > 0) s = s.split("T")[0];
-        const parts = s.split("-");
-        if (parts.length == 3) {
-            if (dateFormat == "yyyy-mm-dd") {
-                return parts[2] + "-" + parts[1] + "-" + parts[0];
-            }
-            if (dateFormat == "mm-dd-yyyy") {
-                return parts[2] + "-" + parts[0] + "-" + parts[1];
-            }
-            return parts[2] + "-" + parts[1] + "-" + parts[0];
+        if (dateFormat == "yyyy-mm-dd") {
+            return String(date.getFullYear()) + "-" + String((date.getMonth())+1) + "-" + String(date.getFullYear())
         }
-        return s;
+        if (dateFormat == "mm-dd-yyyy") {
+            return String(date.getMonth()) + "-" + String((date.getDay())+1) + "-" + String(date.getFullYear())
+        }
+        return String(date.getDay()) + "-" + String((date.getMonth())+1) + "-" + String(date.getFullYear())
     }
 
     export function stringIsDate(val : string) {
