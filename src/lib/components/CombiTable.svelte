@@ -59,31 +59,34 @@
         if (!date) return "";
         if (!date) return "-";
         if (dateFormat == "yyyy-mm-dd") {
-            return String(date.getFullYear()) + "-" + String((date.getMonth())+1) + "-" + String(date.getDate())
+            return String(date.getFullYear()) + "-" + String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getDate().padStart(2, '0'))
         }
         if (dateFormat == "mm-dd-yyyy") {
-            return String(date.getMonth()) + "-" + String((date.getDate())+1) + "-" + String(date.getFullYear())
+            return String(date.getMonth()).padStart(2, '0') + "-" + String((date.getDate())+1).padStart(2, '0') + "-" + String(date.getFullYear())
         }
-        return String(date.getDate()) + "-" + String((date.getMonth())+1) + "-" + String(date.getFullYear())
+        return String(date.getDate()).padStart(2, '0') + "-" + String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getFullYear())
     }
 
     export function stringIsDate(val : string) {
-        if (dateFormat == "yyyy-mm-dd") return /^( *[0-9][0-9][0-9][0-9]-[0-9][0-9]?-[0-9][0-9] *?)$/.test(val);
-        return /^( *[0-9][0-9]-[0-9][0-9]?-[0-9][0-9][0-9][0-9] *?)$/.test(val) ;
+        if (dateFormat == "yyyy-mm-dd") return /^( *[0-9][0-9][0-9][0-9]-[0-9][0-9]?-[0-9][0-9]? *?)$/.test(val);
+        return /^( *[0-9][0-9]?-[0-9][0-9]?-[0-9][0-9][0-9][0-9] *?)$/.test(val) ;
     }
 
     export function parseDate(val : string) : Date {
+        console.log("parseDate", val)
         val = val.trim();
         if (val.indexOf("T") > 0) {
             val = val.split("T")[0];
-            return new Date(val);
+            console.log(val, parseISODate(val));
+            return parseISODate(val);
         }
         const parts = val.trim().split("-");
         if (parts.length != 3) throw Error("Date " + val + " should be " + dateFormat);
         let dateStr = parts[2] + "-" + parts[1] + "-" + parts[0];
         if (dateFormat == "yyyy-mm-dd") dateStr = val;
         if (dateFormat == "mm-dd-yyyy") dateStr = parts[2] + "-" + parts[0] + "-" + parts[1];
-        return new Date(dateStr);
+        console.log(dateStr, parseISODate(dateStr));
+        return parseISODate(dateStr);
     }
 
     // SVG wants to display with a new line.  Depending on what icons
@@ -112,6 +115,12 @@
     if (pk == "" && (editUrl)) {
         console.log("Warning: edit enabled but no primary key column - disabling edit");
         editUrl = undefined;
+    }
+
+    function parseISODate(s : String) {
+        console.log("parseISODate", s)
+        let b = s.split(/\D+/);
+        return new Date(Date.UTC(parseInt(b[0]), parseInt(b[1])-1, parseInt(b[2]), 0, 0, 0));
     }
 
     /////
@@ -169,11 +178,11 @@
         if (val == undefined) return new Date();
         if (typeof(val) == "string") {
             const dateString = val.trim();
-            if (dateFormat == "yyyy-mm-dd") return new Date(dateString);
+            if (dateFormat == "yyyy-mm-dd") return parseISODate(dateString);
             const parts = dateString.split("-");
             if (parts.length != 3) return new Date();
-            if (dateFormat == "mm-dd-yyyy") return new Date(parts[2] + "-" + parts[0] + "-" + parts[1]);
-            return new Date(parts[2] + "-" + parts[1] + "-" + parts[0]);
+            if (dateFormat == "mm-dd-yyyy") return parseISODate(parts[2] + "-" + parts[0] + "-" + parts[1]);
+            return parseISODate(parts[2] + "-" + parts[1] + "-" + parts[0]);
         } 
         return val;
     }
