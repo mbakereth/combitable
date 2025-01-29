@@ -59,7 +59,7 @@
         if (!date) return "";
         if (!date) return "-";
         if (dateFormat == "yyyy-mm-dd") {
-            return String(date.getFullYear()) + "-" + String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getDate().padStart(2, '0'))
+            return String(date.getFullYear()) + "-" + String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getDate()).padStart(2, '0')
         }
         if (dateFormat == "mm-dd-yyyy") {
             return String(date.getMonth()).padStart(2, '0') + "-" + String((date.getDate())+1).padStart(2, '0') + "-" + String(date.getFullYear())
