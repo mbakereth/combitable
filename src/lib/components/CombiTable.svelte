@@ -1170,13 +1170,13 @@
                             <td class="{cmaxw}">
                                 {#if (col.type == "date" || col.type == "datetime" || col.nowrap)}
                                     {#if col.link}
-                                        <span class="text-nowrap text-neutral-content"><a class="text-neutral-content" href={col.link(row)}>{value}</a></span>
+                                        <span class="text-nowrap text-base-content"><a class="text-base-content" href={col.link(row)}>{value}</a></span>
                                     {:else}
-                                        <span class="text-nowrap text-neutral-content">{value}</span>
+                                        <span class="text-nowrap text-base-content">{value}</span>
                                     {/if}
                                 {:else}
                                     {#if col.link}
-                                        <a class="text-neutral-content" href={col.link(row)}>{value}</a>
+                                        <a class="text-base-content" href={col.link(row)}>{value}</a>
                                     {:else}
                                         {value}
                                     {/if}
@@ -1342,7 +1342,7 @@
 
 <!-- Modal to display validation errors -->
 <CombiTableConfirmDeleteDialog id="confirmDelete" okFn={confirmDeleteRow}/>
-<div class="hidden -mt-[21px] ml-1 -ml-6 table-fixed table-auto -mt-[21px] -mt-[42px] ml-1 ml-6 ml-12 w-[80px] w-[60px] w-[48px] -mt-[20px] -mt-[18px] ml-6 -ml-6 -ml-1"></div>
+<div class="hidden -mt-[21px] ml-1 -ml-6 table-fixed table-auto -mt-[21px] -mt-[42px] ml-1 ml-6 ml-12 w-[80px] w-[60px] w-[48px] -mt-[20px] -mt-[18px] ml-6 -ml-6 -ml-1 text-base-content"></div>
 
 <style>
 .tail-icon {
