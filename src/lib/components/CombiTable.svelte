@@ -32,6 +32,7 @@
     export let editUrl : string|undefined = undefined;
     export let deleteUrl : string|undefined = undefined;
     export let presets : {[key:string]:any}|undefined = undefined;
+    export let linkFormat : string = "";
     export let urlSuffix : string = "";
     export let widthType : "auto"|"fixed" = "auto";
     export let primaryKey : string = "";
@@ -1170,13 +1171,13 @@
                             <td class="{cmaxw}">
                                 {#if (col.type == "date" || col.type == "datetime" || col.nowrap)}
                                     {#if col.link}
-                                        <span class="text-nowrap text-base-content"><a class="text-base-content" href={col.link(row)}>{value}</a></span>
+                                        <span class="text-nowrap text-base-content"><a class="text-base-content {linkFormat}" href={col.link(row)}>{value}</a></span>
                                     {:else}
                                         <span class="text-nowrap text-base-content">{value}</span>
                                     {/if}
                                 {:else}
                                     {#if col.link}
-                                        <a class="text-base-content" href={col.link(row)}>{value}</a>
+                                        <a class="text-base-content {linkFormat}" href={col.link(row)}>{value}</a>
                                     {:else}
                                         {value}
                                     {/if}
@@ -1187,53 +1188,60 @@
                                 {#if colidx == 0}
                                 <p class="small m-0 p-0 pb-1 text-primary ml-1">Edit</p>
                                 {/if}
-                                {#if !col.readOnly}
-                                {#if col.type == "boolean"}
-                                    <details class="dropdown overflow:visible" bind:open={editRowMenusOpen[col.col]}>
-                                        <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
-                                        <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                        <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
-                                            {#if col.nullable == true}
-                                                <!-- svelte-ignore a11y-missing-attribute -->
-                                                <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                                <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                                <li><a on:click={() => editRowUpdate(col, null)}>Unset</a></li>
-                                            {/if}
-                                            <!-- svelte-ignore a11y-missing-attribute -->
-                                            <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                            <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                            <li><a on:click={() => editRowUpdate(col, false)}>No</a></li>
-                                            <!-- svelte-ignore a11y-missing-attribute -->
-                                            <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                            <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                            <li><a on:click={() => editRowUpdate(col, true)}>Yes</a></li>
-                                        </ul>
-                                    </details>  
-                                {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
-                                    <details class="dropdown overflow:visible" bind:open={editRowMenusOpen[col.col]}>
-                                        <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
-                                        <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                        <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
-                                            {#if col.nullable == true}
-                                                <!-- svelte-ignore a11y-missing-attribute -->
-                                                <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                                <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                                <li><a on:click={() => editRowUpdate(col, null)}>Unset</a></li>
-                                            {/if}
-                                            {#each col.names as name, i}
-                                                <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                                <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                                <!-- svelte-ignore a11y-missing-attribute -->
-                                                <li><a on:click={() => editRowUpdate(col, col.values ? col.values[i]+"" : name)}>{name}</a></li>
-                                            {/each}
-                                        </ul>
-                                    </details>
+                                {#if col.readOnly}
+                                    {@const value = formatColumn(getColumn(row, col.col), col)}
+                                    {#if (col.type == "date" || col.type == "datetime" || col.nowrap)}
+                                        <span class="text-nowrap text-base-content align-middle">{value}</span>
+                                    {:else}
+                                        <span class="align-middle">{value}</span>
+                                    {/if}
                                 {:else}
-                                    <input type="text" class="input {bg} w-full {editminw} {editmaxw}" 
-                                        bind:value={editRowText[col.col]} 
-                                        on:keyup={(evt) => editInputUpdate(evt, col)}
-                                        />
-                                {/if}
+                                    {#if col.type == "boolean"}
+                                        <details class="dropdown overflow:visible" bind:open={editRowMenusOpen[col.col]}>
+                                            <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
+                                            <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+                                            <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
+                                                {#if col.nullable == true}
+                                                    <!-- svelte-ignore a11y-missing-attribute -->
+                                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                                    <li><a on:click={() => editRowUpdate(col, null)}>Unset</a></li>
+                                                {/if}
+                                                <!-- svelte-ignore a11y-missing-attribute -->
+                                                <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                                <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                                <li><a on:click={() => editRowUpdate(col, false)}>No</a></li>
+                                                <!-- svelte-ignore a11y-missing-attribute -->
+                                                <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                                <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                                <li><a on:click={() => editRowUpdate(col, true)}>Yes</a></li>
+                                            </ul>
+                                        </details>  
+                                    {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
+                                        <details class="dropdown overflow:visible" bind:open={editRowMenusOpen[col.col]}>
+                                            <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
+                                            <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+                                            <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
+                                                {#if col.nullable == true}
+                                                    <!-- svelte-ignore a11y-missing-attribute -->
+                                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                                    <li><a on:click={() => editRowUpdate(col, null)}>Unset</a></li>
+                                                {/if}
+                                                {#each col.names as name, i}
+                                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                                    <!-- svelte-ignore a11y-missing-attribute -->
+                                                    <li><a on:click={() => editRowUpdate(col, col.values ? col.values[i]+"" : name)}>{name}</a></li>
+                                                {/each}
+                                            </ul>
+                                        </details>
+                                    {:else}
+                                        <input type="text" class="input {bg} w-full {editminw} {editmaxw}" 
+                                            bind:value={editRowText[col.col]} 
+                                            on:keyup={(evt) => editInputUpdate(evt, col)}
+                                            />
+                                    {/if}
                                 {/if}
 
                             </td>
@@ -1342,7 +1350,7 @@
 
 <!-- Modal to display validation errors -->
 <CombiTableConfirmDeleteDialog id="confirmDelete" okFn={confirmDeleteRow}/>
-<div class="hidden -mt-[21px] ml-1 -ml-6 table-fixed table-auto -mt-[21px] -mt-[42px] ml-1 ml-6 ml-12 w-[80px] w-[60px] w-[48px] -mt-[20px] -mt-[18px] ml-6 -ml-6 -ml-1 text-base-content"></div>
+<div class="hidden -mt-[21px] ml-1 -ml-6 table-fixed table-auto -mt-[21px] -mt-[42px] ml-1 ml-6 ml-12 w-[80px] w-[60px] w-[48px] -mt-[20px] -mt-[18px] ml-6 -ml-6 -ml-1 text-base-content align-middle"></div>
 
 <style>
 .tail-icon {

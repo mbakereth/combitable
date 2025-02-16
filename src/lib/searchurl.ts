@@ -284,7 +284,20 @@ export class SearchUrl {
             ret.take = take;
             ret.skip = this.getSkip();
         }
-        if (!sortCol) sortCol = defaultSearch;
+        //if (!sortCol) sortCol = defaultSearch;
+        if (!sortCol) {
+            if (defaultSearch.substring(0,1) == "+") {
+                sortCol = defaultSearch.substring(1);
+                sortDirection = "ascending";
+            }
+            else if (defaultSearch.substring(0,1) == "-") {
+                sortCol = defaultSearch.substring(1);
+                sortDirection = "descending";
+            } else {
+                sortCol = defaultSearch;
+                sortDirection = "ascending";
+            }
+        }
         if (sortCol != "") {
             /*ret.orderBy = {
                 [sortCol]: sortDirection == "ascending" ? "asc" : "desc",
