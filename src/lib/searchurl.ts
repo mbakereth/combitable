@@ -344,6 +344,7 @@ export class SearchUrl {
                 modelName1 = field.type;
             }
         }
+        let isContains = false;
         if (type == undefined) {
             console.log("Warning: type for " + name + " not found - setting to String");
         }
@@ -356,10 +357,29 @@ export class SearchUrl {
             value1 = value == "" ? null : parseFloat(value);
         } else if (type == "DateTime") {
             value1 = value == "" ? null : new Date(value);
+        } else {
+            if (value1.includes("*") && !invert) {
+                // escape special characters _ and %
+                value1 = value1.replaceAll('_', '\\').replaceAll('%', '\\');
+                // replace * with % for wildcard
+                value1 = value1.replaceAll('*', '%');
+                isContains = true;
+            }
         }
-    if (parts.length == 1) return {[name]: value1}
+
+        if (parts.length == 1) {
+            if (invert) return {[name]: {not: value1}} ;
+            if (isContains) {
+                return {[name]: {contains: value1}} ;
+            }
+            return {[name]: value1}
+        }
+
         let where : {[key:string]:any} = {};
         if (invert) where[parts[parts.length-1]] = {not: value1};
+        else if (isContains) {
+            where[parts[parts.length-1]] = {contains: value1};
+        }
         else where[parts[parts.length-1]] = value1;
         for (let i=parts.length-2; i>=0; --i) {
             const part = parts[i];
