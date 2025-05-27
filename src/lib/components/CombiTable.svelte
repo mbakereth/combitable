@@ -1,5 +1,6 @@
 <script lang="ts">
     // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
+    import { onMount } from 'svelte';
     import { page } from '$app/stores';
     import { goto, invalidateAll } from '$app/navigation'
     import type { CombiTableColumn, CombiTableOp } from '$lib/combitabletypes';
@@ -15,6 +16,8 @@
     import CombiTableValidateDialog from '$lib/components/CombiTableErrorDialog.svelte';
     import CombiTableInfoDialog from '$lib/components/CombiTableInfoDialog.svelte';
     import CombiTableConfirmDeleteDialog from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
+
+    let table : Element;
 
     export let rows : {[key:string]:any|undefined}[];
     $: rrows = rows;
@@ -37,9 +40,15 @@
     export let widthType : "auto"|"fixed" = "auto";
     export let primaryKey : string = "";
     export let select : boolean = false;
+    export let restOfScreenHeight : number|undefined = undefined;
+    export let stickyHeadRow = true;
+    export let stickyHeadCol = true;
     export let ops : CombiTableOp[] = [];
     let haveOps = ops.length > 0;
     if (haveOps) select = true;
+    let stickyHeadRowClass = stickyHeadRow ? "sticky top-0" : "";
+    let stickyHeadColClass0 = stickyHeadCol ? "sticky left-0 bg-base-100 z-10" : ""
+    let stickyHeadColClass1 = stickyHeadCol ? "sticky left-" + (select ? 1 : 0) + " bg-base-100 z-10" : ""
 
     $: rowChecked = rows.map((row) => false);
     $: rowsAreChecked = rowChecked.reduce(
@@ -55,6 +64,20 @@
             });
         }
     }
+
+    let innerWidth = 0
+    let innerHeight = 0
+    $: maxHeight = restOfScreenHeight ? innerHeight - restOfScreenHeight : undefined;
+    $: tableHeightStyle = maxHeight && innerWidth > 0 ? "display: block; max-height:" + maxHeight + "px" : "";
+    function resize() {
+        maxHeight = restOfScreenHeight ? innerHeight - restOfScreenHeight : undefined;
+        tableHeightStyle = maxHeight ? "display: block; max-height:" + maxHeight + "px;" : "";
+        console.log("Table height " + innerHeight + " " + restOfScreenHeight + " " + maxHeight + " " + tableHeightStyle);
+    }
+    
+    onMount(() => {
+        resize();
+    });
 
     export function printDate(date : Date|undefined|null) : string {
         if (!date) return "";
@@ -339,7 +362,7 @@
     }
 
     function filterKeyPress(evt: KeyboardEvent, col : CombiTableColumn, value : string|boolean|undefined) {
-        if (evt.keyCode == 13) {
+        if (evt.key === 'Enter') {
             filter(col, value);
         }
     }
@@ -508,6 +531,20 @@
     columns.forEach((val: CombiTableColumn, i: number) => {editRowText[val.col] = ""})
     let editRowMenusOpen : {[key:string]:boolean} = {}
     columns.forEach((val: CombiTableColumn, i: number) => {editRowMenusOpen[val.col] = false})
+
+    function filterDetailsClicked(col : CombiTableColumn) {
+        console.log(filterMenusOpen[col.col])
+    }
+    function editDetailsClicked(e : Event, col : CombiTableColumn) {
+        if (editRowMenusOpen[col.col]) {
+            let target = e.currentTarget;
+            if (target instanceof Element) {
+                if (target.getBoundingClientRect().bottom > table.getBoundingClientRect().bottom) {
+                    target.scrollIntoView({behavior: "smooth", block: "start"}); 
+                }
+            }
+        }
+    }
 
     function edit(rowidx : number) {
         // make sure all dropdowns are closed
@@ -921,21 +958,29 @@
         unlinkIdx = -1;
     }
 
+    let ncolumns = columns.length;
+    if (select) ncolumns += 1;
+
 </script>
 
+<svelte:window bind:innerWidth bind:innerHeight />
+
+
 <div class="overflow-x-auto overflow-y-visible">
-    <table class="table table-{widthType} overflow-y-visible">
-        <thead>
+    <table class="table table-{widthType} overflow-y-visible" style="{tableHeightStyle} bg-base-100" bind:this={table}>
+        <thead class="{stickyHeadRowClass} z-10">
             <!-- header row -->
-            <tr>
+            <tr class="bg-base-100 z-10">
                 {#if select}
                     <!-- checkbox column -->
-                    <td class="w-10"></td>
+                    <td class="w-10 {stickyHeadColClass0}"></td>
                 {/if}
-                {#each columns as col}
+                {#each columns as col, colidx}
+                    {@const sticky = colidx == 0 && stickyHeadCol ? stickyHeadColClass1 : ""}
+                    {@const stickyright = "last:sticky last:right-0 z-10 bg-base-100 "}
                     {@const minw = col.minWidth ? "min-w-" + col.minWidth : ""}
                     {@const maxw = col.maxWidth ? "max-w-" + col.maxWidth : ""}
-                    <th class="{minw} {maxw}">
+                    <th class="{minw} {maxw} z-10 {sticky}">
                         {#if enableSort && (col.sortable === undefined || col.sortable == true)}
                             <!-- svelte-ignore a11y-invalid-attribute -->
                             <a href="#" on:click={() => sort(col.col)}>
@@ -957,7 +1002,7 @@
                 <!-- actions column-->
                 {#if enableFilter || addUrl || editUrl || deleteUrl || linkUrl || unlinkUrl}
                 {@const width = deleteUrl && unlinkUrl ? "80px" : "60px"}
-                    <td class="w-[{width}]"></td>
+                    <td class="w-[{width}] last:sticky last:right-0 z-10 bg-base-100 "></td>
                 {/if}
             </tr>
         </thead>
@@ -970,19 +1015,21 @@
                 <tr class="0">
                     {#if select}
                         <!-- checkbox column -->
-                        <td></td>
+                        <td class="{stickyHeadColClass0}"></td>
                     {/if}
                     {#each columns as col, colidx}
                         {@const editminw = col.editMinWidth ? "min-w-" + col.editMinWidth : ""}
                         {@const editmaxw = col.editMaxWidth ? "max-w-" + col.editMaxWidth : ""}
                         {@const cmaxw = maxWidth[col.col]}
                         {@const dropdownwidth = col.dropdownWidth ? "w-" + col.dropdownWidth : ""}
-                        <td class="align-bottom {cmaxw}">
+                        {@const sticky = colidx == 0 && stickyHeadCol ?stickyHeadColClass1 : ""}
+                        {@const stickyright = "last:sticky last:right-0 z-10 bg-base-100 "}
+                        <td class="align-bottom {cmaxw} {sticky}">
                             {#if colidx == 0}
                                 <p class="small m-0 p-0 pb-1 text-primary ml-1">Filter</p>
                             {/if}
                             {#if col.type == "boolean"}
-                            <details class="dropdown overflow:visible" bind:open={filterMenusOpen[col.col]}>
+                            <details class="dropdown overflow:visible" bind:open={filterMenusOpen[col.col]}  on:toggle={e => filterDetailsClicked(col)}>
                                 <summary class="btn m-0 -mb-1 w-full {editminw} {editmaxw}">{filterText[col.col] ?? ""}</summary>
                                 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                 <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
@@ -1001,7 +1048,7 @@
                                 </ul>
                             </details>  
                             {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
-                                <details class="dropdown overflow:visible" bind:open={filterMenusOpen[col.col]}>
+                                <details class="dropdown overflow:visible" bind:open={filterMenusOpen[col.col]}  on:toggle={e => filterDetailsClicked(col)}>
                                     <summary class="btn m-0 -mb-1 w-full {editminw} {editmaxw}">{filterText[col.col] ?? ""}</summary>
                                     <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                     <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
@@ -1026,7 +1073,7 @@
                         </td>
                     {/each}
                     {#if enableFilter || addUrl || editUrl || deleteUrl || linkUrl}
-                        <td>
+                        <td class="last:sticky last:right-0 z-10 bg-base-100">
                             <!-- svelte-ignore a11y-click-events-have-key-events -->
                             <!-- svelte-ignore a11y-no-static-element-interactions -->
                             {#if haveFilters}
@@ -1045,7 +1092,7 @@
                     {#if editRow == -1 || editRow == -2}
                         {#if select}
                             <!-- checkbox column -->
-                            <td></td>
+                            <td class="{stickyHeadColClass0}"></td>
                         {/if}
                         {#each columns as col, colidx}
                             {@const editminw = col.editMinWidth ? "min-w-" + col.editMinWidth : ""}
@@ -1053,14 +1100,16 @@
                             {@const dropdownwidth = col.dropdownWidth ? "w-" + col.dropdownWidth : ""}
                             {@const cmaxw = maxWidth[col.col]}
                             {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
+                            {@const sticky = colidx == 0 && stickyHeadCol ? stickyHeadColClass1 : ""}
+                            {@const stickyright = "last:sticky last:right-0 z-10 bg-base-100 "}
                             {#if editRow == -1 || col.col == primaryKey}
-                                <td class="align-bottom {cmaxw}">
+                                <td class="align-bottom {cmaxw} {sticky}">
                                     {#if colidx == 0}
                                         <p class="small m-0 p-0 pb-1 text-primary ml-1">New</p>
                                     {/if}
                                     {#if !col.readOnly}
                                         {#if col.type == "boolean"}
-                                            <details class="dropdown overflow:visible" bind:open={editRowMenusOpen[col.col]}>
+                                            <details class="dropdown overflow:visible" bind:open={editRowMenusOpen[col.col]}  on:toggle={e => editDetailsClicked(e, col)}>
                                                 <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
                                                 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                                 <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
@@ -1081,7 +1130,7 @@
                                                 </ul>
                                             </details>  
                                         {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
-                                            <details class="dropdown overflow:visible" bind:open={editRowMenusOpen[col.col]}>
+                                            <details class="dropdown overflow:visible" bind:open={editRowMenusOpen[col.col]}  on:toggle={e => editDetailsClicked(e, col)} >
                                                 <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
                                                 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                                 <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
@@ -1110,7 +1159,7 @@
                             {/if}
                         {/each}
                         {#if enableFilter || addUrl || editUrl || deleteUrl || linkUrl}
-                            <td class="w-4">
+                            <td class="w-4 last:sticky last:right-0 z-10 bg-base-100">
                                 {#if dirty}
                                     <!-- svelte-ignore missing-declaration -->
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -1130,9 +1179,9 @@
                         {/if}
                     {:else}
                         {#if select}
-                            <td></td>
+                            <td class="{stickyHeadColClass0}"></td>
                         {/if}
-                        <td>
+                        <td class="{stickyHeadColClass1}">
                         {#if addUrl}
                             <button class="btn btn-sm mr-2" on:click={() => edit(-1)}>Add</button>
                         {/if}
@@ -1149,7 +1198,7 @@
                 <tr class="hover:bg-neutral">
                     {#if select}
                         <!-- checkbox column -->
-                        <td>
+                        <td class="{stickyHeadColClass0}">
                             {#if editRow == undefined || editRow != rowidx}
                             <div class="form-control">
                                 <label class="label cursor-pointer">
@@ -1166,9 +1215,11 @@
                         {@const editmaxw = col.editMaxWidth ? "max-w-" + col.editMaxWidth : ""}
                         {@const dropdownwidth = col.dropdownWidth ? "w-" + col.dropdownWidth : ""}
                         {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
+                        {@const sticky = colidx == 0 && stickyHeadCol ? stickyHeadColClass1 : ""}
+                        {@const stickyright = "last:sticky last:right-0 z-10 bg-base-100 "}
                         {#if editRow == undefined || editRow != rowidx}
                             {@const value = formatColumn(getColumn(row, col.col), col)}
-                            <td class="{cmaxw}">
+                            <td class="{cmaxw} {sticky}">
                                 {#if (col.type == "date" || col.type == "datetime" || col.nowrap)}
                                     {#if col.link}
                                         <span class="text-nowrap text-base-content"><a class="text-base-content {linkFormat}" href={col.link(row)}>{value}</a></span>
@@ -1197,7 +1248,7 @@
                                     {/if}
                                 {:else}
                                     {#if col.type == "boolean"}
-                                        <details class="dropdown overflow:visible" bind:open={editRowMenusOpen[col.col]}>
+                                        <details class="dropdown overflow:visible" bind:open={editRowMenusOpen[col.col]}   on:toggle={e => editDetailsClicked(e, col)}>
                                             <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
                                             <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                             <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
@@ -1218,7 +1269,7 @@
                                             </ul>
                                         </details>  
                                     {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
-                                        <details class="dropdown overflow:visible" bind:open={editRowMenusOpen[col.col]}>
+                                        <details class="dropdown overflow:visible" bind:open={editRowMenusOpen[col.col]} on:toggle={e => editDetailsClicked(e, col)}>
                                             <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
                                             <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                             <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
@@ -1250,7 +1301,7 @@
                     {#if editRow == undefined}
                         <!-- displaying row - only show delete icon if delete allowed -->
                         {#if editUrl || deleteUrl !== undefined}
-                            <td class="w-4">
+                            <td class="w-4 last:sticky last:right-0 z-10 bg-base-100">
                                 {#if editUrl}
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -1275,7 +1326,7 @@
                             </td>
                         {/if}
                     {:else if editRow == rowidx}
-                        <td class="w-4">
+                        <td class="w-4 last:sticky last:right-0 z-10 bg-base-100">
                             <!-- svelte-ignore a11y-click-events-have-key-events -->
                             {#if dirty}
                                 <!-- svelte-ignore missing-declaration -->
