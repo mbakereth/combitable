@@ -41,7 +41,7 @@
     export let primaryKey : string = "";
     export let select : boolean = false;
     export let restOfScreenHeight : number|undefined = undefined;
-    export let stickyHeadRow = true;
+    export let stickyHeadRow = false;
     export let stickyHeadCol = false;
     export let ops : CombiTableOp[] = [];
     let haveOps = ops.length > 0;
