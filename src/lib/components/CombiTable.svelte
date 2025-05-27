@@ -77,6 +77,11 @@
     
     onMount(() => {
         resize();
+		window.addEventListener('resize', resize);
+		
+		return () => {
+			window.removeEventListener('resize', resize);
+		}
     });
 
     export function printDate(date : Date|undefined|null) : string {
