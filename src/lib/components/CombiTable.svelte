@@ -42,7 +42,7 @@
     export let select : boolean = false;
     export let restOfScreenHeight : number|undefined = undefined;
     export let stickyHeadRow = true;
-    export let stickyHeadCol = true;
+    export let stickyHeadCol = false;
     export let ops : CombiTableOp[] = [];
     let haveOps = ops.length > 0;
     if (haveOps) select = true;
