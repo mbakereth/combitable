@@ -3,7 +3,7 @@
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
     import { goto, invalidateAll } from '$app/navigation'
-    import type { CombiTableColumn, CombiTableOp } from '$lib/combitabletypes';
+    import type { CombiTableColumn, CombiTableOp , CombiTablePresets } from '$lib/combitabletypes';
     import { SearchUrl } from '$lib/searchurl';
     import upIcon from "$lib/assets/prime--sort-up-fill.svg?raw"
     import downIcon from "$lib/assets/prime--sort-down-fill.svg?raw"
@@ -34,7 +34,7 @@
     export let unlinkUrl : string|undefined = undefined;
     export let editUrl : string|undefined = undefined;
     export let deleteUrl : string|undefined = undefined;
-    export let presets : {[key:string]:any}|undefined = undefined;
+    export let presets : CombiTablePresets|undefined = undefined;
     export let linkFormat : string = "";
     export let urlSuffix : string = "";
     export let widthType : "auto"|"fixed" = "auto";
@@ -46,6 +46,7 @@
     export let ops : CombiTableOp[] = [];
     let haveOps = ops.length > 0;
     if (haveOps) select = true;
+
     let stickyHeadRowClass = stickyHeadRow ? "sticky top-0" : "";
     let stickyHeadColClass0 = stickyHeadCol ? "sticky left-0 bg-base-100 z-10" : ""
     let stickyHeadColClass1 = stickyHeadCol ? "sticky left-" + (select ? 1 : 0) + " bg-base-100 z-10" : ""
@@ -530,6 +531,13 @@
     /////
     // Editing
 
+    function getPreset(col : CombiTableColumn) : string|undefined {
+        if (presets == undefined || presets[col.col] == undefined) return undefined;
+        let colName = col.col;
+        if (typeof presets[colName] == 'function') return asString((presets[colName])(), col.type);
+        return asString(presets[colName], col.type);
+    }
+
     $: editRow = undefined as number|undefined;
     $: editRowSelectValue = {} as {[key:string]:string|number|boolean|undefined};
     let editRowText : {[key:string]:string} = {}
@@ -611,11 +619,13 @@
             for (let col of columns) {
                 let colName = col.col;
                 if (col.type == "boolean") {
-                    editRowText[colName] = (presets && presets[colName]) ? asString(rrows[rowidx][colName], col.type) : "";
+                    //editRowText[colName] = (presets && presets[colName]) ? asString(rrows[rowidx][colName], col.type) : "";
+                    editRowText[colName] = getPreset(col) ??  "";
                 } else if (col.type == "select:string" || col.type == "select:integer") {
                     if (col.col in editRowSelectValue) editRowSelectValue[col.col] = undefined;
                     if (col.names && col.values) {
-                        const val = presets && col.col in presets ? presets[col.col] : undefined;
+                        //const val = presets && col.col in presets ? presets[col.col] : undefined;
+                        const val = getPreset(col);
                         if (!val) {
                             editRowText[colName] = "";
                             editRowSelectValue[colName] = "";
@@ -628,7 +638,8 @@
                             }  
                         }
                     } else if (col.names) {
-                        const val = presets && col.col in presets ? presets[col.col] : undefined;
+                        //const val = presets && col.col in presets ? presets[col.col] : undefined;
+                        const val = getPreset(col);
                         for (let i=0; i<col.names.length; ++i) {
                             if (val == col.names[i]) {
                                 editRowText[colName] = col.names[i];
@@ -639,7 +650,8 @@
                     }
 
                 } else {
-                    let val = presets && col.col in presets ? presets[col.col] : undefined;
+                    //let val = presets && col.col in presets ? presets[col.col] : undefined;
+                    const val = getPreset(col);
                     editRowText[colName] = asString(val, col.type);
                 }
                 editRowText = {...editRowText}

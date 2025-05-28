@@ -1,7 +1,7 @@
 // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
 
 export { default as CombiTable } from '$lib/components/CombiTable.svelte';
-export type { CombiTableColumn } from '$lib/combitabletypes';
+export type { CombiTableColumn, CombiTablePresets } from '$lib/combitabletypes';
 export { SearchUrl } from '$lib/searchurl';
 export {default as upIcon} from "$lib/assets/prime--sort-up-fill.svg?raw"
 export {default as downIcon} from "$lib/assets/prime--sort-down-fill.svg?raw"

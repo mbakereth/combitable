@@ -22,3 +22,7 @@ export interface CombiTableOp {
     label: string,
     fn: (pks: (string|number)[]) => Promise<{error? : string, info? : string}>
 } 
+
+export type CombiTablePresets = 
+    {[key:string] : 
+        string|number|boolean|Date|(()=>string|number|boolean|Date)};
