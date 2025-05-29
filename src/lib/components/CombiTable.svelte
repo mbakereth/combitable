@@ -1045,7 +1045,7 @@
                                     <!-- svelte-ignore a11y-missing-attribute -->
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                    &nbsp;&nbsp;<a class="cursor-pointer" on:click={() => clearIds()}>Clear ID filter</a>
+                                    &nbsp;&nbsp;<a class="cursor-pointer" on:click={() => clearIds()}>[Clear ID filter]</a>
                             {/if}
                         </p>
                     </td>
