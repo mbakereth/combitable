@@ -23,6 +23,11 @@ export interface CombiTableOp {
     fn: (pks: (string|number)[]) => Promise<{error? : string, info? : string}>
 } 
 
+export interface CombiTableAddExtraOp {
+    label: string,
+    fn: () => Promise<void>
+} 
+
 export type CombiTablePresets = 
     {[key:string] : 
         string|number|boolean|Date|(()=>string|number|boolean|Date)};

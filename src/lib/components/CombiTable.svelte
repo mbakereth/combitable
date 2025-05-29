@@ -3,7 +3,7 @@
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
     import { goto, invalidateAll } from '$app/navigation'
-    import type { CombiTableColumn, CombiTableOp , CombiTablePresets } from '$lib/combitabletypes';
+    import type { CombiTableColumn, CombiTableOp, CombiTableAddExtraOp , CombiTablePresets } from '$lib/combitabletypes';
     import { SearchUrl } from '$lib/searchurl';
     import upIcon from "$lib/assets/prime--sort-up-fill.svg?raw"
     import downIcon from "$lib/assets/prime--sort-down-fill.svg?raw"
@@ -45,6 +45,8 @@
     export let ops : CombiTableOp[] = [];
     let haveOps = ops.length > 0;
     if (haveOps) select = true;
+    export let addExtra : CombiTableAddExtraOp[] = [];
+    let haveAddExtra = addExtra.length > 0;
 
     let stickyHeadRowClass = stickyHeadRow ? "sticky top-0" : "";
 
@@ -902,12 +904,12 @@
     }
 
     // show dialogs
-    function showInfo(info : string) {
+    export function showInfo(info : string) {
         opInfo = info;
         (document.querySelector('#infoDialog') as HTMLDialogElement)?.showModal(); 
     }
 
-    function showError(errors: string[]|string) {
+    export function showError(errors: string[]|string) {
         validationErrors = errors;
         (document.querySelector('#validateDialog') as HTMLDialogElement)?.showModal(); 
     }
@@ -947,6 +949,10 @@
                 showReload("Operation successful")
             }
         }
+    }
+
+    async function callAddExtra(op: CombiTableAddExtraOp) {
+        let ret = await op.fn();
     }
 
     /////
@@ -1212,12 +1218,17 @@
                         {#if select}
                             <td></td>
                         {/if}
-                        <td>
+                        <td colspan="{columns.length}">
                         {#if addUrl}
                             <button class="btn btn-sm mr-2" on:click={() => edit(-1)}>Add</button>
                         {/if}
                         {#if linkUrl}
                             <button class="btn btn-sm" on:click={() => edit(-2)}>Link</button>
+                        {/if}
+                        {#if haveAddExtra} 
+                            {#each addExtra as row}
+                                <button class="btn btn-sm" on:click={() => callAddExtra(row)}>{row.label}</button>
+                            {/each}
                         {/if}
                         </td>
                     {/if}
