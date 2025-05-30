@@ -471,6 +471,7 @@
         const url = new SearchUrl($page.url, paginate);
         url.setSuffix(urlSuffix);
         url.setFilters(filters);
+        url.skip(0);
         await invalidateAll()
         searchParams = `?${url.searchParamsAsString()}`;
         goto(searchParams);
