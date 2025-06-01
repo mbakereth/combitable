@@ -51,11 +51,13 @@ export class SearchUrl {
     readonly body : {[key:string]:any}|undefined = undefined;
     private suffix = "";
     private idColumn = "id_pk";
+    emptySearch : string|undefined = "-";
 
-    constructor(url : URL|{[key:string]:any}, defaultTake = 20) {
+    constructor(url : URL|{[key:string]:any}, defaultTake = 20, emptySearch : string|undefined = "-") {
         this.url = url instanceof URL ? url : undefined;
         this.body = url instanceof URL ? undefined : url;
         this.defaultTake = defaultTake;
+        this.emptySearch = emptySearch;
     }
 
     setSuffix(val : string|undefined) {
@@ -338,10 +340,10 @@ export class SearchUrl {
         let prefilters = this.getPreFilters();
         let where : {[key:string]:any} = {}
         for (let filter in filters) {
-            where = {...where, ...SearchUrl.makePrismaWhere(filter, filters[filter], map, modelName, this.suffix)};
+            where = {...where, ...SearchUrl.makePrismaWhere(filter, filters[filter], map, modelName, this.suffix, this.emptySearch)};
         }
         for (let filter in prefilters) {
-            where = {...where, ...SearchUrl.makePrismaWhere(filter, prefilters[filter], map, modelName, this.suffix)};
+            where = {...where, ...SearchUrl.makePrismaWhere(filter, prefilters[filter], map, modelName, this.suffix, this.emptySearch)};
         }
         const ids = this.getIds();
         if (ids.length > 0) {
@@ -355,7 +357,7 @@ export class SearchUrl {
     
     }
 
-    private static makePrismaWhere(name : string, value : string, models : PrismaModelMaps, modelName: string, suffix : string="") : {[key:string]:any} {
+    private static makePrismaWhere(name : string, value : string, models : PrismaModelMaps, modelName: string, suffix : string="", emptySearch : string|undefined = undefined) : {[key:string]:any} {
         if (name == "") return {};
         const parts = name.split(".");
         let type : string|undefined = undefined;
@@ -399,6 +401,8 @@ export class SearchUrl {
                 // replace * with % for wildcard
                 value1 = value1.replaceAll('*', '%');
                 isContains = true;
+            } else if (emptySearch && value1 == emptySearch) {
+                value1 = null;
             }
         }
 
