@@ -39,6 +39,7 @@ type OrderBy = "asc"|"desc"|{[key:string]: OrderByObj|OrderBy}
  *   - `t` take: return at most this number odf rows
  *   - `k` skip: skip  this number of rows
  *   - `b` back URL - all of the above, prefixed with the pathname and `?`, URL-encoded.
+ *   - `i` individual ids, comma-separated
  * 
  * `b` may also contain a `b` so this is recursive
  */
@@ -49,11 +50,14 @@ export class SearchUrl {
     readonly url : URL|undefined;
     readonly body : {[key:string]:any}|undefined = undefined;
     private suffix = "";
+    private idColumn = "id_pk";
+    emptySearch : string|undefined = "-";
 
-    constructor(url : URL|{[key:string]:any}, defaultTake = 20) {
+    constructor(url : URL|{[key:string]:any}, defaultTake = 20, emptySearch : string|undefined = "-") {
         this.url = url instanceof URL ? url : undefined;
         this.body = url instanceof URL ? undefined : url;
         this.defaultTake = defaultTake;
+        this.emptySearch = emptySearch;
     }
 
     setSuffix(val : string|undefined) {
@@ -62,6 +66,14 @@ export class SearchUrl {
 
     getSuffix() : string {
         return this.suffix;
+    }
+
+    setIdColumn(val : string) {
+        this.idColumn = val;
+    }
+
+    getIdColumn() : string {
+        return this.idColumn;
     }
 
     ///// sorting
@@ -86,7 +98,8 @@ export class SearchUrl {
             }
         }
         if (this.url) this.url.searchParams.set("s"+this.suffix, dir + col);
-        else if (this.body) this.body.s = dir + col;
+        // else if (this.body) this.body.s = dir + col; // check
+        else if (this.body) this.body["s"+this.suffix] = dir + col;
     }
 
     getSort(defaultCol : string="") : {sortCol: string, sortDirection : "ascending"|"descending"} {
@@ -109,6 +122,25 @@ export class SearchUrl {
             else if (col.startsWith("+")) this.sort(col.substring(1), "ascending");
             else this.sort(col, "ascending");
         }
+    }
+
+    ///// individual ids
+
+    ids(vals : number[]|undefined) {
+        if (vals == undefined || vals.length == 0) {
+            if (this.url) this.url.searchParams.delete("i"+this.suffix);
+            else if (this.body) this.body.i = undefined;
+        } else {
+            if (this.url) this.url.searchParams.set("i"+this.suffix, vals.join(","));
+            else if (this.body) this.body["i"+this.suffix] = vals.join(",");
+
+        }
+    }
+
+    getIds() : number[] {
+        const curIds = this.url ? this.url.searchParams.get("i"+this.suffix) : (this.body?this.body["i"+this.suffix]:undefined);
+        if (!curIds) return []
+        return curIds.split(",").map((x:string) => Number(x));
     }
 
     ///// filtering
@@ -308,19 +340,24 @@ export class SearchUrl {
         let prefilters = this.getPreFilters();
         let where : {[key:string]:any} = {}
         for (let filter in filters) {
-            where = {...where, ...SearchUrl.makePrismaWhere(filter, filters[filter], map, modelName, this.suffix)};
+            where = {...where, ...SearchUrl.makePrismaWhere(filter, filters[filter], map, modelName, this.suffix, this.emptySearch)};
         }
         for (let filter in prefilters) {
-            where = {...where, ...SearchUrl.makePrismaWhere(filter, prefilters[filter], map, modelName, this.suffix)};
+            where = {...where, ...SearchUrl.makePrismaWhere(filter, prefilters[filter], map, modelName, this.suffix, this.emptySearch)};
+        }
+        const ids = this.getIds();
+        if (ids.length > 0) {
+            const inClause = {[this.idColumn]: {in: ids}};
+            where = {...where, ...inClause}
         }
         if (Object.keys(where).length !== 0) {
             ret.where = where;
-        }
+        }        
         return ret;
     
     }
 
-    private static makePrismaWhere(name : string, value : string, models : PrismaModelMaps, modelName: string, suffix : string="") : {[key:string]:any} {
+    private static makePrismaWhere(name : string, value : string, models : PrismaModelMaps, modelName: string, suffix : string="", emptySearch : string|undefined = undefined) : {[key:string]:any} {
         if (name == "") return {};
         const parts = name.split(".");
         let type : string|undefined = undefined;
@@ -364,6 +401,8 @@ export class SearchUrl {
                 // replace * with % for wildcard
                 value1 = value1.replaceAll('*', '%');
                 isContains = true;
+            } else if (emptySearch && value1 == emptySearch) {
+                value1 = null;
             }
         }
 

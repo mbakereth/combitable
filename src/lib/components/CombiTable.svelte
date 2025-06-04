@@ -3,7 +3,7 @@
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
     import { goto, invalidateAll } from '$app/navigation'
-    import type { CombiTableColumn, CombiTableOp , CombiTablePresets } from '$lib/combitabletypes';
+    import type { CombiTableColumn, CombiTableOp, CombiTableAddExtraOp , CombiTablePresets } from '$lib/combitabletypes';
     import { SearchUrl } from '$lib/searchurl';
     import upIcon from "$lib/assets/prime--sort-up-fill.svg?raw"
     import downIcon from "$lib/assets/prime--sort-down-fill.svg?raw"
@@ -42,15 +42,14 @@
     export let select : boolean = false;
     export let restOfScreenHeight : number|undefined = undefined;
     export let stickyHeadRow = false;
-    export let stickyHeadCol = false;
     export let ops : CombiTableOp[] = [];
     export let preview : boolean = false;
     let haveOps = ops.length > 0;
     if (haveOps) select = true;
+    export let addExtra : CombiTableAddExtraOp[] = [];
+    let haveAddExtra = addExtra.length > 0;
 
     let stickyHeadRowClass = stickyHeadRow ? "sticky top-0" : "";
-    let stickyHeadColClass0 = stickyHeadCol ? "sticky left-0 bg-base-100 z-10" : ""
-    let stickyHeadColClass1 = stickyHeadCol ? "sticky left-" + (select ? 1 : 0) + " bg-base-100 z-10" : ""
 
     $: rowChecked = rows.map((row) => false);
     $: rowsAreChecked = rowChecked.reduce(
@@ -473,6 +472,19 @@
         const url = new SearchUrl($page.url, paginate);
         url.setSuffix(urlSuffix);
         url.setFilters(filters);
+        url.skip(0);
+        await invalidateAll()
+        searchParams = `?${url.searchParamsAsString()}`;
+        goto(searchParams);
+
+    }
+
+    async function clearIds() {
+
+        const url = new SearchUrl($page.url, paginate);
+        url.setSuffix(urlSuffix);
+        url.setFilters(filters);
+        url.ids([])
         await invalidateAll()
         searchParams = `?${url.searchParamsAsString()}`;
         goto(searchParams);
@@ -485,6 +497,7 @@
     $: filters = {} as {[key:string]:string};
     $: haveFilters = false;
     $: dirty = false;
+    $: ids = [] as number[];
     $: {
         const url = new SearchUrl($page.url, paginate);
         url.setSuffix(urlSuffix);
@@ -495,6 +508,7 @@
         searchParams = `?${url.searchParamsAsString()}`;
         filters = url.getFilters();
         haveFilters = Object.keys(filters).length > 0
+        ids = url.getIds();
     }
     let filterText : {[key:string]:string} = {}
     let filterValues : {[key:string]:string} = {}
@@ -901,12 +915,12 @@
     }
 
     // show dialogs
-    function showInfo(info : string) {
+    export function showInfo(info : string) {
         opInfo = info;
         (document.querySelector('#infoDialog') as HTMLDialogElement)?.showModal(); 
     }
 
-    function showError(errors: string[]|string) {
+    export function showError(errors: string[]|string) {
         validationErrors = errors;
         (document.querySelector('#validateDialog') as HTMLDialogElement)?.showModal(); 
     }
@@ -948,6 +962,10 @@
         }
     }
 
+    async function callAddExtra(op: CombiTableAddExtraOp) {
+        let ret = await op.fn();
+    }
+
     /////
     // Unlinking
     let unlinkIdx = -1;
@@ -987,7 +1005,6 @@
 
     let ncolumns = columns.length;
     if (select) ncolumns += 1;
-
 </script>
 
 <svelte:window bind:innerWidth bind:innerHeight />
@@ -1000,14 +1017,12 @@
             <tr class="bg-base-100 z-10">
                 {#if select}
                     <!-- checkbox column -->
-                    <td class="w-10 {stickyHeadColClass0}"></td>
+                    <td class="w-10"></td>
                 {/if}
                 {#each columns as col, colidx}
-                    {@const sticky = colidx == 0 && stickyHeadCol ? stickyHeadColClass1 : ""}
-                    {@const stickyright = "last:sticky last:right-0 z-10 bg-base-100 "}
                     {@const minw = col.minWidth ? "min-w-" + col.minWidth : ""}
                     {@const maxw = col.maxWidth ? "max-w-" + col.maxWidth : ""}
-                    <th class="{minw} {maxw} z-10 {sticky}">
+                    <th class="{minw} {maxw} z-10">
                         {#if enableSort && (col.sortable === undefined || col.sortable == true)}
                             <!-- svelte-ignore a11y-invalid-attribute -->
                             <a href="#" on:click={() => sort(col.col)}>
@@ -1039,22 +1054,30 @@
 
             <!-- filter row -->
             {#if enableFilter}
-                <tr class="0">
+                <tr class="pb-0 border-none mb-0">
+                    <td colspan="{columns.length}" class="pb-0">
+                        <p class="small m-0 p-0 text-primary ml-1 mb-0">
+                            Filter
+                            {#if ids.length > 0}
+                                    <!-- svelte-ignore a11y-missing-attribute -->
+                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                    &nbsp;&nbsp;<a class="cursor-pointer" on:click={() => clearIds()}>[Clear ID filter]</a>
+                            {/if}
+                        </p>
+                    </td>
+                </tr>
+                <tr class="0 mt-0">
                     {#if select}
                         <!-- checkbox column -->
-                        <td class="{stickyHeadColClass0}"></td>
+                        <td></td>
                     {/if}
                     {#each columns as col, colidx}
                         {@const editminw = col.editMinWidth ? "min-w-" + col.editMinWidth : ""}
                         {@const editmaxw = col.editMaxWidth ? "max-w-" + col.editMaxWidth : ""}
                         {@const cmaxw = maxWidth[col.col]}
                         {@const dropdownwidth = col.dropdownWidth ? "w-" + col.dropdownWidth : ""}
-                        {@const sticky = colidx == 0 && stickyHeadCol ?stickyHeadColClass1 : ""}
-                        {@const stickyright = "last:sticky last:right-0 z-10 bg-base-100 "}
-                        <td class="align-bottom {cmaxw} {sticky}">
-                            {#if colidx == 0}
-                                <p class="small m-0 p-0 pb-1 text-primary ml-1">Filter</p>
-                            {/if}
+                        <td class="align-bottom {cmaxw}">
                             {#if col.type == "boolean"}
                             <details class="dropdown overflow:visible" bind:open={filterMenusOpen[col.col]}  on:toggle={e => filterDetailsClicked(col)}>
                                 <summary class="btn m-0 -mb-1 w-full {editminw} {editmaxw}">{filterText[col.col] ?? ""}</summary>
@@ -1119,7 +1142,7 @@
                     {#if editRow == -1 || editRow == -2}
                         {#if select}
                             <!-- checkbox column -->
-                            <td class="{stickyHeadColClass0}"></td>
+                            <td></td>
                         {/if}
                         {#each columns as col, colidx}
                             {@const editminw = col.editMinWidth ? "min-w-" + col.editMinWidth : ""}
@@ -1127,10 +1150,8 @@
                             {@const dropdownwidth = col.dropdownWidth ? "w-" + col.dropdownWidth : ""}
                             {@const cmaxw = maxWidth[col.col]}
                             {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
-                            {@const sticky = colidx == 0 && stickyHeadCol ? stickyHeadColClass1 : ""}
-                            {@const stickyright = "last:sticky last:right-0 z-10 bg-base-100 "}
                             {#if editRow == -1 || col.col == primaryKey}
-                                <td class="align-bottom {cmaxw} {sticky}">
+                                <td class="align-bottom {cmaxw}">
                                     {#if colidx == 0}
                                         <p class="small m-0 p-0 pb-1 text-primary ml-1">New</p>
                                     {/if}
@@ -1206,14 +1227,19 @@
                         {/if}
                     {:else}
                         {#if select}
-                            <td class="{stickyHeadColClass0}"></td>
+                            <td></td>
                         {/if}
-                        <td class="{stickyHeadColClass1}">
+                        <td colspan="{columns.length}">
                         {#if addUrl}
                             <button class="btn btn-sm mr-2" on:click={() => edit(-1)}>Add</button>
                         {/if}
                         {#if linkUrl}
                             <button class="btn btn-sm" on:click={() => edit(-2)}>Link</button>
+                        {/if}
+                        {#if haveAddExtra} 
+                            {#each addExtra as row}
+                                <button class="btn btn-sm" on:click={() => callAddExtra(row)}>{row.label}</button>
+                            {/each}
                         {/if}
                         </td>
                     {/if}
@@ -1225,7 +1251,7 @@
                 <tr class="hover:bg-neutral">
                     {#if select}
                         <!-- checkbox column -->
-                        <td class="{stickyHeadColClass0}">
+                        <td>
                             {#if editRow == undefined || editRow != rowidx}
                             <div class="form-control">
                                 <label class="label cursor-pointer">
@@ -1242,11 +1268,9 @@
                         {@const editmaxw = col.editMaxWidth ? "max-w-" + col.editMaxWidth : ""}
                         {@const dropdownwidth = col.dropdownWidth ? "w-" + col.dropdownWidth : ""}
                         {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
-                        {@const sticky = colidx == 0 && stickyHeadCol ? stickyHeadColClass1 : ""}
-                        {@const stickyright = "last:sticky last:right-0 z-10 bg-base-100 "}
                         {#if editRow == undefined || editRow != rowidx}
                             {@const value = formatColumn(getColumn(row, col.col), col)}
-                            <td class="{cmaxw} {sticky}">
+                            <td class="{cmaxw}">
                                 {#if (col.type == "date" || col.type == "datetime" || col.nowrap)}
                                     {#if col.link}
                                         <span class="text-nowrap text-base-content"><a class="text-base-content {linkFormat}" href={col.link(row)}>{value}</a></span>
