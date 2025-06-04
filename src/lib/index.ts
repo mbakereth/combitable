@@ -2,7 +2,7 @@
 
 export { default as CombiTable } from '$lib/components/CombiTable.svelte';
 export type { CombiTableColumn, CombiTablePresets } from '$lib/combitabletypes';
-export { SearchUrl } from '$lib/searchurl';
+export { SearchUrl, type PrismaFields } from '$lib/searchurl';
 export {default as upIcon} from "$lib/assets/prime--sort-up-fill.svg?raw"
 export {default as downIcon} from "$lib/assets/prime--sort-down-fill.svg?raw"
 export {default as checkIcon} from "$lib/assets/bitcoin-icons--check-filled.svg?raw"

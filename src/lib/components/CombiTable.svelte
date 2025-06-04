@@ -44,6 +44,7 @@
     export let stickyHeadRow = false;
     export let stickyHeadCol = false;
     export let ops : CombiTableOp[] = [];
+    export let preview : boolean = false;
     let haveOps = ops.length > 0;
     if (haveOps) select = true;
 
@@ -69,11 +70,11 @@
     let innerWidth = 0
     let innerHeight = 0
     $: maxHeight = restOfScreenHeight ? innerHeight - restOfScreenHeight : undefined;
-    $: tableHeightStyle = maxHeight && innerWidth > 0 ? "display: block; max-height:" + maxHeight + "px" : "";
+    $: tableHeightStyle = maxHeight && innerWidth > 0 ? "display: block; max-height:" + maxHeight + "px; min-height: " + maxHeight + "px" : "";
     function resize() {
         maxHeight = restOfScreenHeight ? innerHeight - restOfScreenHeight : undefined;
-        tableHeightStyle = maxHeight ? "display: block; max-height:" + maxHeight + "px;" : "";
-        console.log("Table height " + innerHeight + " " + restOfScreenHeight + " " + maxHeight + " " + tableHeightStyle);
+        tableHeightStyle = maxHeight ? "display: block; max-height:" + maxHeight + "px; min-height: " + maxHeight + "px;" : "";
+        //console.log("Table height " + innerHeight + " " + restOfScreenHeight + " " + maxHeight + " " + tableHeightStyle);
     }
     
     onMount(() => {
@@ -737,6 +738,15 @@
     $: opInfo = "";
 
     async function saveEdit() {
+        if (preview) {
+            clearEdit();
+            editRow = undefined;
+            dirty = false;
+            showInfo("Data not saved in preview mode");
+            return;
+
+        }
+        
         validationErrors = validate();
         if (validationErrors.length > 0) {
             (document.querySelector('#validateDialog') as HTMLDialogElement)?.showModal(); 
