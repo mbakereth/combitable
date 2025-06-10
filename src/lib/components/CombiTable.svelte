@@ -320,14 +320,14 @@
     
     }
 
-    function colMaxWidth(col : CombiTableColumn) : string {
+    function colMaxWidthStyle(col : CombiTableColumn) : string {
         if (col.maxWidth == undefined && col.editMaxWidth == undefined) return "";
         if (col.maxWidth != undefined && col.editMaxWidth == undefined) return col.maxWidth;
         if (col.maxWidth == undefined && col.editMaxWidth != undefined) return col.editMaxWidth;
         if (col.maxWidth != undefined && col.editMaxWidth != undefined) {
             const isNumber = (/[0-9]+/.test(col.maxWidth) && /[0-9]+/.test(col.editMaxWidth));
-            const isRem = (/\[[0-9]+px\]/.test(col.maxWidth) && /\[[0-9]+px\]/.test(col.editMaxWidth));
-            const isPx = (/\[[0-9]+rem\]/.test(col.maxWidth) && /\[[0-9]+rem\]/.test(col.editMaxWidth));
+            const isRem = (/\[?[0-9]+px\]?/.test(col.maxWidth) && /\[?[0-9]+px\]?/.test(col.editMaxWidth));
+            const isPx = (/\[?[0-9]+rem\]?/.test(col.maxWidth) && /\[?[0-9]+rem\]?/.test(col.editMaxWidth));
             if (isNumber || isRem || isNumber) {
                 let editMaxWidthMatch = /([0-9]+)/.exec(col.editMaxWidth);
                 let maxWidthMatch = /([0-9]+)/.exec(col.maxWidth);
@@ -337,18 +337,18 @@
                 let maxWidth = parseInt(maxWidthMatch[0]);
                 let maxMax = editMaxWidth > maxWidth ? editMaxWidth : maxWidth;
                 let maxMaxStr = "";
-                if (isNumber)  maxMaxStr = "max-w-"+maxMax;
-                else if (isRem) maxMaxStr = `max-w-[${maxMax}rem]`;
-                else maxMaxStr = `max-w-[${maxMax}px]`;
+                if (isNumber)  maxMaxStr = "max-width:"+maxMax + "px;";
+                else if (isRem) maxMaxStr = `max-width:${maxMax}rem;`;
+                else maxMaxStr = `max-width:${maxMax}px;`;
                 return maxMaxStr;
             }
 
         }
         return "";
     }
-    let maxWidth : {[key:string]: string} = {}
+    let maxWidthStyle : {[key:string]: string} = {}
     for (let col of columns) {
-        maxWidth[col.col] = colMaxWidth(col);
+        maxWidthStyle[col.col] = colMaxWidthStyle(col);
     }
 
     /////
@@ -1022,7 +1022,9 @@
                 {#each columns as col, colidx}
                     {@const minw = col.minWidth ? "min-w-" + col.minWidth : ""}
                     {@const maxw = col.maxWidth ? "max-w-" + col.maxWidth : ""}
-                    <th class="{minw} {maxw} z-10">
+                    {@const minwStyle = col.minWidth ? "min-width:" + col.minWidth + ";" : ""}
+                    {@const maxwStyle = col.maxWidth ? "max-width:" + col.maxWidth + ";" : ""}
+                    <th class="z-10" style="{minwStyle} {maxwStyle}">
                         {#if enableSort && (col.sortable === undefined || col.sortable == true)}
                             <!-- svelte-ignore a11y-invalid-attribute -->
                             <a href="#" on:click={() => sort(col.col)}>
@@ -1073,16 +1075,16 @@
                         <td></td>
                     {/if}
                     {#each columns as col, colidx}
-                        {@const editminw = col.editMinWidth ? "min-w-" + col.editMinWidth : ""}
-                        {@const editmaxw = col.editMaxWidth ? "max-w-" + col.editMaxWidth : ""}
-                        {@const cmaxw = maxWidth[col.col]}
-                        {@const dropdownwidth = col.dropdownWidth ? "w-" + col.dropdownWidth : ""}
-                        <td class="align-bottom {cmaxw}">
+                        {@const editminwStyle = col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""}
+                        {@const editmaxwStyle = col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}
+                        {@const cmaxwStyle = maxWidthStyle[col.col]}
+                        {@const dropdownwidthStyle = col.dropdownWidth ? "width:" + col.dropdownWidth : ";"}
+                        <td class="align-bottom" style="{cmaxwStyle}">
                             {#if col.type == "boolean"}
                             <details class="dropdown overflow:visible" bind:open={filterMenusOpen[col.col]}  on:toggle={e => filterDetailsClicked(col)}>
-                                <summary class="btn m-0 -mb-1 w-full {editminw} {editmaxw}">{filterText[col.col] ?? ""}</summary>
+                                <summary class="btn m-0 -mb-1 w-full" style="{editminwStyle} {editmaxwStyle}">{filterText[col.col] ?? ""}</summary>
                                 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
+                                <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 p-2 mt-2 shadow" style="{dropdownwidthStyle}">
                                     <!-- svelte-ignore a11y-missing-attribute -->
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -1099,9 +1101,9 @@
                             </details>  
                             {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
                                 <details class="dropdown overflow:visible" bind:open={filterMenusOpen[col.col]}  on:toggle={e => filterDetailsClicked(col)}>
-                                    <summary class="btn m-0 -mb-1 w-full {editminw} {editmaxw}">{filterText[col.col] ?? ""}</summary>
+                                    <summary class="btn m-0 -mb-1 w-full" style="{editminwStyle} {editmaxwStyle}">{filterText[col.col] ?? ""}</summary>
                                     <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                    <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
+                                    <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 p-2 mt-2 shadow" style="{dropdownwidthStyle}">
                                         <!-- svelte-ignore a11y-click-events-have-key-events -->
                                         <!-- svelte-ignore a11y-no-static-element-interactions -->
                                         <!-- svelte-ignore a11y-missing-attribute -->
@@ -1115,7 +1117,7 @@
                                     </ul>
                                 </details>
                             {:else}
-                                <input type="text" class="input bg-base-200 w-full {editminw} {editmaxw}" 
+                                <input type="text" class="input bg-base-200 w-full" style="{editminwStyle} {editmaxwStyle}" 
                                     bind:value={filterText[col.col]} 
                                     on:blur={() => filter(col, filterText[col.col])} 
                                     on:keypress={(evt) => filterKeyPress(evt, col, filterText[col.col])}/>
@@ -1145,22 +1147,22 @@
                             <td></td>
                         {/if}
                         {#each columns as col, colidx}
-                            {@const editminw = col.editMinWidth ? "min-w-" + col.editMinWidth : ""}
-                            {@const editmaxw = col.editMaxWidth ? "max-w-" + col.editMaxWidth : ""}
-                            {@const dropdownwidth = col.dropdownWidth ? "w-" + col.dropdownWidth : ""}
-                            {@const cmaxw = maxWidth[col.col]}
+                            {@const editminwStyle = col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""}
+                            {@const editmaxwStyle = col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}
+                            {@const dropdownwidthStyle = col.dropdownWidth ? "width:" + col.dropdownWidth + ";" : ""}
+                            {@const cmaxwStyle = maxWidthStyle[col.col]}
                             {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
                             {#if editRow == -1 || col.col == primaryKey}
-                                <td class="align-bottom {cmaxw}">
+                                <td class="align-bottom" style="{cmaxwStyle}">
                                     {#if colidx == 0}
                                         <p class="small m-0 p-0 pb-1 text-primary ml-1">New</p>
                                     {/if}
                                     {#if !col.readOnly}
                                         {#if col.type == "boolean"}
                                             <details class="dropdown overflow:visible" bind:open={editRowMenusOpen[col.col]}  on:toggle={e => editDetailsClicked(e, col)}>
-                                                <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
+                                                <summary class="btn m-0 -mb-1 w-full {bg}" style="{editminwStyle} {editmaxwStyle}">{editRowText[col.col] ?? ""}</summary>
                                                 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                                <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
+                                                <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 p-2 mt-2 shadow" style="{dropdownwidthStyle}">
                                                     {#if col.nullable == true}
                                                         <!-- svelte-ignore a11y-missing-attribute -->
                                                         <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -1179,9 +1181,9 @@
                                             </details>  
                                         {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
                                             <details class="dropdown overflow:visible" bind:open={editRowMenusOpen[col.col]}  on:toggle={e => editDetailsClicked(e, col)} >
-                                                <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
+                                                <summary class="btn m-0 -mb-1 w-full {bg}" style="{editminwStyle} {editmaxwStyle}">{editRowText[col.col] ?? ""}</summary>
                                                 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                                <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
+                                                <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 p-2 mt-2 shadow" style="{dropdownwidthStyle}">
                                                     {#if col.nullable == true}
                                                         <!-- svelte-ignore a11y-click-events-have-key-events -->
                                                         <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -1197,7 +1199,7 @@
                                                 </ul>
                                             </details>
                                         {:else}
-                                            <input type="text" class="input w-full {editminw} {editmaxw} {bg}" 
+                                            <input type="text" class="input w-full {bg}" style="{editminwStyle} {editmaxwStyle}" 
                                                 bind:value={editRowText[col.col]} 
                                                 on:keyup={(evt) => editInputUpdate(evt, col)}
                                             />
@@ -1261,16 +1263,19 @@
                         </td>
                     {/if}
                     {#each columns as col, colidx}
-                        {@const minw = col.minWidth ? "min-w-" + col.minWidth : ""}
-                        {@const editminw = col.editMinWidth ? "min-w-" + col.editMinWidth : ""}
-                        {@const maxw = col.maxWidth ? "max-w-" + col.maxWidth : ""}
-                        {@const cmaxw = maxWidth[col.col]}
-                        {@const editmaxw = col.editMaxWidth ? "max-w-" + col.editMaxWidth : ""}
                         {@const dropdownwidth = col.dropdownWidth ? "w-" + col.dropdownWidth : ""}
+
+                        {@const minwStyle = col.minWidth ? "min-width:" + col.minWidth + ";" : ""}
+                        {@const editminwStyle = col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""}
+                        {@const maxwStyle = col.maxWidth ? "max-width:" + col.maxWidth + ";" : ""}
+                        {@const cmaxwStyle = maxWidthStyle[col.col]}
+                        {@const editmaxwStyle = col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}
+                        {@const dropdownwidthStyle = col.dropdownWidth ? "width:" + col.dropdownWidth + ";" : ""}
+
                         {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
                         {#if editRow == undefined || editRow != rowidx}
                             {@const value = formatColumn(getColumn(row, col.col), col)}
-                            <td class="{cmaxw}">
+                            <td style="{cmaxwStyle}">
                                 {#if (col.type == "date" || col.type == "datetime" || col.nowrap)}
                                     {#if col.link}
                                         <span class="text-nowrap text-base-content"><a class="text-base-content {linkFormat}" href={col.link(row)}>{value}</a></span>
@@ -1286,7 +1291,7 @@
                                 {/if}
                             </td>
                         {:else}
-                            <td class="align-bottom {cmaxw}">
+                            <td class="align-bottom" style="{cmaxwStyle}">
                                 {#if colidx == 0}
                                 <p class="small m-0 p-0 pb-1 text-primary ml-1">Edit</p>
                                 {/if}
@@ -1300,9 +1305,9 @@
                                 {:else}
                                     {#if col.type == "boolean"}
                                         <details class="dropdown overflow:visible" bind:open={editRowMenusOpen[col.col]}   on:toggle={e => editDetailsClicked(e, col)}>
-                                            <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
+                                            <summary class="btn m-0 -mb-1 w-full {bg}" style="{editminwStyle} {editmaxwStyle}">{editRowText[col.col] ?? ""}</summary>
                                             <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                            <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
+                                            <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 p-2 mt-2 shadow" style="{dropdownwidth}">
                                                 {#if col.nullable == true}
                                                     <!-- svelte-ignore a11y-missing-attribute -->
                                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -1321,9 +1326,9 @@
                                         </details>  
                                     {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
                                         <details class="dropdown overflow:visible" bind:open={editRowMenusOpen[col.col]} on:toggle={e => editDetailsClicked(e, col)}>
-                                            <summary class="btn m-0 -mb-1 w-full {bg} {editminw} {editmaxw}">{editRowText[col.col] ?? ""}</summary>
+                                            <summary class="btn m-0 -mb-1 w-full {bg}" style="{editminwStyle} {editmaxwStyle}">{editRowText[col.col] ?? ""}</summary>
                                             <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                            <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 {dropdownwidth} p-2 mt-2 shadow">
+                                            <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 p-2 mt-2 shadow" style="{dropdownwidthStyle}">
                                                 {#if col.nullable == true}
                                                     <!-- svelte-ignore a11y-missing-attribute -->
                                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -1339,7 +1344,7 @@
                                             </ul>
                                         </details>
                                     {:else}
-                                        <input type="text" class="input {bg} w-full {editminw} {editmaxw}" 
+                                        <input type="text" class="input {bg} w-full" style="{editminwStyle} {editmaxwStyle}" 
                                             bind:value={editRowText[col.col]} 
                                             on:keyup={(evt) => editInputUpdate(evt, col)}
                                             />
@@ -1452,7 +1457,9 @@
 
 <!-- Modal to display validation errors -->
 <CombiTableConfirmDeleteDialog id="confirmDelete" okFn={confirmDeleteRow}/>
-<div class="hidden -mt-[21px] ml-1 -ml-6 table-fixed table-auto -mt-[21px] -mt-[42px] ml-1 ml-6 ml-12 w-[80px] w-[60px] w-[48px] -mt-[20px] -mt-[18px] ml-6 -ml-6 -ml-1 text-base-content align-middle"></div>
+
+<!-- To instantiate tailwind classes that are in variables therefore not seen by the preprocessor -->
+<div class="hidden -mt-[21px] ml-1 ml-6 -ml-6 table-fixed table-auto -mt-[21px] -mt-[42px] ml-1 ml-6 ml-12 w-[80px] w-[60px] w-[48px] -mt-[20px] -mt-[18px] ml-6 -ml-6 -ml-1 text-base-content align-middle sticky top-0 bg-required bg-base-200 -mt-[18px] -mt-[20px] -mt-[21px]"></div>
 
 <style>
 .tail-icon {
