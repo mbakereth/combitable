@@ -3,7 +3,7 @@
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
     import { goto, invalidateAll } from '$app/navigation'
-    import type { CombiTableColumn, CombiTableOp, CombiTableAddExtraOp , CombiTablePresets } from '$lib/combitabletypes';
+    import type { CombiTableColumn, CombiTableOp, CombiTableExtraButton , CombiTablePresets } from '$lib/combitabletypes';
     import { SearchUrl } from '$lib/searchurl';
     import upIcon from "$lib/assets/prime--sort-up-fill.svg?raw"
     import downIcon from "$lib/assets/prime--sort-down-fill.svg?raw"
@@ -46,8 +46,10 @@
     export let preview : boolean = false;
     let haveOps = ops.length > 0;
     if (haveOps) select = true;
-    export let addExtra : CombiTableAddExtraOp[] = [];
+    export let addExtra : CombiTableExtraButton[] = [];
     let haveAddExtra = addExtra.length > 0;
+    export let navExtra : CombiTableExtraButton[] = [];
+    let haveNavExtra = navExtra.length > 0;
 
     let stickyHeadRowClass = stickyHeadRow ? "sticky top-0" : "";
 
@@ -962,7 +964,7 @@
         }
     }
 
-    async function callAddExtra(op: CombiTableAddExtraOp) {
+    async function callExtra(op: CombiTableExtraButton) {
         let ret = await op.fn();
     }
 
@@ -1240,7 +1242,7 @@
                         {/if}
                         {#if haveAddExtra} 
                             {#each addExtra as row}
-                                <button class="btn btn-sm" on:click={() => callAddExtra(row)}>{row.label}</button>
+                                <button class="btn btn-sm" on:click={() => callExtra(row)}>{row.label}</button>
                             {/each}
                         {/if}
                         </td>
@@ -1430,7 +1432,14 @@
             {/each}
             <button class="btn btn-neutral {disabled} ml-3" on:click={() => clearSelection() }>Clear Selection</button>
         {/if}
-    {/if}
+
+        {#if haveNavExtra}
+            {@const disabled = rowsAreChecked? "" : "btn-disabled"}
+            {#each navExtra as op}
+                <button class="btn btn-secondary ml-3" on:click={() => callExtra(op) }>{op.label}</button>
+            {/each}
+        {/if}
+        {/if}
 </div>
 {/if}
 

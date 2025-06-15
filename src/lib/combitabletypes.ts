@@ -15,6 +15,7 @@ export interface CombiTableColumn {
     dropdownWidth? : string,
     readOnly? : boolean,
     sortable? : boolean,
+    default? : string,
     link?: (row:{[key:string]:any}) => string,
 }
 
@@ -23,7 +24,7 @@ export interface CombiTableOp {
     fn: (pks: (string|number)[]) => Promise<{error? : string, info? : string}>
 } 
 
-export interface CombiTableAddExtraOp {
+export interface CombiTableExtraButton {
     label: string,
     fn: () => Promise<void>
 } 
