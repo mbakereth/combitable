@@ -1,5 +1,7 @@
 // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
 
+export type PrismaWhereFunction = (value : string) => {[key:string]:any};
+
 export interface CombiTableColumn {
     name : string,
     col: string,
@@ -16,6 +18,7 @@ export interface CombiTableColumn {
     readOnly? : boolean,
     sortable? : boolean,
     default? : string,
+    prismaWhere? : PrismaWhereFunction,
     link?: (row:{[key:string]:any}) => string,
 }
 

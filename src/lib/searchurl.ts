@@ -1,5 +1,7 @@
 // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
 
+import type { CombiTableColumn } from "./combitabletypes";
+
 export interface PrismaFields {
     take? : number,
     skip? : number,
@@ -294,7 +296,7 @@ export class SearchUrl {
         return new SearchUrl(newUrl, this.defaultTake); 
     }
 
-    getPrismaFields(models : readonly PrismaModel[], modelName: string, defaultSearch : string = "") : PrismaFields {
+    getPrismaFields(models : readonly PrismaModel[], modelName: string, defaultSearch : string = "", columns: CombiTableColumn[]|undefined = undefined) : PrismaFields {
 
         let map : PrismaModelMaps = {}
         for (let model of models) {
@@ -340,10 +342,10 @@ export class SearchUrl {
         let prefilters = this.getPreFilters();
         let where : {[key:string]:any} = {}
         for (let filter in filters) {
-            where = {...where, ...SearchUrl.makePrismaWhere(filter, filters[filter], map, modelName, this.suffix, this.emptySearch)};
+            where = {...where, ...SearchUrl.makePrismaWhere(filter, filters[filter], map, modelName, this.suffix, this.emptySearch, columns)};
         }
         for (let filter in prefilters) {
-            where = {...where, ...SearchUrl.makePrismaWhere(filter, prefilters[filter], map, modelName, this.suffix, this.emptySearch)};
+            where = {...where, ...SearchUrl.makePrismaWhere(filter, prefilters[filter], map, modelName, this.suffix, this.emptySearch, columns)};
         }
         const ids = this.getIds();
         if (ids.length > 0) {
@@ -357,8 +359,14 @@ export class SearchUrl {
     
     }
 
-    private static makePrismaWhere(name : string, value : string, models : PrismaModelMaps, modelName: string, suffix : string="", emptySearch : string|undefined = undefined) : {[key:string]:any} {
+    private static makePrismaWhere(name : string, value : string, models : PrismaModelMaps, modelName: string, suffix : string="", emptySearch : string|undefined = undefined, columns: CombiTableColumn[]|undefined = undefined) : {[key:string]:any} {
         if (name == "") return {};
+
+        const colMatch = columns?.filter((val : {[key:string]:any}) => val.col == name);
+        if (colMatch && colMatch.length > 0 && colMatch[0].prismaWhere) {
+            return colMatch[0].prismaWhere(value)
+        }
+
         const parts = name.split(".");
         let type : string|undefined = undefined;
         let modelName1 = modelName;
