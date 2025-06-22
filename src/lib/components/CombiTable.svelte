@@ -88,7 +88,6 @@
     });
 
     export function printDate(date : Date|undefined|null) : string {
-        if (!date) return "";
         if (!date) return "-";
         if (dateFormat == "yyyy-mm-dd") {
             return String(date.getFullYear()) + "-" + String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getDate()).padStart(2, '0')
