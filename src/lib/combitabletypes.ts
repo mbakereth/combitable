@@ -17,9 +17,10 @@ export interface CombiTableColumn {
     dropdownWidth? : string,
     readOnly? : boolean,
     sortable? : boolean,
-    default? : string,
+    default? : string, // only for DetailsField - value to show instead of -
     prismaWhere? : PrismaWhereFunction,
     link?: (row:{[key:string]:any}) => string,
+    autoCompleteLink? : string,
 }
 
 export interface CombiTableOp {

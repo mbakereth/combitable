@@ -6,12 +6,12 @@
     import type { CombiTableColumn } from '$lib/combitabletypes';
 
     let columns : CombiTableColumn[] = [
-        {name: "Name", col: "name", type: "string"},
+        {name: "Name", col: "name", type: "string", link: (row) => {return "/god/" + row.id}},
         {name: "Gender", col: "gender", type: "select:string", values: ["m", "f"], names: ["m", "f"], minWidth: "[4rem]"},
         {name: "Died", col: "died", type: "boolean"},
         {name: "Type", col: "type", type: "select:integer", values: [0,1,2], names: ["God", "Titan", "Personification"]},
-        {name: "Father", col: "father.name", type: "string", nullable: true, maxWidth: "16", editMaxWidth: "16"},
-        {name: "Mother", col: "mother.name", type: "string", nullable: true},
+        {name: "Father", col: "father.name", type: "string", nullable: true, maxWidth: "16", editMaxWidth: "16", autoCompleteLink:"/autocomplete/god/name"},
+        {name: "Mother", col: "mother.name", type: "string", nullable: true, autoCompleteLink:"/autocomplete/god/name"},
     ]
 
     $: rows = data.gods;

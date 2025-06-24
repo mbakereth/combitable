@@ -45,7 +45,6 @@ export class GodsOps extends Ops {
 
     static async addOrUpdateGod(event : RequestEvent, add: boolean)  : Promise<{row? : God, errors?: string[]|string, info? : string}>  {
         const body =  await event.request.json();
-
         if (!add && (Ops.isEmpty(body._pk))) {
             return {errors: "Primary key missing or invalid"};
         }

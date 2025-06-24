@@ -7,8 +7,24 @@ export default {
     extend: {
       colors: {
         neutral: colors.neutral,
+        "required": "var(--required)",
       }
     },
+  },
+    daisyui: {
+      themes: [
+      {
+        light: {
+          ...require("daisyui/src/theming/themes")["light"],
+          //...require("daisyui/src/theming/themes")["corporate"],
+            "--required": "#a5a8c4",
+          },
+        dark: {
+            ...require("daisyui/src/theming/themes")["dark"],
+            "--required": "#282c42",
+        },
+      },
+    ],
   },
   plugins: [require('daisyui')],
 }

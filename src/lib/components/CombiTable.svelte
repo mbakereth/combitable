@@ -104,11 +104,9 @@
     }
 
     export function parseDate(val : string) : Date {
-        console.log("parseDate", val)
         val = val.trim();
         if (val.indexOf("T") > 0) {
             val = val.split("T")[0];
-            console.log(val, parseISODate(val));
             return parseISODate(val);
         }
         const parts = val.trim().split("-");
@@ -116,7 +114,6 @@
         let dateStr = parts[2] + "-" + parts[1] + "-" + parts[0];
         if (dateFormat == "yyyy-mm-dd") dateStr = val;
         if (dateFormat == "mm-dd-yyyy") dateStr = parts[2] + "-" + parts[0] + "-" + parts[1];
-        console.log(dateStr, parseISODate(dateStr));
         return parseISODate(dateStr);
     }
 
@@ -149,7 +146,6 @@
     }
 
     function parseISODate(s : String) {
-        console.log("parseISODate", s)
         let b = s.split(/\D+/);
         return new Date(Date.UTC(parseInt(b[0]), parseInt(b[1])-1, parseInt(b[2]), 0, 0, 0));
     }
@@ -544,6 +540,74 @@
         }
     }    
 
+    //////
+    // Auto complete
+
+    let autoCompleteDivs : {[key:string]:Element|null} = {};
+    columns.forEach((val: CombiTableColumn, i: number) => {autoCompleteDivs[val.col] = null})
+    let autoCompleteData : string[];
+    $: autoCompleteData = [];
+    let autoCompleteOpen : {[key:string]:boolean} = {};
+    columns.forEach((val: CombiTableColumn, i: number) => {autoCompleteOpen[val.col] = false})
+
+    function autoCompleteUpdate(col : CombiTableColumn, value : string|undefined|null) {
+        if (value == undefined || value == null || value == "") {
+            /*editRowSelectValue[col.col] = "";
+            delete editRowSelectValue[col.col];
+            editRowSelectValue = {...editRowSelectValue}*/
+
+
+        } else {
+            editRowText[col.col] = value;
+            editRowSelectValue = {...editRowSelectValue, [col.col]: value}
+        }
+
+
+        dirty = true;
+        for (let col in autoCompleteOpen) {
+            autoCompleteOpen[col] = false;
+        }
+        autoCompleteData = [];
+    }
+
+    async function autoCompleteKeyPress(evt: KeyboardEvent, col : CombiTableColumn, value : string|undefined) {
+        if (!col.autoCompleteLink) return;
+        if (value && value.length > 0) {
+            autoCompleteOpen[col.col] = true;
+
+            // call link
+            const url = col.autoCompleteLink + "?t="+encodeURIComponent(value);
+            const resp = await fetch(url, {
+                method: "GET",
+                headers: {"content-type": "application/json"},
+            });
+            if (!resp.ok) {
+                console.log("Auto complete error on", col.col);
+                return;
+            } else {
+                const body = await resp.json() as string[];
+                autoCompleteData = [...body];
+            }
+
+            if (autoCompleteData.length > 0) {
+                let target = autoCompleteDivs[col.col];
+                if (target instanceof Element) {
+                    if (target.getBoundingClientRect().bottom > table.getBoundingClientRect().bottom) {
+                        setInterval(() => {target.scrollIntoView({behavior: "smooth", block: "nearest"})}); 
+                    }
+                }
+            } else {
+                autoCompleteOpen[col.col] = false;
+            }
+
+        } else {
+            autoCompleteOpen[col.col] = false;
+            autoCompleteData = []
+        }
+        
+        dirty = true;
+    }
+
     /////
     // Editing
 
@@ -562,15 +626,18 @@
     columns.forEach((val: CombiTableColumn, i: number) => {editRowMenusOpen[val.col] = false})
 
     function filterDetailsClicked(col : CombiTableColumn) {
-        console.log(filterMenusOpen[col.col])
+        //console.log(filterMenusOpen[col.col])
     }
+
     function editDetailsClicked(e : Event, col : CombiTableColumn) {
+        console.log("editDetailsClicked")
         if (editRowMenusOpen[col.col]) {
             let target = e.currentTarget;
             if (target instanceof Element) {
-                if (target.getBoundingClientRect().bottom > table.getBoundingClientRect().bottom) {
+                console.log("scrolling", target.getBoundingClientRect().bottom, table.getBoundingClientRect().bottom)
+                //if (target.getBoundingClientRect().bottom > table.getBoundingClientRect().bottom) {
                     target.scrollIntoView({behavior: "smooth", block: "start"}); 
-                }
+                //}
             }
         }
     }
@@ -1199,6 +1266,28 @@
                                                     {/each}
                                                 </ul>
                                             </details>
+                                        {:else if col.autoCompleteLink}    
+                                            <div class="acdropdown overflow:visible">
+                                                <input role="button" class="input m-0 -mb-1 w-full {bg} cursor-text" style="{editminwStyle} {editmaxwStyle}"
+                                                    on:keyup={(evt) => autoCompleteKeyPress(evt, col, editRowText[col.col])}
+                                                    bind:value={editRowText[col.col]}/>
+                                                <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+                                                 {#if autoCompleteOpen[col.col]}
+                                                <ul bind:this={autoCompleteDivs[col.col]} class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 p-2 mt-2 shadow" style="{dropdownwidthStyle}">
+                                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                                    <!-- svelte-ignore a11y-missing-attribute -->
+                                                    <li><a on:click={() => autoCompleteUpdate(col, null)} class="italic">Close</a></li>
+                                                    <li class="divider h-[1px] mt-1 mb-1"></li>
+                                                    {#each autoCompleteData as name}
+                                                        <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                                        <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                                        <!-- svelte-ignore a11y-missing-attribute -->
+                                                        <li><a on:click={() => autoCompleteUpdate(col, name)}>{name}</a></li>
+                                                    {/each}
+                                                </ul>
+                                                {/if}
+                                            </div>
                                         {:else}
                                             <input type="text" class="input w-full {bg}" style="{editminwStyle} {editmaxwStyle}" 
                                                 bind:value={editRowText[col.col]} 
@@ -1344,6 +1433,28 @@
                                                 {/each}
                                             </ul>
                                         </details>
+                                        {:else if col.autoCompleteLink}    
+                                            <div class="acdropdown overflow:visible">
+                                                <input role="button" class="input m-0 -mb-1 w-full {bg} cursor-text" style="{editminwStyle} {editmaxwStyle}"
+                                                    on:keyup={(evt) => autoCompleteKeyPress(evt, col, editRowText[col.col])}
+                                                    bind:value={editRowText[col.col]}/>
+                                                <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+                                                 {#if autoCompleteOpen[col.col]}
+                                                <ul bind:this={autoCompleteDivs[col.col]}  class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 p-2 mt-2 shadow" style="{dropdownwidthStyle}">
+                                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                                    <!-- svelte-ignore a11y-missing-attribute -->
+                                                    <li><a on:click={() => autoCompleteUpdate(col, null)} class="italic">Close</a></li>
+                                                    <li class="divider h-[1px] mt-1 mb-1"></li>
+                                                    {#each autoCompleteData as name}
+                                                        <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                                        <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                                        <!-- svelte-ignore a11y-missing-attribute -->
+                                                        <li><a on:click={() => autoCompleteUpdate(col, name)}>{name}</a></li>
+                                                    {/each}
+                                                </ul>
+                                                {/if}
+                                            </div>
                                     {:else}
                                         <input type="text" class="input {bg} w-full" style="{editminwStyle} {editmaxwStyle}" 
                                             bind:value={editRowText[col.col]} 
@@ -1475,6 +1586,35 @@
   /* Make sure last word and icon will break ultimately */
   display: inline-flex;
   flex-wrap: wrap; 
+}
+
+.acdropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.acdropdown > *:not(summary):focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.acdropdown .dropdown-content {
+  position: absolute;
+}
+
+.acdropdown:is(:not(details)) .dropdown-content {
+  visibility: hidden;
+  opacity: 0;
+  transform-origin: top;
+  --tw-scale-x: .95;
+  --tw-scale-y: .95;
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-backdrop-filter;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  transition-duration: 200ms;
 }
 
 </style>

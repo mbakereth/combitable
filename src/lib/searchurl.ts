@@ -390,6 +390,7 @@ export class SearchUrl {
             }
         }
         let isContains = false;
+        let isStartsWith = false;
         if (type == undefined) {
             console.log("Warning: type for " + name + " not found - setting to String");
         }
@@ -403,7 +404,13 @@ export class SearchUrl {
         } else if (type == "DateTime") {
             value1 = value == "" ? null : new Date(value);
         } else {
-            if (value1.includes("*") && !invert) {
+            if (value1.length > 1 && value1.endsWith("*") && !(value1.substring(0, value1.length-1).includes("*"))) {
+                // escape special characters _ and %
+                value1 = value1.replaceAll('_', '\\').replaceAll('%', '\\');
+                // replace * with % for wildcard
+                value1 = value1.replaceAll('*', '%');
+                isStartsWith = true;
+            } else if (value1.includes("*") && !invert) {
                 // escape special characters _ and %
                 value1 = value1.replaceAll('_', '\\').replaceAll('%', '\\');
                 // replace * with % for wildcard
@@ -418,6 +425,8 @@ export class SearchUrl {
             if (invert) return {[name]: {not: value1}} ;
             if (isContains) {
                 return {[name]: {contains: value1}} ;
+            } else if (isStartsWith) {
+                return {[name]: {startsWith: value1}} ;
             }
             return {[name]: value1}
         }

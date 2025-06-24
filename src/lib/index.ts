@@ -14,3 +14,4 @@ export {default as CombiTableDiscardChanges} from '$lib/components/CombiTableDis
 export {default as CombiTableValidateDialog} from '$lib/components/CombiTableErrorDialog.svelte';
 export {default as CombiTableInfoDialog} from '$lib/components/CombiTableInfoDialog.svelte';
 export {default as CombiTableConfirmDeleteDialog} from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
+export { autocomplete, parseDate, stringIsDate, validateField, asBoolean, asBooleanOrUndefined, asNumber, asNumberOrUndefined, asString, printDate } from '$lib/utils';
