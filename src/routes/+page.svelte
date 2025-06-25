@@ -59,6 +59,7 @@
     widthType={"auto"}
     ops={[{label: "Kill", fn: killGods}]}
     urlSuffix=""
+    navExtra={[{label: "New", fn: async () => {goto("/god/")}}]}
     bind:primaryKeysChecked={primaryKeysChecked}
 />
 

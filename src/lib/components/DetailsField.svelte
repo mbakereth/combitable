@@ -271,7 +271,7 @@
                 let target = autoCompleteList;
                 if (target instanceof Element) {
                     //if (target.getBoundingClientRect().bottom > table.getBoundingClientRect().bottom) {
-                    setTimeout(() => {target.scrollIntoView({behavior: "smooth", block: "nearest"})}, 1);
+                    setInterval(() => {target.scrollIntoView({behavior: "smooth", block: "nearest"})});
                     //}
                 }
             } else {

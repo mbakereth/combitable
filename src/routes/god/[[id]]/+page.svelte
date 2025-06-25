@@ -14,6 +14,9 @@
         {name: "Mother", col: "mother.name", type: "string", nullable: true, autoCompleteLink:"/autocomplete/god/name"},
     ]
 
+    let rec : {[key:string]:any} = data.rec ?? {}
+    $: isAdd = data.rec === undefined
+
     const restOfScreenHeight = 230;
     const buttonHeight = 78;
     let innerWidth = 0
@@ -39,7 +42,7 @@
 
 
     let table : Element;
-    $: fieldData = [data.rec?.name, data.rec?.gender, data.rec?.died, data.rec?.type, data.rec?.father?.name, data.rec?.mother?.name];
+    $: fieldData = [rec?.name, rec?.gender, rec?.died, rec?.type, rec?.father?.name, rec?.mother?.name];
 
     let nameField : DetailsField;
     let genderField : DetailsField;
@@ -52,12 +55,16 @@
 <svelte:window bind:innerWidth bind:innerHeight />
 
 <svelte:head>
-    <title>{fieldData[0] ?? "Unknown god"}</title>
+    <title>{fieldData[0] ?? "New god"}</title>
 </svelte:head>
 
-<h2 class="ml-4">{data.rec?.name ?? "Unknown god"}</h2>
+{#if data.rec}
+    <h2 class="ml-4">{data.rec?.name ?? '<span class="italic">New god</span>'}</h2>
+{:else}
+    <h2 class="ml-4"><span class="italic">New god</span></h2>
+{/if}
 
-{#if data.error || !data.rec}
+{#if data.error}
     <p>An error occurred: {data.error ?? "Unknown error"}</p>
 {:else}
 
@@ -135,7 +142,8 @@
     </div>
 
     <DetailsFieldSet
-        bind:rec={data.rec}
+        bind:rec={rec}
+        bind:isAdd={isAdd}
         pk="name"
         addUrl="/add"
         editUrl="/edit"

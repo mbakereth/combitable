@@ -17,14 +17,19 @@
     export let addUrl : string|undefined = undefined;
     export let deleteUrl : string|undefined = undefined;
     export let deleteNextPage : string|undefined = undefined;
+    export let isAdd = false;
     
 
     function getRecField(col : string) {
         let obj = rec;
         const parts = col.split(".");
         for (let i=0; i<parts.length-1; ++i) {
+            if (!obj || !(parts[i] in obj)) {
+                return undefined;
+            }
             obj = obj[parts[i]];
         }
+        if (!obj || !(parts[parts.length-1] in obj)) return undefined;
         return obj[parts[parts.length-1]];
     }
 
@@ -77,7 +82,6 @@
         let errors : string[] = [];
         let error : string|undefined = undefined;
         for (let i=0; i<data.length; ++i) {
-            console.log("validate", i, cols[i].col, data[i])
             error = validateField(cols[i], data[i]); 
             if (error) errors.push(error);
         }
@@ -89,21 +93,26 @@
         if (validationErrors.length > 0) {
             (document.querySelector('#validateDialog') as HTMLDialogElement)?.showModal(); 
         } else {
-            if (!editUrl) {
+            if (isAdd && !addUrl) {
                 console.log("No edit url defined");
                 return;
             }
+            if (!isAdd && !editUrl) {
+                console.log("No edit url defined");
+                return;
+            }
+            const url = (isAdd ? addUrl : editUrl) ?? "";
             if (!pk) {
                 console.log("No pk defined");
                 return;
             }
             try {
                 let body : {[key:string]:any} = {};
-                body._pk = rec[pk];
+                body._pk = rec[pk] ?? undefined;
                 for (let i=0; i<data.length; ++i) {
                     body[cols[i].col] = data[i];
                 };
-                const resp = await fetch(editUrl, {
+                const resp = await fetch(url, {
                     method: "POST",
                     headers: {"content-type": "application/json"},
                     body: JSON.stringify(body),

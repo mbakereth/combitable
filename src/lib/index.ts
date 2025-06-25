@@ -2,6 +2,7 @@
 
 export { default as CombiTable } from '$lib/components/CombiTable.svelte';
 export { default as DetailsField } from '$lib/components/DetailsField.svelte';
+export { default as DetailsFieldSet } from '$lib/components/DetailsFieldSet.svelte';
 export type { CombiTableColumn, CombiTablePresets, PrismaWhereFunction } from '$lib/combitabletypes';
 export { SearchUrl, type PrismaFields } from '$lib/searchurl';
 export {default as upIcon} from "$lib/assets/prime--sort-up-fill.svg?raw"
