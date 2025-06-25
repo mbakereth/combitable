@@ -2,7 +2,6 @@
     import type { CombiTableColumn } from '$lib/combitabletypes';
 
     export let col : CombiTableColumn;
-    export let rec : {[key:string]:any};
     export let value : any;
     export let dateFormat = "yyyy-mm-dd"; // or "yyyy-mm-dd" or "mm-dd-yyyy"
 
@@ -43,7 +42,6 @@
 
     export let dirty = false;
     export let editMenuOpen = false;
-    export let table : Element;
 
     export function printDate(date : Date|undefined|null, defaultValue="") : string {
         if (!date) return defaultValue;
@@ -226,6 +224,13 @@
     let autoCompleteOpen : boolean = false;
 
     function autoCompleteUpdate(col : CombiTableColumn, newValue : string|undefined|null) {
+        if (newValue === null) {
+            editMenuOpen = false;
+            autoCompleteOpen = false;
+            autoCompleteData = [];
+            return;
+        }
+
         dirty = newValue != value;
         if (newValue == undefined || newValue == null || newValue == "") {
             if (col.nullable) value = null;
@@ -266,7 +271,7 @@
                 let target = autoCompleteList;
                 if (target instanceof Element) {
                     //if (target.getBoundingClientRect().bottom > table.getBoundingClientRect().bottom) {
-                    setInterval(() => {target.scrollIntoView({behavior: "smooth", block: "nearest"})});
+                    setTimeout(() => {target.scrollIntoView({behavior: "smooth", block: "nearest"})}, 1);
                     //}
                 }
             } else {
@@ -279,7 +284,18 @@
         }
         
         dirty = true;
+        value = displayValue;
     }
+
+    async function handleACBlur(event : any) {
+        // if the blur was because of outside focus
+        // currentTarget is the parent element, relatedTarget is the clicked element
+        //autoCompleteUpdate(col, null);
+        if (event.relatedTarget == null || !event.relatedTarget && event.currentTarget.parentNode.contains(event.relatedTarget)) {
+            autoCompleteUpdate(col, null);
+        }
+
+}
 
 </script>
 
@@ -295,10 +311,11 @@
         <div class="acdropdown overflow:visible" bind:this={autoCompleteDiv}>
             <input role="button" class="input m-0 -mb-1 w-full cursor-text {bg}" style="{editminwStyle} {editmaxwStyle}"
                 on:keyup={(evt) => autoCompleteKeyPress(evt, value)}
+                on:blur={(evt) => handleACBlur(evt)}
                 bind:value={displayValue}/>
             <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
             {#if autoCompleteOpen}
-                <ul bind:this={autoCompleteList} class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box z-10 p-2 mt-2 shadow border border-base-100" style="{dropdownwidthStyle}">
+                <ul bind:this={autoCompleteList} class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box z-10 p-2 mt-2 shadow border border-base-100" style="{dropdownwidthStyle}" tabindex="0">
                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                     <!-- svelte-ignore a11y-no-static-element-interactions -->
                     <!-- svelte-ignore a11y-missing-attribute -->

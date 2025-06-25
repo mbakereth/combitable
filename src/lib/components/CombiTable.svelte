@@ -1,5 +1,6 @@
 <script lang="ts">
     // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
+    import { tick } from 'svelte';
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
     import { goto, invalidateAll } from '$app/navigation'
@@ -593,7 +594,7 @@
                 let target = autoCompleteDivs[col.col];
                 if (target instanceof Element) {
                     if (target.getBoundingClientRect().bottom > table.getBoundingClientRect().bottom) {
-                        setInterval(() => {target.scrollIntoView({behavior: "smooth", block: "nearest"})}); 
+                        setTimeout(() => {target.scrollIntoView({behavior: "smooth", block: "nearest"})}, 1); 
                     }
                 }
             } else {
@@ -1073,10 +1074,23 @@
 
     let ncolumns = columns.length;
     if (select) ncolumns += 1;
+
+    async function handleACBlur(event : any, col: CombiTableColumn) {
+        // if the blur was because of outside focus
+        // currentTarget is the parent element, relatedTarget is the clicked element
+        //setTimeout(() => {autoCompleteUpdate(col, null)}, 100);
+        if (event.relatedTarget == null || !event.relatedTarget && event.currentTarget.parentNode.contains(event.relatedTarget)) {
+            autoCompleteUpdate(col, null);
+        }
+
+}
+
+let activeElement : Element
+
 </script>
 
 <svelte:window bind:innerWidth bind:innerHeight />
-
+<svelte:document bind:activeElement={activeElement} />
 
 <div class="overflow-x-auto overflow-y-visible">
     <table class="table table-{widthType} overflow-y-visible" style="{tableHeightStyle} bg-base-100" bind:this={table}>
@@ -1270,10 +1284,11 @@
                                             <div class="acdropdown overflow:visible">
                                                 <input role="button" class="input m-0 -mb-1 w-full {bg} cursor-text" style="{editminwStyle} {editmaxwStyle}"
                                                     on:keyup={(evt) => autoCompleteKeyPress(evt, col, editRowText[col.col])}
+                                                    on:focusout={(event) => {handleACBlur(event, col)}}
                                                     bind:value={editRowText[col.col]}/>
                                                 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                                  {#if autoCompleteOpen[col.col]}
-                                                <ul bind:this={autoCompleteDivs[col.col]} class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 p-2 mt-2 shadow" style="{dropdownwidthStyle}">
+                                                <ul bind:this={autoCompleteDivs[col.col]} class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 p-2 mt-2 shadow" style="{dropdownwidthStyle}" tabindex="0">
                                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
                                                     <!-- svelte-ignore a11y-missing-attribute -->
@@ -1437,10 +1452,11 @@
                                             <div class="acdropdown overflow:visible">
                                                 <input role="button" class="input m-0 -mb-1 w-full {bg} cursor-text" style="{editminwStyle} {editmaxwStyle}"
                                                     on:keyup={(evt) => autoCompleteKeyPress(evt, col, editRowText[col.col])}
+                                                    on:focusout={(event) => {handleACBlur(event, col)}}
                                                     bind:value={editRowText[col.col]}/>
                                                 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                                  {#if autoCompleteOpen[col.col]}
-                                                <ul bind:this={autoCompleteDivs[col.col]}  class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 p-2 mt-2 shadow" style="{dropdownwidthStyle}">
+                                                <ul bind:this={autoCompleteDivs[col.col]}  class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 p-2 mt-2 shadow" style="{dropdownwidthStyle}"  tabindex="0">
                                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
                                                     <!-- svelte-ignore a11y-missing-attribute -->
