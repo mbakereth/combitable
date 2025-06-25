@@ -1289,11 +1289,6 @@ let activeElement : Element
                                                 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                                  {#if autoCompleteOpen[col.col]}
                                                 <ul bind:this={autoCompleteDivs[col.col]} class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 p-2 mt-2 shadow" style="{dropdownwidthStyle}" tabindex="0">
-                                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                                    <!-- svelte-ignore a11y-missing-attribute -->
-                                                    <li><a on:click={() => autoCompleteUpdate(col, null)} class="italic">Close</a></li>
-                                                    <li class="divider h-[1px] mt-1 mb-1"></li>
                                                     {#each autoCompleteData as name}
                                                         <!-- svelte-ignore a11y-click-events-have-key-events -->
                                                         <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -1457,11 +1452,6 @@ let activeElement : Element
                                                 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                                  {#if autoCompleteOpen[col.col]}
                                                 <ul bind:this={autoCompleteDivs[col.col]}  class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 p-2 mt-2 shadow" style="{dropdownwidthStyle}"  tabindex="0">
-                                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                                    <!-- svelte-ignore a11y-missing-attribute -->
-                                                    <li><a on:click={() => autoCompleteUpdate(col, null)} class="italic">Close</a></li>
-                                                    <li class="divider h-[1px] mt-1 mb-1"></li>
                                                     {#each autoCompleteData as name}
                                                         <!-- svelte-ignore a11y-click-events-have-key-events -->
                                                         <!-- svelte-ignore a11y-no-static-element-interactions -->
