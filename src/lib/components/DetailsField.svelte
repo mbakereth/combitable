@@ -302,6 +302,7 @@
 {#if true}
     {@const editminwStyle = col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""}
     {@const editmaxwStyle = col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}
+    {@const editHeightStyle = col.editHeight ? "height:" + col.editHeight + ";" : ""}
     {@const dropdownwidthStyle = col.dropdownWidth ? "width:" + col.dropdownWidth + ";" : ""}
     {@const cmaxwStyle = maxWidthStyle}
     {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
@@ -326,10 +327,18 @@
             {/if}
         </div>
     {:else if col.type != "select:string" && col.type != "select:integer" && col.type != "boolean"}
-        {#if col.default}
-            <input type="text" class="input bg-base-200 w-40 {bg}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue} style="{editminwStyle} {editmaxwStyle}"/>
+        {#if col.editHeight}
+            {#if col.default}
+                <textarea class="textarea bg-base-200 align-top {bg}" style="{editminwStyle} {editmaxwStyle} {editHeightStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}></textarea>
+            {:else}
+                <textarea class="textarea bg-base-200 align-top {bg}" style="{editminwStyle} {editmaxwStyle} {editHeightStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}></textarea>
+            {/if}
         {:else}
-            <input type="text" class="input bg-base-200 w-40 {bg}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue} style="{editminwStyle} {editmaxwStyle}"/>
+            {#if col.default}
+                <input type="text" class="input bg-base-200 {bg}" style="{editminwStyle} {editmaxwStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}/>
+            {:else}
+                <input type="text" class="input bg-base-200 {bg}" style="{editminwStyle} {editmaxwStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}/>
+            {/if}
         {/if}
     {:else if col.type == "boolean"}
         <details class="dropdown overflow:visible" bind:open={editMenuOpen}  on:toggle={e => editDetailsClicked(e)}>

@@ -21,6 +21,8 @@ export interface CombiTableColumn {
     prismaWhere? : PrismaWhereFunction,
     link?: (row:{[key:string]:any}) => string,
     autoCompleteLink? : string,
+    editHeight? : string,
+
 }
 
 export interface CombiTableOp {
