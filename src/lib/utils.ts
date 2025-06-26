@@ -2,7 +2,7 @@ import { json, type RequestEvent } from '@sveltejs/kit';
 import { PrismaClient, type Prisma } from '@prisma/client';
 import type { CombiTableColumn } from '../../dist';
 
-export async function autocomplete(event : RequestEvent, cols? : {[key:string]: string[]}) : Promise<Response> {
+export async function autocomplete(client : any, event : RequestEvent, cols? : {[key:string]: string[]}) : Promise<Response> {
     const table = event.params.table;
     const col = event.params.col;
 
@@ -55,9 +55,7 @@ export async function autocomplete(event : RequestEvent, cols? : {[key:string]: 
         take: 10,
     };
     try {
-            const prisma : any = new PrismaClient();
-            const res : {[key:string]:any}[] = await prisma[table??""].findMany(query); 
-            console.log(res)
+            const res : {[key:string]:any}[] = await client[table??""].findMany(query); 
             const ret : string[] = res.map((el) => {
                 let obj = el;
                 for (let i=0; i<parts.length-1; ++i) {
