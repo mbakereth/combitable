@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { CombiTableColumn } from '$lib/combitabletypes';
+    import { tick } from 'svelte';
 
     export let col : CombiTableColumn;
     export let value : any;
@@ -31,7 +32,7 @@
                 let matches = col.values.filter((val, i) => col.values && col.values[i] == val);
                 displayValue = matches && matches.length > 0 ? matches[0] : "";
             }
-        } else if (col.type == "date") {
+        } else if (col.type == "date" && typeof(value) != "string") {
             displayValue = printDate(value, "")
         } else if (col.type == "boolean") {
             displayValue = value ? "Yes" : "No"
@@ -43,8 +44,9 @@
     export let dirty = false;
     export let editMenuOpen = false;
 
-    export function printDate(date : Date|undefined|null, defaultValue="") : string {
+    export function printDate(date : Date|undefined|null|string, defaultValue="") : string {
         if (!date) return defaultValue;
+        if (typeof(date) == "string") return date;
         if (dateFormat == "yyyy-mm-dd") {
             return String(date.getFullYear()) + "-" + String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getDate()).padStart(2, '0')
         }
@@ -193,7 +195,7 @@
     }
 
     function fieldKeyPress(evt: KeyboardEvent) {
-        if (col.type == "string") {
+        if (col.type == "string" || (typeof(value) == "string")) {
             dirty = displayValue !== value;
             if (dirty) value = displayValue;
         } else if (col.type == "integer") {
@@ -250,6 +252,8 @@
 
     async function autoCompleteKeyPress(evt: KeyboardEvent, newValue : string|undefined) {
         if (!col.autoCompleteLink) return;
+        await tick();
+        newValue = (evt.currentTarget as HTMLInputElement).value;
         if (newValue && newValue.length > 0) {
             autoCompleteOpen = true;
 

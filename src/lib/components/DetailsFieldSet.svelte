@@ -3,7 +3,7 @@
     import type { CombiTableColumn } from '$lib/combitabletypes';
     import CombiTableValidateDialog from '$lib/components/CombiTableErrorDialog.svelte';
     import CombiTableDiscardChanges from '$lib/components/CombiTableDiscardChanges.svelte';
-    import { autocomplete, stringIsDate, validateField, asBoolean, asBooleanOrUndefined, asNumber, asNumberOrUndefined, asString, printDate } from '$lib/utils';
+    import { autocomplete, stringIsDate, validateField, asBoolean, asBooleanOrUndefined, asNumber, asNumberOrUndefined, asString, printDate, parseDate } from '$lib/utils';
     import CombiTableInfoDialog from '$lib/components/CombiTableInfoDialog.svelte';
     import CombiTableConfirmDeleteDialog from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
 
@@ -18,6 +18,7 @@
     export let deleteUrl : string|undefined = undefined;
     export let deleteNextPage : string|undefined = undefined;
     export let isAdd = false;
+    export let dateFormat = "yyyy-mm-dd";
     
 
     function getRecField(col : string) {
@@ -38,7 +39,8 @@
         dirty = false;
         if (data && cols && cols.length == data.length) {
             for (let i=0; i<data.length; ++i) {
-                if (data[i] != getRecField(cols[i].col)) {
+                const recField = getRecField(cols[i].col);
+                if (data[i] != recField) {
                     dirty = true;
                     break;
                 }
