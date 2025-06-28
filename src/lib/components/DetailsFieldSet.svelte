@@ -3,7 +3,7 @@
     import type { CombiTableColumn } from '$lib/combitabletypes';
     import CombiTableValidateDialog from '$lib/components/CombiTableErrorDialog.svelte';
     import CombiTableDiscardChanges from '$lib/components/CombiTableDiscardChanges.svelte';
-    import { autocomplete, stringIsDate, validateField, asBoolean, asBooleanOrUndefined, asNumber, asNumberOrUndefined, asString, printDate, parseDate } from '$lib/utils';
+    import { validateField } from '$lib/utils';
     import CombiTableInfoDialog from '$lib/components/CombiTableInfoDialog.svelte';
     import CombiTableConfirmDeleteDialog from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
 
@@ -17,9 +17,8 @@
     export let addUrl : string|undefined = undefined;
     export let deleteUrl : string|undefined = undefined;
     export let deleteNextPage : string|undefined = undefined;
-    export let isAdd = false;
+    export let isAdd = false;    
     export let dateFormat = "yyyy-mm-dd";
-    
 
     function getRecField(col : string) {
         let obj = rec;
@@ -28,7 +27,11 @@
             if (!obj || !(parts[i] in obj)) {
                 return undefined;
             }
-            obj = obj[parts[i]];
+            if (Array.isArray(obj[parts[i]])) {
+                obj = obj[parts[i]][0];
+            } else {
+                obj = obj[parts[i]];
+            }
         }
         if (!obj || !(parts[parts.length-1] in obj)) return undefined;
         return obj[parts[parts.length-1]];
@@ -40,7 +43,7 @@
         if (data && cols && cols.length == data.length) {
             for (let i=0; i<data.length; ++i) {
                 const recField = getRecField(cols[i].col);
-                if (data[i] != recField) {
+                if (!(!data[i] && !recField) && data[i] != recField) {
                     dirty = true;
                     break;
                 }
@@ -84,7 +87,7 @@
         let errors : string[] = [];
         let error : string|undefined = undefined;
         for (let i=0; i<data.length; ++i) {
-            error = validateField(cols[i], data[i]); 
+            error = validateField(cols[i], data[i], dateFormat); 
             if (error) errors.push(error);
         }
         return errors;

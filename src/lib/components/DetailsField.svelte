@@ -4,6 +4,7 @@
 
     export let col : CombiTableColumn;
     export let value : any;
+    let origValue = value;
     export let dateFormat = "yyyy-mm-dd"; // or "yyyy-mm-dd" or "mm-dd-yyyy"
 
     let valueMap : {[key:string|number]:string|number} = {};
@@ -109,6 +110,10 @@
     }
     let maxWidthStyle : string = ""
     maxWidthStyle = colMaxWidthStyle(col);
+
+    /*$: {
+        dirty = !(!value && !origValue) && value != origValue;
+    }*/
 
     function editRowUpdate(newValue : string) {
 

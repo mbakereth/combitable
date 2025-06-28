@@ -49,7 +49,9 @@ export async function autocomplete(client : any, event : RequestEvent, cols? : {
             where = {[parts[i]]: where}; 
         }
     }
+    const distinct = (parts.length == 1)  ? [parts[0]] : undefined;
     const query : {[key:string]:any} = {
+        distinct,
         include,
         where,
         take: 10,
@@ -91,7 +93,7 @@ export function validateField(col : CombiTableColumn, value: string|number|Date|
                 error = col.name + " must be a number";
             }
         } else if (col.type == "date" && typeof(value) == "string") {
-            if (!stringIsDate(value)) {
+            if (!stringIsDate(value, dateFormat)) {
                 error = col.name + " must be in the form " + dateFormat;
             }
 
