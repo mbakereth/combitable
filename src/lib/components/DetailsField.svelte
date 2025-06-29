@@ -300,11 +300,19 @@
         // if the blur was because of outside focus
         // currentTarget is the parent element, relatedTarget is the clicked element
         //autoCompleteUpdate(col, null);
-        if (event.relatedTarget == null || !event.relatedTarget && event.currentTarget.parentNode.contains(event.relatedTarget)) {
+        if (event.relatedTarget == null || !(event.relatedTarget && event.currentTarget.parentNode.contains(event.relatedTarget))) {
             autoCompleteUpdate(col, null);
         }
+    }
 
-}
+    async function handleEditBlur(event : any) {
+        // if the blur was because of outside focus
+        // currentTarget is the parent element, relatedTarget is the clicked element
+        //autoCompleteUpdate(col, null);
+        if (event.relatedTarget == null || !(event.relatedTarget && event.currentTarget.parentNode.contains(event.relatedTarget))) {
+            editMenuOpen = false;
+        }
+    }
 
 </script>
 
@@ -316,10 +324,10 @@
     {@const cmaxwStyle = maxWidthStyle}
     {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
     {#if col.type == "date"}
-        <input type="text" class="input bg-base-200 w-40 {bg}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue} style="{editminwStyle} {editmaxwStyle}"/>
+        <input type="text" class="input bg-base-200 w-40 {bg}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue} style="{editminwStyle} {editmaxwStyle}"  tabindex="0"/>
     {:else if col.autoCompleteLink}    
         <div class="acdropdown overflow:visible" bind:this={autoCompleteDiv}>
-            <input role="button" class="input m-0 -mb-1 w-full cursor-text {bg}" style="{editminwStyle} {editmaxwStyle}"
+            <input role="button" class="input m-0 -mb-1 w-full cursor-text {bg}" style="{editminwStyle} {editmaxwStyle}"  tabindex="0"
                 on:keyup={(evt) => autoCompleteKeyPress(evt, value)}
                 on:blur={(evt) => handleACBlur(evt)}
                 bind:value={displayValue}/>
@@ -338,22 +346,24 @@
     {:else if col.type != "select:string" && col.type != "select:integer" && col.type != "boolean"}
         {#if col.editHeight}
             {#if col.default}
-                <textarea class="textarea bg-base-200 align-top {bg}" style="{editminwStyle} {editmaxwStyle} {editHeightStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}></textarea>
+                <textarea class="textarea bg-base-200 align-top {bg}" style="{editminwStyle} {editmaxwStyle} {editHeightStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
             {:else}
-                <textarea class="textarea bg-base-200 align-top {bg}" style="{editminwStyle} {editmaxwStyle} {editHeightStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}></textarea>
+                <textarea class="textarea bg-base-200 align-top {bg}" style="{editminwStyle} {editmaxwStyle} {editHeightStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
             {/if}
         {:else}
             {#if col.default}
-                <input type="text" class="input bg-base-200 {bg}" style="{editminwStyle} {editmaxwStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}/>
+                <input type="text" class="input bg-base-200 {bg}" style="{editminwStyle} {editmaxwStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"/>
             {:else}
-                <input type="text" class="input bg-base-200 {bg}" style="{editminwStyle} {editmaxwStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}/>
+                <input type="text" class="input bg-base-200 {bg}" style="{editminwStyle} {editmaxwStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"/>
             {/if}
         {/if}
     {:else if col.type == "boolean"}
         <details class="dropdown overflow:visible" bind:open={editMenuOpen}  on:toggle={e => editDetailsClicked(e)}>
-            <summary class="btn m-0 -mb-1 w-full {bg}" style="{editminwStyle} {editmaxwStyle}">{displayValue}</summary>
+            <summary class="btn m-0 -mb-1 w-full {bg}" style="{editminwStyle} {editmaxwStyle}"  tabindex="0"
+                on:blur={(evt) => handleEditBlur(evt)}
+            >{displayValue}</summary>
             <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-            <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box z-10  p-2 mt-2 shadow border border-base-100" style="{dropdownwidthStyle}">
+            <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box z-10  p-2 mt-2 shadow border border-base-100" style="{dropdownwidthStyle}" tabindex="0">
                 {#if col.nullable}
                     <!-- svelte-ignore a11y-missing-attribute -->
                     <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -372,9 +382,11 @@
         </details>  
     {:else if col.values}
         <details class="dropdown overflow:visible" bind:open={editMenuOpen}  on:toggle={e => editDetailsClicked(e)}>
-            <summary class="btn m-0 -mb-1 w-full {bg}" style="{editminwStyle} {editmaxwStyle}">{displayValue}</summary>
+            <summary class="btn m-0 -mb-1 w-full {bg}" style="{editminwStyle} {editmaxwStyle}"  tabindex="0"
+                on:blur={(evt) => handleEditBlur(evt)}
+            >{displayValue}</summary>
             <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-            <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box z-10  p-2 mt-2 shadow border border-base-100" style="{dropdownwidthStyle}">
+            <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box z-10  p-2 mt-2 shadow border border-base-100" style="{dropdownwidthStyle}" tabindex="0">
                 {#if col.nullable}
                     <!-- svelte-ignore a11y-missing-attribute -->
                     <!-- svelte-ignore a11y-click-events-have-key-events -->
