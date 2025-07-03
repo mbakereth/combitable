@@ -5,7 +5,7 @@ export type PrismaWhereFunction = (value : string) => {[key:string]:any};
 export interface CombiTableColumn {
     name : string,
     col: string,
-    type: "string"|"boolean"|"integer"|"float"|"date"|"datetime"|"select:string"|"select:integer",
+    type: "string"|"boolean"|"integer"|"float"|"date"|"datetime"|"select:string"|"select:integer"|"array:string",
     values?: string[]|number[],
     names?: string[],
     nullable?: boolean,
@@ -19,7 +19,7 @@ export interface CombiTableColumn {
     sortable? : boolean,
     default? : string, // only for DetailsField - value to show instead of -
     prismaWhere? : PrismaWhereFunction,
-    link?: (row:{[key:string]:any}) => string,
+    link?: (row:{[key:string]:any}, i? : number) => string,
     autoCompleteLink? : string,
     editHeight? : string,
 

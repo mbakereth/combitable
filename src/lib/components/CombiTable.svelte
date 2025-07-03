@@ -131,6 +131,7 @@
     let pk  = primaryKey;
     let selectMap : {[key:string] : {[key:string|number]:string}} = {}
     let selectReverseMap : {[key:string] : {[key:string]:string|number}} = {}
+    let editable = true;
     for (let column of columns) {
         if ((column.type == "select:string" || column.type == "select:integer") && column.names && column.values) {
             selectMap[column.col] = {};
@@ -139,7 +140,12 @@
                 selectMap[column.col][column.values[i]] = column.names[i];
                 selectReverseMap[column.col][column.names[i]] = column.values[i];
             }
+        } else if (column.type == "array:string") {
+            editable = false;
         }
+    }
+    if (!editable && (addUrl || editUrl)) {
+        console.log("Warning: Add and edit disabled as array:srting is not supported when editing table data");
     }
     if (pk == "" && (editUrl)) {
         console.log("Warning: edit enabled but no primary key column - disabling edit");
@@ -221,7 +227,8 @@
 
 
     // parse a column name with dots and fetch from the nested data
-    function getColumn(obj : {[key:string]:any}, name : string) : any|undefined{
+    function getColumn(obj : {[key:string]:any}, col: CombiTableColumn) : any|undefined{
+        const name = col.col;
         const parts = name.split(".");
         let res : any|undefined = obj;
         for (let i=0; i<parts.length; ++i) {
@@ -234,7 +241,11 @@
                     res = res[part].map((row) => row[parts[i+1]]).filter((row) => row != undefined && row !== null && row != "").join(", ");
                     break;
                 } else {
-                    res = res[part][0]
+                    if (i == parts.length-1 && col.type == "array:string") {
+                        res = res[part];
+                    } else {
+                        res = res[part][0]
+                    }
                 }
             } else {
                 res = res && part in res ? res[part] : undefined;
@@ -262,6 +273,10 @@
         }
         if (col.type == "select:integer" || col.type == "select:string" && col.col in selectMap) {
             return selectMap[col.col][val];
+        }
+        if (col.type == "array:string") {
+            if (!Array.isArray(val)) return [val];
+            return val;
         }
         return val;
     }
@@ -662,7 +677,7 @@
                     editRowSelectValue[colName] = rrows[rowidx][colName];
                 } else if (col.type == "select:string" || col.type == "select:integer") {
                     if (col.names && col.values) {
-                        const val = getColumn(rrows[rowidx], col.col);
+                        const val = getColumn(rrows[rowidx], col);
                         if (val == undefined || (typeof(val) == "string" && val == "")) {
                             editRowText[colName] = "";
                             editRowSelectValue[colName] = "";
@@ -675,7 +690,7 @@
                             }  
                         }
                     } else if (col.values) {
-                        const val = getColumn(rrows[rowidx], col.col)
+                        const val = getColumn(rrows[rowidx], col)
                         if (val == undefined || (typeof(val) == "string" && val == "")) {
                             editRowText[colName] = "";
                             editRowSelectValue[colName] = "";
@@ -691,7 +706,7 @@
                     }
 
                 } else {
-                    let val = getColumn(rrows[rowidx], colName)
+                    let val = getColumn(rrows[rowidx], col)
                     editRowText[colName] = asString(val, col.type);
                 }
                 editRowText = {...editRowText}
@@ -1127,7 +1142,7 @@ let activeElement : Element
                 {/each}
 
                 <!-- actions column-->
-                {#if enableFilter || addUrl || editUrl || deleteUrl || linkUrl || unlinkUrl}
+                {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl || unlinkUrl}
                 {@const width = deleteUrl && unlinkUrl ? "80px" : "60px"}
                     <td class="w-[{width}] last:sticky last:right-0 z-10 bg-base-100 "></td>
                 {/if}
@@ -1207,7 +1222,7 @@ let activeElement : Element
                             {/if}
                         </td>
                     {/each}
-                    {#if enableFilter || addUrl || editUrl || deleteUrl || linkUrl}
+                    {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl}
                         <td class="last:sticky last:right-0 z-10 bg-base-100">
                             <!-- svelte-ignore a11y-click-events-have-key-events -->
                             <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -1222,7 +1237,7 @@ let activeElement : Element
             {/if}
 
             <!-- add row -->
-            {#if addUrl || linkUrl}
+            {#if (addUrl && editable) || linkUrl}
                 <tr class="0">
                     {#if editRow == -1 || editRow == -2}
                         {#if select}
@@ -1309,7 +1324,7 @@ let activeElement : Element
                                 </td>
                             {/if}
                         {/each}
-                        {#if enableFilter || addUrl || editUrl || deleteUrl || linkUrl}
+                        {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl}
                             <td class="w-4 last:sticky last:right-0 z-10 bg-base-100">
                                 {#if dirty}
                                     <!-- svelte-ignore missing-declaration -->
@@ -1333,7 +1348,7 @@ let activeElement : Element
                             <td></td>
                         {/if}
                         <td colspan="{columns.length}">
-                        {#if addUrl}
+                        {#if addUrl && editable}
                             <button class="btn btn-sm mr-2" on:click={() => edit(-1)}>Add</button>
                         {/if}
                         {#if linkUrl}
@@ -1375,13 +1390,23 @@ let activeElement : Element
 
                         {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
                         {#if editRow == undefined || editRow != rowidx}
-                            {@const value = formatColumn(getColumn(row, col.col), col)}
-                            <td style="{cmaxwStyle}">
+                            {@const value = formatColumn(getColumn(row, col), col)}
+                            <td class="align-top" style="{cmaxwStyle}">
                                 {#if (col.type == "date" || col.type == "datetime" || col.nowrap)}
                                     {#if col.link}
                                         <span class="text-nowrap text-base-content"><a class="text-base-content {linkFormat}" href={col.link(row)}>{value}</a></span>
                                     {:else}
                                         <span class="text-nowrap text-base-content">{value}</span>
+                                    {/if}
+                                {:else if col.type == "array:string"}
+                                    {#if col.link}
+                                        {#each formatColumn(getColumn(row, col), col) as el, i} 
+                                            <a class="text-base-content {linkFormat}" href={col.link(row, i)}>{el}</a>
+                                        {/each}
+                                    {:else}
+                                        {#each formatColumn(getColumn(row, col), col) as el} 
+                                            {el}<br>
+                                        {/each}
                                     {/if}
                                 {:else}
                                     {#if col.link}
@@ -1397,7 +1422,7 @@ let activeElement : Element
                                 <p class="small m-0 p-0 pb-1 text-primary ml-1">Edit</p>
                                 {/if}
                                 {#if col.readOnly}
-                                    {@const value = formatColumn(getColumn(row, col.col), col)}
+                                    {@const value = formatColumn(getColumn(row, col), col)}
                                     {#if (col.type == "date" || col.type == "datetime" || col.nowrap)}
                                         <span class="text-nowrap text-base-content align-middle">{value}</span>
                                     {:else}
@@ -1475,9 +1500,9 @@ let activeElement : Element
                     {/each}
                     {#if editRow == undefined}
                         <!-- displaying row - only show delete icon if delete allowed -->
-                        {#if editUrl || deleteUrl !== undefined}
+                        {#if (editUrl  && editable) || deleteUrl !== undefined}
                             <td class="w-4 last:sticky last:right-0 z-10 bg-base-100">
-                                {#if editUrl}
+                                {#if editUrl && editable}
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->

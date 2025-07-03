@@ -76,7 +76,6 @@
 
     function confirmCancelEdit() {
         for (let i=0; i<data.length; ++i) {
-            console.log(i, cols[i].col, getRecField(cols[i].col))
             data[i] = getRecField(cols[i].col);
         }
         //data = [...data];
