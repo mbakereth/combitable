@@ -278,18 +278,47 @@ export class SearchUrl {
        return encodeURIComponent(this.url.search);
     }
 
-    setBack(back : SearchUrl) {
+    setBack(back : SearchUrl, storage?: Storage) {
         if (!this.url || !back.url) return; // only supported for query params
         let partialBackUrl = back.url.pathname + back.url.search;
-        let encodedBack = encodeURIComponent(partialBackUrl);
-        this.url.searchParams.set("b", encodedBack);
+        if (storage) {
+            let stack : string[] = []
+            let stack_str = storage.getItem("history");
+            if (stack_str) stack = JSON.parse(stack_str);
+            stack.push(partialBackUrl)
+            storage.setItem("history", JSON.stringify(stack));
+        } else {
+            // use query pareams
+            let encodedBack = encodeURIComponent(partialBackUrl);
+            this.url.searchParams.set("b", encodedBack);
+            if (String(this.url).length >= 2048) {
+
+                // reset url to justory of just 1
+                this.url.searchParams.delete("b");
+                partialBackUrl = back.url.pathname + back.url.search;
+                let encodedBack = encodeURIComponent(partialBackUrl);
+                this.url.searchParams.set("b", encodedBack);
+            }
+        }
     }
 
-    popBack() : SearchUrl|null {
+    popBack(storage?: Storage) : SearchUrl|null {
         if (!this.url) return null; // only supported for query params
-        let back = this.url.searchParams.get("b");
-        if (!back) return null;
-        back = decodeURIComponent(back);
+        let back : string|null = null;
+        if (storage) {
+            let stack : string[] = []
+            let stack_str = storage.getItem("history");
+            if (!stack_str) return null;
+            stack = JSON.parse(stack_str);
+            if (stack.length == 0) return null;
+            back = stack.pop() ?? null;
+            storage.setItem("history", JSON.stringify(stack));
+
+        } else {
+            back = this.url.searchParams.get("b");
+            if (!back) return null;
+            back = decodeURIComponent(back);
+        }
         let tempUrl = new URL(this.url.origin + back);
         let pathname = tempUrl.pathname;
         let newUrl = new URL(this.url.origin + pathname + tempUrl.search);
