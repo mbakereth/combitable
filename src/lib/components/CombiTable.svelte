@@ -1401,7 +1401,7 @@ let activeElement : Element
                                 {:else if col.type == "array:string"}
                                     {#if col.link}
                                         {#each formatColumn(getColumn(row, col), col) as el, i} 
-                                            <a class="text-base-content {linkFormat}" href={col.link(row, i)}>{el}</a>
+                                            <a class="text-base-content {linkFormat}" href={col.link(row, i)}>{el}</a><br>
                                         {/each}
                                     {:else}
                                         {#each formatColumn(getColumn(row, col), col) as el} 
