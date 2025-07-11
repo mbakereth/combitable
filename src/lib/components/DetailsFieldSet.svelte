@@ -1,11 +1,12 @@
 <script lang="ts">
-    import { goto } from '$app/navigation';
+    import { goto, invalidateAll } from '$app/navigation';
     import type { CombiTableColumn } from '$lib/combitabletypes';
     import CombiTableValidateDialog from '$lib/components/CombiTableErrorDialog.svelte';
     import CombiTableDiscardChanges from '$lib/components/CombiTableDiscardChanges.svelte';
     import { validateField } from '$lib/utils';
     import CombiTableInfoDialog from '$lib/components/CombiTableInfoDialog.svelte';
     import CombiTableConfirmDeleteDialog from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
+    import { page } from '$app/stores';
 
     import DetailsField from '$lib/components/DetailsField.svelte';
 
@@ -128,13 +129,24 @@
                     if (body.errors) {
                         showError(body.errors);
                     } else {
-                        rec = body.row;
-                        for (let i=0; i<data.length; ++i) {
-                            body[cols[i].col] = data[i];
-                            data[i] = getRecField(cols[i].col)
-                        };
+                        //rec = body.row;
+                        /*for (let i=0; i<data.length; ++i) {
+                            //body[cols[i].col] = data[i];
+                            //data[i] = getRecField(cols[i].col)
+                        };*/
                         dirty = false;
-                        showInfo("Record saved");
+                        let infoText = "Record saved";
+                        if (body.info) {
+                            let info : string[] = Array.isArray(body.info) ? body.info : [body.info];
+                            infoText += '<ul class="list-disc">\n';
+                            for (let l of body.info) {
+                                infoText += "<li>" + l + "</li>\n";
+                            }
+                            infoText += "</ul>\n";
+                        }
+                        showInfo(infoText);
+                        invalidateAll();
+                        goto($page.url);
                     }
                 }
             } catch (e) {

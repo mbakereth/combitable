@@ -8,7 +8,7 @@
     
 <dialog id={id} class="modal">
     <div class="modal-box">
-        <p class="py-4">{info}</p>
+        <p class="py-4">{@html info}</p>
         <div class="modal-action">
             <form method="dialog">
                 <!-- if there is a button in form, it will close the modal -->
