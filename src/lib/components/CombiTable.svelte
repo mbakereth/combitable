@@ -633,6 +633,13 @@
         if (typeof presets[colName] == 'function') return asString((presets[colName])(), col.type);
         return asString(presets[colName], col.type);
     }
+    function getPresetSelectValue(col : CombiTableColumn) : string|undefined|number|boolean {
+        if (presets == undefined || presets[col.col] == undefined) return undefined;
+        let colName = col.col;
+        if (typeof presets[colName] == 'function') return asString((presets[colName])(), col.type);
+        if (typeof(presets[colName]) == "object") return undefined;
+        return presets[colName];
+    }
 
     $: editRow = undefined as number|undefined;
     $: editRowSelectValue = {} as {[key:string]:string|number|boolean|undefined};
@@ -720,11 +727,13 @@
                 if (col.type == "boolean") {
                     //editRowText[colName] = (presets && presets[colName]) ? asString(rrows[rowidx][colName], col.type) : "";
                     editRowText[colName] = getPreset(col) ??  "";
+                    editRowSelectValue[colName] = getPresetSelectValue(col);
                 } else if (col.type == "select:string" || col.type == "select:integer") {
                     if (col.col in editRowSelectValue) editRowSelectValue[col.col] = undefined;
                     if (col.names && col.values) {
                         //const val = presets && col.col in presets ? presets[col.col] : undefined;
                         const val = getPreset(col);
+                        editRowSelectValue[colName] = getPresetSelectValue(col);
                         if (!val) {
                             editRowText[colName] = "";
                             editRowSelectValue[colName] = "";
@@ -857,6 +866,7 @@
             try {
                 let data : {[key:string]:any} = {};
                 for (let col of columns) {
+
                     if (editRow == -2 && col.col != primaryKey) continue;
                     if (col.type == "select:string") {
                         data[col.col] = editRowSelectValue[col.col];

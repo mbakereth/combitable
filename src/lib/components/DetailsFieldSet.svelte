@@ -16,6 +16,7 @@
     export let pk : string|undefined = undefined;
     export let editUrl : string|undefined = undefined;
     export let addUrl : string|undefined = undefined;
+    export let newUrl : string|undefined = undefined;
     export let deleteUrl : string|undefined = undefined;
     export let deleteNextPage : string|undefined = undefined;
     export let isAdd = false;    
@@ -188,11 +189,15 @@
 </script>
 
 <div>
-    {#if addUrl || editUrl || deleteUrl}
+    {#if (addUrl && newUrl
+    ) || editUrl || deleteUrl}
         <div class="m-4 mt-8 mb-0">
-            {#if addUrl }
+            {#if addUrl || editUrl }
                 <button class="btn btn-success mt-0 mb-0" disabled={!dirty} on:click={() => saveEdit()}>Save</button>
                 <button class="btn btn-neutral mt-0 mb-0" disabled={!dirty} on:click={() => cancelEdit()}>Cancel</button>
+            {/if}                 
+            {#if addUrl && newUrl }
+            <button class="btn btn-primary mt-0 mb-0" disabled={dirty} on:click={async () => {await invalidateAll(); goto(newUrl)}}>New</button>
             {/if}                 
             {#if deleteUrl }
             <button class="btn btn-error mt-0 mb-0" disabled={dirty} on:click={() => deleteRow()}>Delete</button>
