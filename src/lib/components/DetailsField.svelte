@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { CombiTableColumn } from '$lib/combitabletypes';
     import { tick } from 'svelte';
+    import { readonly } from 'svelte/store';
 
     export let col : CombiTableColumn;
     export let value : any;
@@ -16,6 +17,7 @@
         }
     }
     $: displayValue = value;
+    $: extraValue = "";
     $: {
         if (value === undefined || value === null ||  value === "") { 
             displayValue = "";
@@ -37,6 +39,8 @@
             displayValue = printDate(value, "")
         } else if (col.type == "boolean") {
             displayValue = value ? "Yes" : "No"
+        } else if (col.type == "array:string") {
+            displayValue = value ? [...value] : [];
         } else {
             displayValue = defaultValue(value);
         }
@@ -314,6 +318,15 @@
         }
     }
 
+    function removeElement(i : number) {
+        value.splice(i, 1);
+        value = [...value];
+    }
+    function addElement() {
+        value = [...value, extraValue];
+        extraValue = "";
+    }
+
 </script>
 
 {#if true}
@@ -343,7 +356,7 @@
                 </ul>
             {/if}
         </div>
-    {:else if col.type != "select:string" && col.type != "select:integer" && col.type != "boolean"}
+    {:else if col.type != "select:string" && col.type != "select:integer" && col.type != "boolean" && col.type != "array:string"}
         {#if col.editHeight}
             {#if col.default}
                 <textarea class="textarea bg-base-200 align-top {bg}" style="{editminwStyle} {editmaxwStyle} {editHeightStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
@@ -357,6 +370,28 @@
                 <input type="text" class="input bg-base-200 {bg}" style="{editminwStyle} {editmaxwStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"/>
             {/if}
         {/if}
+    {:else if col.type == "array:string"}
+        <div>
+        <table class="table table-sm border-none border-spacing-0 -ml-1 -p-4">
+            <tbody>
+                {#each displayValue as val, i}
+                    <tr>
+                        {#if !col.readOnly}
+                            <td class="w-16"><button class="btn btn-neutral btn-small h-8" on:click={() => removeElement(i)}>-</button></td>
+                        {/if}
+                        <td>{val}</td>
+                    </tr>
+                {/each}
+                <tr>
+                    {#if !col.readOnly}
+                        <td class="w-16"><button class="btn btn-neutral btn-small h-8" disabled={extraValue==""} on:click={() => addElement()}>+</button></td>
+                        <td><input type="text" class="input bg-base-200" style="{editminwStyle} {editmaxwStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={extraValue}  tabindex="0"/></td>
+                    {/if}
+                </tr>
+            </tbody>
+        </table>
+
+        </div>
     {:else if col.type == "boolean"}
         <details class="dropdown overflow:visible" bind:open={editMenuOpen}  on:toggle={e => editDetailsClicked(e)}>
             <summary class="btn m-0 -mb-1 w-full {bg}" style="{editminwStyle} {editmaxwStyle}"  tabindex="0"

@@ -390,7 +390,6 @@ export class SearchUrl {
 
     private static makePrismaWhere(name : string, value : string, models : PrismaModelMaps, modelName: string, suffix : string="", emptySearch : string|undefined = undefined, columns: CombiTableColumn[]|undefined = undefined) : {[key:string]:any} {
         if (name == "") return {};
-
         const colMatch = columns?.filter((val : {[key:string]:any}) => val.col == name);
         if (colMatch && colMatch.length > 0 && colMatch[0].prismaWhere) {
             return colMatch[0].prismaWhere(value)

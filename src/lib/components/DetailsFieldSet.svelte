@@ -45,9 +45,25 @@
         if (data && cols && cols.length == data.length) {
             for (let i=0; i<data.length; ++i) {
                 const recField = getRecField(cols[i].col);
-                if (!(!data[i] && !recField) && data[i] != recField) {
-                    dirty = true;
-                    break;
+                if (!(!data[i] && !recField)) {
+                    if (Array.isArray(data[i])) {
+                        if (data[i].length != recField.length) {
+                            dirty = true;
+                            break;
+                        } else {
+                            for (let j=0; i<data[i].lenmgth; ++i) {
+                                if (data[i][j] != recField[j]) {
+                                    dirty = true;
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        if (data[i] != recField) {
+                            dirty = true;
+                            break;
+                        }
+                    }
                 }
             }
 
@@ -69,18 +85,29 @@
     }
 
     function cancelEdit() {
-        if (!dirty) {
+        if (isAdd) {
+            (document.querySelector('#confirmEditDiscard') as HTMLDialogElement)?.showModal(); 
+        } else if (!dirty) {
             confirmCancelEdit();
         } else {
             (document.querySelector('#confirmEditDiscard') as HTMLDialogElement)?.showModal(); 
         }
     }
 
-    function confirmCancelEdit() {
-        for (let i=0; i<data.length; ++i) {
-            data[i] = getRecField(cols[i].col);
+    async function confirmCancelEdit() {
+        if (isAdd) {
+            let prev = $page.url.searchParams.get("prev");
+            if (prev) {
+                await invalidateAll();
+                goto(prev);
+            }
+        } else {
+            for (let i=0; i<data.length; ++i) {
+                data[i] = getRecField(cols[i].col);
+                if (Array.isArray(data[i])) data[i] = [...data[i]];
+            }
+            //data = [...data];
         }
-        //data = [...data];
 
     }
 
@@ -186,6 +213,10 @@
             }
     }
 
+    async function newEntry(url : string) {
+        await invalidateAll(); 
+        goto(url + "&prev=" + encodeURIComponent($page.url.toString()))
+    }
 </script>
 
 <div>
@@ -194,10 +225,10 @@
         <div class="m-4 mt-8 mb-0">
             {#if addUrl || editUrl }
                 <button class="btn btn-success mt-0 mb-0" disabled={!dirty} on:click={() => saveEdit()}>Save</button>
-                <button class="btn btn-neutral mt-0 mb-0" disabled={!dirty} on:click={() => cancelEdit()}>Cancel</button>
+                <button class="btn btn-neutral mt-0 mb-0" disabled={!dirty && !isAdd} on:click={() => cancelEdit()}>Cancel</button>
             {/if}                 
             {#if addUrl && newUrl }
-            <button class="btn btn-primary mt-0 mb-0" disabled={dirty} on:click={async () => {await invalidateAll(); goto(newUrl)}}>New</button>
+            <button class="btn btn-primary mt-0 mb-0" disabled={dirty || isAdd} on:click={async () => {await newEntry(newUrl);}}>New</button>
             {/if}                 
             {#if deleteUrl }
             <button class="btn btn-error mt-0 mb-0" disabled={dirty} on:click={() => deleteRow()}>Delete</button>
