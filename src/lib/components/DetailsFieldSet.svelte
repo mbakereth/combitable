@@ -173,8 +173,12 @@
                             infoText += "</ul>\n";
                         }
                         showInfo(infoText);
-                        invalidateAll();
-                        goto($page.url);
+                        await invalidateAll();
+                        if (body.url) {
+                            goto(body.url);
+                        } else {
+                            goto($page.url);
+                        }
                     }
                 }
             } catch (e) {

@@ -653,11 +653,9 @@
     }
 
     function editDetailsClicked(e : Event, col : CombiTableColumn) {
-        console.log("editDetailsClicked")
         if (editRowMenusOpen[col.col]) {
             let target = e.currentTarget;
             if (target instanceof Element) {
-                console.log("scrolling", target.getBoundingClientRect().bottom, table.getBoundingClientRect().bottom)
                 //if (target.getBoundingClientRect().bottom > table.getBoundingClientRect().bottom) {
                     target.scrollIntoView({behavior: "smooth", block: "start"}); 
                 //}
