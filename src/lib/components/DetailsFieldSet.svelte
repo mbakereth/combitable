@@ -51,7 +51,7 @@
                             dirty = true;
                             break;
                         } else {
-                            for (let j=0; i<data[i].lenmgth; ++i) {
+                            for (let j=0; j<data[i].length; ++j) {
                                 if (data[i][j] != recField[j]) {
                                     dirty = true;
                                     break;
@@ -215,7 +215,8 @@
 
     async function newEntry(url : string) {
         await invalidateAll(); 
-        goto(url + "&prev=" + encodeURIComponent($page.url.toString()))
+        let joiner = url.includes("?") ? "&" : "?";
+        goto(url + joiner + "prev=" + encodeURIComponent($page.url.toString()))
     }
 </script>
 

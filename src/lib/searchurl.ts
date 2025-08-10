@@ -452,9 +452,9 @@ export class SearchUrl {
         if (parts.length == 1) {
             if (invert) return {[name]: {not: value1}} ;
             if (isContains) {
-                return {[name]: {contains: value1}} ;
+                return {[name]: {contains: value1, mode: 'insensitive'}} ;
             } else if (isStartsWith) {
-                return {[name]: {startsWith: value1}} ;
+                return {[name]: {startsWith: value1, mode: 'insensitive'}} ;
             }
             return {[name]: value1}
         }
@@ -462,7 +462,7 @@ export class SearchUrl {
         let where : {[key:string]:any} = {};
         if (invert) where[parts[parts.length-1]] = {not: value1};
         else if (isContains) {
-            where[parts[parts.length-1]] = {contains: value1};
+            where[parts[parts.length-1]] = {contains: value1, mode: 'insensitive'};
         }
         else where[parts[parts.length-1]] = value1;
         for (let i=parts.length-2; i>=0; --i) {

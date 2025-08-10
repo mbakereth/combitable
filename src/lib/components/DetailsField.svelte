@@ -247,13 +247,22 @@
             if (col.nullable) value = null;
 
         } else {
-            value = newValue;
-            displayValue = defaultValue(value)
+            if (col.type == "array:string") {
+                extraValue = defaultValue(value)
+            } else {
+                value = newValue;
+               displayValue = defaultValue(value)
+            }
+
         }
 
 
-        value = newValue;
-        displayValue = defaultValue(newValue)
+        if (col.type == "array:string") {
+            extraValue = defaultValue(newValue)
+        } else {
+            value = newValue;
+            displayValue = defaultValue(newValue)
+        }
         editMenuOpen = false;
         autoCompleteOpen = false;
         autoCompleteData = [];
@@ -297,7 +306,8 @@
         }
         
         dirty = true;
-        value = displayValue;
+        if (col.type != "array:string")
+            value = displayValue;
     }
 
     async function handleACBlur(event : any) {
@@ -338,7 +348,7 @@
     {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
     {#if col.type == "date"}
         <input type="text" class="input bg-base-200 w-40 {bg}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue} style="{editminwStyle} {editmaxwStyle}"  tabindex="0"/>
-    {:else if col.autoCompleteLink}    
+    {:else if col.autoCompleteLink && col.type != "array:string"}    
         <div class="acdropdown overflow:visible" bind:this={autoCompleteDiv}>
             <input role="button" class="input m-0 -mb-1 w-full cursor-text {bg}" style="{editminwStyle} {editmaxwStyle}"  tabindex="0"
                 on:keyup={(evt) => autoCompleteKeyPress(evt, value)}
@@ -385,7 +395,29 @@
                 <tr>
                     {#if !col.readOnly}
                         <td class="w-16"><button class="btn btn-neutral btn-small h-8" disabled={extraValue==""} on:click={() => addElement()}>+</button></td>
-                        <td><input type="text" class="input bg-base-200" style="{editminwStyle} {editmaxwStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={extraValue}  tabindex="0"/></td>
+                        <td>
+                            {#if col.autoCompleteLink}
+                                <div class="acdropdown overflow:visible" bind:this={autoCompleteDiv}>
+                                    <input role="button" class="input m-0 -mb-1 w-full cursor-text {bg}" style="{editminwStyle} {editmaxwStyle}"  tabindex="0"
+                                        on:keyup={(evt) => autoCompleteKeyPress(evt, value)}
+                                        on:blur={(evt) => handleACBlur(evt)}
+                                        bind:value={extraValue}/>
+                                    <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+                                    {#if autoCompleteOpen}
+                                        <ul bind:this={autoCompleteList} class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box z-10 p-2 mt-2 shadow border border-base-100" style="{dropdownwidthStyle}" tabindex="0">
+                                            {#each autoCompleteData as name}
+                                                <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                                <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                                <!-- svelte-ignore a11y-missing-attribute -->
+                                                <li><a on:click={() => autoCompleteUpdate(col, name)}>{name}</a></li>
+                                            {/each}
+                                        </ul>
+                                    {/if}
+                                </div>
+                            {:else}
+                                <input type="text" class="input bg-base-200" style="{editminwStyle} {editmaxwStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={extraValue}  tabindex="0"/>
+                            {/if}
+                        </td>
                     {/if}
                 </tr>
             </tbody>
