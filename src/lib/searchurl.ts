@@ -54,6 +54,7 @@ export class SearchUrl {
     private suffix = "";
     private idColumn = "id_pk";
     emptySearch : string|undefined = "-";
+    private insensitive = false;
 
     constructor(url : URL|{[key:string]:any}, defaultTake = 20, emptySearch : string|undefined = "-") {
         this.url = url instanceof URL ? url : undefined;
@@ -76,6 +77,14 @@ export class SearchUrl {
 
     getIdColumn() : string {
         return this.idColumn;
+    }
+
+    setInsensitive(val : boolean) {
+        this.insensitive = val;
+    }
+
+    getInsensitive() : boolean {
+        return this.insensitive;
     }
 
     ///// sorting
@@ -371,10 +380,10 @@ export class SearchUrl {
         let prefilters = this.getPreFilters();
         let where : {[key:string]:any} = {}
         for (let filter in filters) {
-            where = {...where, ...SearchUrl.makePrismaWhere(filter, filters[filter], map, modelName, this.suffix, this.emptySearch, columns)};
+            where = {...where, ...SearchUrl.makePrismaWhere(filter, filters[filter], map, modelName, this.suffix, this.emptySearch, columns, this.insensitive)};
         }
         for (let filter in prefilters) {
-            where = {...where, ...SearchUrl.makePrismaWhere(filter, prefilters[filter], map, modelName, this.suffix, this.emptySearch, columns)};
+            where = {...where, ...SearchUrl.makePrismaWhere(filter, prefilters[filter], map, modelName, this.suffix, this.emptySearch, columns, this.insensitive)};
         }
         const ids = this.getIds();
         if (ids.length > 0) {
@@ -388,7 +397,7 @@ export class SearchUrl {
     
     }
 
-    private static makePrismaWhere(name : string, value : string, models : PrismaModelMaps, modelName: string, suffix : string="", emptySearch : string|undefined = undefined, columns: CombiTableColumn[]|undefined = undefined) : {[key:string]:any} {
+    private static makePrismaWhere(name : string, value : string, models : PrismaModelMaps, modelName: string, suffix : string="", emptySearch : string|undefined = undefined, columns: CombiTableColumn[]|undefined = undefined, insensitive : boolean = false) : {[key:string]:any} {
         if (name == "") return {};
         const colMatch = columns?.filter((val : {[key:string]:any}) => val.col == name);
         if (colMatch && colMatch.length > 0 && colMatch[0].prismaWhere) {
@@ -452,9 +461,11 @@ export class SearchUrl {
         if (parts.length == 1) {
             if (invert) return {[name]: {not: value1}} ;
             if (isContains) {
-                return {[name]: {contains: value1, mode: 'insensitive'}} ;
+                if (insensitive) return {[name]: {contains: value1, mode: 'insensitive'}} ;
+                return {[name]: {contains: value1}} ;
             } else if (isStartsWith) {
-                return {[name]: {startsWith: value1, mode: 'insensitive'}} ;
+                if (insensitive) return {[name]: {startsWith: value1, mode: 'insensitive'}} ;
+                return {[name]: {startsWith: value1}} ;
             }
             return {[name]: value1}
         }
@@ -462,7 +473,8 @@ export class SearchUrl {
         let where : {[key:string]:any} = {};
         if (invert) where[parts[parts.length-1]] = {not: value1};
         else if (isContains) {
-            where[parts[parts.length-1]] = {contains: value1, mode: 'insensitive'};
+            if (insensitive) where[parts[parts.length-1]] = {contains: value1, mode: 'insensitive'};
+            else where[parts[parts.length-1]] = {contains: value1};
         }
         else where[parts[parts.length-1]] = value1;
         for (let i=parts.length-2; i>=0; --i) {
