@@ -44,7 +44,7 @@
             for (let i=0; i<data.length; ++i) {
                 const recField = getRecField(cols[i].col);
                 if (!(!data[i] && !recField)) {
-                    if (Array.isArray(data[i])) {
+                    if (Array.isArray(data[i]) && recField) {
                         if (data[i].length != recField.length) {
                             dirty = true;
                             break;
