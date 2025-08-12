@@ -175,7 +175,7 @@
                         if (body.url) {
                             goto(body.url);
                         } else {
-                            goto($page.url);
+                            //goto($page.url);
                         }
                     }
                 }
