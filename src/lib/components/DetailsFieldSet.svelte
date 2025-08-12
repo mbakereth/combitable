@@ -8,8 +8,6 @@
     import CombiTableConfirmDeleteDialog from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
     import { page } from '$app/stores';
 
-    import DetailsField from '$lib/components/DetailsField.svelte';
-
     export let rec : {[key:string]:any};
     export let data : any[]
     export let cols : CombiTableColumn[]
