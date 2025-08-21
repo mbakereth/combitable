@@ -17,42 +17,9 @@
     let rec : {[key:string]:any} = data.rec ?? {}
     $: isAdd = data.rec === undefined
 
-    const restOfScreenHeight = 230;
-    const buttonHeight = 78;
-    let innerWidth = 0
-    let innerHeight = 0
-    $: maxTableHeight = restOfScreenHeight ? innerHeight - restOfScreenHeight - buttonHeight : undefined;
-    $: maxTabHeight = restOfScreenHeight ? innerHeight - restOfScreenHeight : undefined;
-    $: tabHeightStyle = maxTabHeight && innerWidth > 0 ? "display: block; height:" + maxTabHeight + "px" : "";
-    $: tableHeightStyle = maxTableHeight && innerWidth > 0 ? "display: block; height:" + maxTableHeight + "px" : "";
-    function resize() {
-        maxTabHeight = restOfScreenHeight ? innerHeight - restOfScreenHeight : undefined;
-        tabHeightStyle = maxTabHeight ? "display: block; height:" + maxTabHeight + "px;" : "";
-        maxTableHeight = restOfScreenHeight ? innerHeight - restOfScreenHeight - buttonHeight  : undefined;
-        tableHeightStyle = maxTableHeight ? "display: block; height:" + maxTableHeight + "px;" : "";
-    }
-    onMount(() => {
-        resize();
-		window.addEventListener('resize', resize);
-		
-		return () => {
-			window.removeEventListener('resize', resize);
-		}
-    });
-
-
-    let table : Element;
     $: fieldData = [rec?.name, rec?.gender, rec?.died, rec?.type, rec?.father?.name, rec?.mother?.name];
 
-    let nameField : DetailsField;
-    let genderField : DetailsField;
-    let diedField : DetailsField;
-    let typeField : DetailsField;
-    let motherField : DetailsField;
-    let fatherField : DetailsField;
 </script>
-
-<svelte:window bind:innerWidth bind:innerHeight />
 
 <svelte:head>
     <title>{fieldData[0] ?? "New god"}</title>
@@ -70,13 +37,12 @@
 
 
     <div class="m-4 overflow-y-auto">
-        <table bind:this={table}  class="table overflow-y-visible table-sm">
+        <table class="table overflow-y-visible table-sm">
             <tbody>
                 <tr class="border-none">
                     <td class="w-32">Name</td>
                     <td>
                         <DetailsField
-                            bind:this={nameField}
                             col={columns[0]}
                             bind:value={fieldData[0]}
                         />
@@ -87,7 +53,6 @@
                     <td class="w-32">Gender</td>
                     <td>
                         <DetailsField
-                            bind:this={genderField}
                             col={columns[1]}
                             bind:value={fieldData[1]}
                         />
@@ -98,7 +63,6 @@
                     <td class="w-32">Died</td>
                     <td>
                         <DetailsField
-                            bind:this={diedField}
                             col={columns[2]}
                             bind:value={fieldData[2]}
                         />
@@ -109,7 +73,6 @@
                     <td class="w-32">Type</td>
                     <td>
                         <DetailsField
-                            bind:this={typeField}
                             col={columns[3]}
                             bind:value={fieldData[3]}
                         />
@@ -120,7 +83,6 @@
                     <td class="w-32">Father</td>
                     <td>
                         <DetailsField
-                            bind:this={fatherField}
                             col={columns[4]}
                             bind:value={fieldData[4]}
                         />
@@ -131,7 +93,6 @@
                     <td class="w-32">Mother</td>
                     <td>
                         <DetailsField
-                            bind:this={motherField}
                             col={columns[5]}
                             bind:value={fieldData[5]}
                         />
