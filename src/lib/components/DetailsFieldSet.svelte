@@ -8,8 +8,6 @@
     import CombiTableConfirmDeleteDialog from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
     import { page } from '$app/stores';
 
-    import DetailsField from '$lib/components/DetailsField.svelte';
-
     export let rec : {[key:string]:any};
     export let data : any[]
     export let cols : CombiTableColumn[]
@@ -46,7 +44,7 @@
             for (let i=0; i<data.length; ++i) {
                 const recField = getRecField(cols[i].col);
                 if (!(!data[i] && !recField)) {
-                    if (Array.isArray(data[i])) {
+                    if (Array.isArray(data[i]) && recField) {
                         if (data[i].length != recField.length) {
                             dirty = true;
                             break;
@@ -177,7 +175,7 @@
                         if (body.url) {
                             goto(body.url);
                         } else {
-                            goto($page.url);
+                            //goto($page.url);
                         }
                     }
                 }

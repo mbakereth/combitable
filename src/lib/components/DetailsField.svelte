@@ -19,6 +19,7 @@
     $: displayValue = value;
     $: extraValue = "";
     $: {
+        extraValue = "";
         if (value === undefined || value === null ||  value === "") { 
             displayValue = "";
         } else if (col.type == "select:string" || col.type == "select:integer") {
@@ -192,7 +193,7 @@
             let target = e.currentTarget;
             if (target instanceof Element) {
                 //if (target.getBoundingClientRect().bottom > table.getBoundingClientRect().bottom) {
-                    setInterval(() => {target.scrollIntoView({behavior: "smooth", block: "nearest"})}); 
+                    setTimeout(() => {target.scrollIntoView({behavior: "smooth", block: "nearest"})}, 100); 
                 //}
             }
         }
@@ -382,17 +383,17 @@
         {/if}
     {:else if col.type == "array:string"}
         <div>
-        <table class="table table-sm border-none border-spacing-0 -ml-1 -p-4">
+        <table class="table table-sm border-none border-spacing-0 -ml-1 -p-4" style="border-bottom-width: 0px!important;">
             <tbody>
                 {#each displayValue as val, i}
-                    <tr>
+                    <tr style="border-bottom-width: 0px!important;">
                         {#if !col.readOnly}
                             <td class="w-16"><button class="btn btn-neutral btn-small h-8" on:click={() => removeElement(i)}>-</button></td>
                         {/if}
                         <td>{val}</td>
                     </tr>
                 {/each}
-                <tr>
+                <tr style="border-bottom-width: 0px!important;">
                     {#if !col.readOnly}
                         <td class="w-16"><button class="btn btn-neutral btn-small h-8" disabled={extraValue==""} on:click={() => addElement()}>+</button></td>
                         <td>
