@@ -45,6 +45,8 @@
     export let stickyHeadRow = false;
     export let ops : CombiTableOp[] = [];
     export let preview : boolean = false;
+    export let link: ((row:{[key:string]:any}, i? : number) => string)|undefined = undefined;
+
     let haveOps = ops.length > 0;
     if (haveOps) select = true;
     export let addExtra : CombiTableExtraButton[] = [];
@@ -1109,12 +1111,9 @@
 
 }
 
-let activeElement : Element
-
 </script>
 
 <svelte:window bind:innerWidth bind:innerHeight />
-<svelte:document bind:activeElement={activeElement} />
 
 <div class="overflow-x-auto overflow-y-visible">
     <table class="table table-{widthType} overflow-y-visible" style="{tableHeightStyle} bg-base-100" bind:this={table}>
@@ -1374,7 +1373,8 @@ let activeElement : Element
             
             <!-- data rows -->
             {#each rrows as row, rowidx}
-                <tr class="hover:bg-neutral">
+                {@const rowLinkClass = link ? "cursor-pointer hover:bg-base-200" : "hover:bg-neutral"}
+                <tr class="{rowLinkClass}"  on:click={() => {if (link) goto(link(row))}}>
                     {#if select}
                         <!-- checkbox column -->
                         <td>
@@ -1619,7 +1619,7 @@ let activeElement : Element
 
 <!-- To instantiate tailwind classes that are in variables therefore not seen by the preprocessor -->
 <div class="hidden -mt-[21px] ml-1 ml-6 -ml-6 table-fixed table-auto -mt-[21px] -mt-[42px] ml-1 ml-6 ml-12 w-[80px] w-[60px] w-[48px] -mt-[20px] -mt-[18px] ml-6 -ml-6 -ml-1 text-base-content align-middle sticky top-0 bg-required bg-base-200 -mt-[18px] -mt-[20px] -mt-[21px]"></div>
-
+<div class="hidden cursor-pointer hover:bg-base-200 hover:bg-neutral"></div>
 <style>
 .tail-icon {
   white-space: nowrap;
