@@ -61,6 +61,7 @@
     urlSuffix=""
     navExtra={[{label: "New", fn: async () => {goto("/god/")}}]}
     bind:primaryKeysChecked={primaryKeysChecked}
+    link={(row) => {return "/god/" + row.id}}
 />
 
 <p class="mt-4"><a href="/olympicgods" class="ml-4">Olympic Gods</a></p>
