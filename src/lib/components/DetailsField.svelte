@@ -193,7 +193,7 @@
             let target = e.currentTarget;
             if (target instanceof Element) {
                 //if (target.getBoundingClientRect().bottom > table.getBoundingClientRect().bottom) {
-                    setTimeout(() => {target.scrollIntoView({behavior: "smooth", block: "nearest"})}, 100); 
+                    //setTimeout(() => {target.scrollIntoView({behavior: "smooth", block: "nearest"})}, 100);  // XXX disabled
                 //}
             }
         }
@@ -294,7 +294,7 @@
                 let target = autoCompleteList;
                 if (target instanceof Element) {
                     //if (target.getBoundingClientRect().bottom > table.getBoundingClientRect().bottom) {
-                    setTimeout(() => {target.scrollIntoView({behavior: "smooth", block: "nearest"})}, 100);
+                    //setTimeout(() => {target.scrollIntoView({behavior: "smooth", block: "nearest"})}, 100); // XXX disabled
                     //}
                 }
             } else {
