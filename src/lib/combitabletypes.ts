@@ -22,6 +22,8 @@ export interface CombiTableColumn {
     link?: (row:{[key:string]:any}, i? : number) => string,
     autoCompleteLink? : string,
     editHeight? : string,
+    prismaWhereIgnore? : boolean,
+    prismaOrderByIgnore? : boolean,
 
 }
 

@@ -147,7 +147,7 @@
         }
     }
     if (!editable && (addUrl || editUrl)) {
-        console.log("Warning: Add and edit disabled as array:srting is not supported when editing table data");
+        console.log("Warning: Add and edit disabled as array:string is not supported when editing table data");
     }
     if (pk == "" && (editUrl)) {
         console.log("Warning: edit enabled but no primary key column - disabling edit");
@@ -632,8 +632,23 @@
     function getPreset(col : CombiTableColumn) : string|undefined {
         if (presets == undefined || presets[col.col] == undefined) return undefined;
         let colName = col.col;
-        if (typeof presets[colName] == 'function') return asString((presets[colName])(), col.type);
-        return asString(presets[colName], col.type);
+        let p : string|number|boolean|Date = "";
+        if (typeof presets[colName] == 'function') {
+            let p = (presets[colName])();
+        } else {
+            p = presets[colName];
+        }
+        if (col.values && col.names) {
+            let val = "";
+            for (let i=0; i<col.values.length; ++i) {
+                if (p == col.values[i]) {
+                    p = col.names[i];
+                    break;
+                }
+            }
+        }
+            
+        return asString(p, col.type);
     }
     function getPresetSelectValue(col : CombiTableColumn) : string|undefined|number|boolean {
         if (presets == undefined || presets[col.col] == undefined) return undefined;
@@ -1327,6 +1342,8 @@
                                                 on:keyup={(evt) => editInputUpdate(evt, col)}
                                             />
                                         {/if}
+                                    {:else}
+                                    &nbsp; 
                                     {/if}
                                 </td>
                             {/if}

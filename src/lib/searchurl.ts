@@ -371,10 +371,13 @@ export class SearchUrl {
             }
         }
         if (sortCol != "") {
+            const colMatch = columns?.filter((val : {[key:string]:any}) => val.col == sortCol);
+            if (!(colMatch && colMatch.length > 0 && colMatch[0].prismaOrderByIgnore)) {
+                ret.orderBy = SearchUrl.makePrismaOrderBy(sortCol, sortDirection == "ascending" ? "asc" : "desc") 
+            }
             /*ret.orderBy = {
                 [sortCol]: sortDirection == "ascending" ? "asc" : "desc",
             };   */
-            ret.orderBy = SearchUrl.makePrismaOrderBy(sortCol, sortDirection == "ascending" ? "asc" : "desc") 
         }
         let filters = this.getFilters();
         let prefilters = this.getPreFilters();
@@ -403,6 +406,10 @@ export class SearchUrl {
         if (colMatch && colMatch.length > 0 && colMatch[0].prismaWhere) {
             return colMatch[0].prismaWhere(value)
         }
+        if (colMatch && colMatch.length > 0 && colMatch[0].prismaWhereIgnore) {
+            return {}
+        }
+        
 
         const parts = name.split(".");
         let type : string|undefined = undefined;
