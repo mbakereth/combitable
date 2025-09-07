@@ -611,7 +611,7 @@
                 let target = autoCompleteDivs[col.col];
                 if (target instanceof Element) {
                     if (target.getBoundingClientRect().bottom > table.getBoundingClientRect().bottom) {
-                        setTimeout(() => {target.scrollIntoView({behavior: "smooth", block: "nearest"})}, 100); 
+                        //setTimeout(() => {target.scrollIntoView({behavior: "smooth", block: "nearest"})}, 100); 
                     }
                 }
             } else {

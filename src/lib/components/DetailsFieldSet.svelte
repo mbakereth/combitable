@@ -75,20 +75,20 @@
 
     export function showError(errors: string[]|string) {
         validationErrors = errors;
-        (document.querySelector('#validateDialog') as HTMLDialogElement)?.showModal(); 
+        (document.querySelector('#validateDialog1') as HTMLDialogElement)?.showModal(); 
     }
     export function showInfo(info : string) {
         opInfo = info;
-        (document.querySelector('#infoDialog') as HTMLDialogElement)?.showModal(); 
+        (document.querySelector('#infoDialog1') as HTMLDialogElement)?.showModal(); 
     }
 
-    function cancelEdit() {
+    async function cancelEdit() {
         if (isAdd) {
-            (document.querySelector('#confirmEditDiscard') as HTMLDialogElement)?.showModal(); 
+            (document.querySelector('#confirmEditDiscard1') as HTMLDialogElement)?.showModal(); 
         } else if (!dirty) {
             confirmCancelEdit();
         } else {
-            (document.querySelector('#confirmEditDiscard') as HTMLDialogElement)?.showModal(); 
+            (document.querySelector('#confirmEditDiscard1') as HTMLDialogElement)?.showModal(); 
         }
     }
 
@@ -122,7 +122,7 @@
     async function saveEdit() {
         validationErrors = validate();
         if (validationErrors.length > 0) {
-            (document.querySelector('#validateDialog') as HTMLDialogElement)?.showModal(); 
+            (document.querySelector('#validateDialog1') as HTMLDialogElement)?.showModal(); 
         } else {
             if (isAdd && !addUrl) {
                 console.log("No edit url defined");
@@ -187,7 +187,7 @@
     }
 
     function deleteRow() {
-        (document.querySelector('#confirmDelete') as HTMLDialogElement)?.showModal(); 
+        (document.querySelector('#confirmDelete1') as HTMLDialogElement)?.showModal(); 
     }
     async function confirmDeleteRow() {
         if (!pk) {
@@ -222,7 +222,7 @@
     }
 </script>
 
-<div>
+<div class="">
     {#if (addUrl && newUrl
     ) || editUrl || deleteUrl}
         <div class="m-4 mt-8 mb-0">
@@ -238,16 +238,17 @@
             {/if}                 
         </div>    
     {/if}                 
+<CombiTableDiscardChanges id="confirmEditDiscard1" okFn={confirmCancelEdit}/> 
 </div>
 
 <!-- Modal to display validation errors -->
-<CombiTableValidateDialog id="validateDialog" errors={validationErrors}/>
+<CombiTableValidateDialog id="validateDialog1" errors={validationErrors}/>
 
 <!-- Modal to confirm discarding edit -->
-<CombiTableDiscardChanges id="confirmEditDiscard" okFn={confirmCancelEdit}/>
+
 
 <!-- Modal to display information after executing a function -->
-<CombiTableInfoDialog id="infoDialog" info={opInfo}/>
+<CombiTableInfoDialog id="infoDialog1" info={opInfo}/>
 
 <!-- Modal to display delete confirmation -->
-<CombiTableConfirmDeleteDialog id="confirmDelete" okFn={confirmDeleteRow}/>
+<CombiTableConfirmDeleteDialog id="confirmDelete1" okFn={confirmDeleteRow}/>
