@@ -32,6 +32,8 @@ interface OrderByObj {[key:string]: "asc"|"desc"}
 
 type OrderBy = "asc"|"desc"|{[key:string]: OrderByObj|OrderBy}
 
+const MAX_URL_LENGTH = 2048;
+
 /**
  * 
  * Creates and parses URLs which have the following:
@@ -49,7 +51,8 @@ export class SearchUrl {
 
     defaultTake;
 
-    readonly url : URL|undefined;
+    private _url : URL|undefined = undefined;
+    get url() { return this._url };
     readonly body : {[key:string]:any}|undefined = undefined;
     private suffix = "";
     private idColumn = "id_pk";
@@ -57,7 +60,7 @@ export class SearchUrl {
     private insensitive = false;
 
     constructor(url : URL|{[key:string]:any}, defaultTake = 20, emptySearch : string|undefined = "-") {
-        this.url = url instanceof URL ? url : undefined;
+        this._url = url instanceof URL ? url : undefined;
         this.body = url instanceof URL ? undefined : url;
         this.defaultTake = defaultTake;
         this.emptySearch = emptySearch;
@@ -300,15 +303,32 @@ export class SearchUrl {
             // use query pareams
             let encodedBack = encodeURIComponent(partialBackUrl);
             this.url.searchParams.set("b", encodedBack);
-            if (String(this.url).length >= 2048) {
-
-                // reset url to justory of just 1
-                this.url.searchParams.delete("b");
-                partialBackUrl = back.url.pathname + back.url.search;
-                let encodedBack = encodeURIComponent(partialBackUrl);
-                this.url.searchParams.set("b", encodedBack);
+            if (String(this.url).length >= parseInt(process.env["SEARCHURL_MAX_LENGTH"] ?? ""+MAX_URL_LENGTH)) {
+                this.clipBack();
             }
         }
+    }
+
+    clipBack() {
+        while (String(this.url).length >= parseInt(process.env["SEARCHURL_MAX_LENGTH"] ?? ""+MAX_URL_LENGTH)) {
+            //console.log("Clipping", String(this.url), String(this.url).length)
+            let back : SearchUrl|null = this;
+            if (!back) return;
+            let stack : SearchUrl[] = [];
+            while (back) {
+                stack.push(back);
+                back = back.popBack();
+            }
+            if (stack.length == 0) return;
+            stack.pop();
+            if (stack.length == 0) return;        
+            stack[stack.length-1].url?.searchParams.delete("b");
+            for (let i=stack.length-2; i>=0; --i) {
+                stack[i].setBack(stack[i+1])
+            }
+            this._url = stack[0]._url;
+        }
+
     }
 
     popBack(storage?: Storage) : SearchUrl|null {

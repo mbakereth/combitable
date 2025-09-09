@@ -266,3 +266,30 @@ test('utils.searchUrl.prismaFieldsWithSuffix', async () => {
     expect(fields.where?.key1).toBe("val1");
     expect(fields.where?.key2.is.key3.is.key4).toBe("val2");
 })
+
+////////////////////////
+// Test back clipping
+
+test('utils.searchUrl.clipBack', async () => {
+    process.env["SEARCHURL_MAX_LENGTH"] = "200";
+    console.log("utils.searchUrl.clipBack")
+    let url = "http://server.com/page";
+    let expected = [
+        "/page",
+        "/pageaaaa?b=%252Fpage",
+        "/pagebbb?b=%252Fpageaaaa%253Fb%253D%2525252Fpage",
+        "/pageccc?b=%252Fpagebbb%253Fb%253D%2525252Fpageaaaa%2525253Fb%2525253D%25252525252Fpage",
+        "/pageddd?b=%252Fpageccc%253Fb%253D%2525252Fpagebbb%2525253Fb%2525253D%25252525252Fpageaaaa",
+        "/pageeee?b=%252Fpageddd%253Fb%253D%2525252Fpageccc%2525253Fb%2525253D%25252525252Fpagebbb",
+        "/pagefff?b=%252Fpageeee%253Fb%253D%2525252Fpageddd%2525253Fb%2525253D%25252525252Fpageccc"
+
+    ]
+    let searchUrl = new SearchUrl(new URL(url), 20);
+    for (let stack of ["aaaa", "bbb", "ccc", "ddd", "eee", "fff", "hhh"]) {
+        let nextUrl = new SearchUrl(new URL(url+stack), 20);
+        nextUrl.setBack(searchUrl);
+        searchUrl = nextUrl;
+        let prev = nextUrl.url?.searchParams.get("b");
+        expect(prev == expected.shift())
+    } 
+})

@@ -16,10 +16,17 @@ export async function load({ params, url, depends }) {
         try {
             const data = await prisma.god.findUniqueOrThrow({
                 where: {id: id},
-                include: { father: true, mother: true},
+                include: { 
+                    father: true, 
+                    mother: true,
+                    children_as_father: true,
+                    children_as_mother: true
+                },
             })
+            let rec = {...data, 
+                children: (data.gender == "m" ? data.children_as_father : data.children_as_mother).map((x) => x.name)};
             return {
-                rec: data, 
+                rec,
             };
         }
         catch (e) {

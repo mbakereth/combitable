@@ -7,67 +7,53 @@
     import CombiTableInfoDialog from '$lib/components/CombiTableInfoDialog.svelte';
     import CombiTableConfirmDeleteDialog from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
     import { page } from '$app/stores';
+    import { setContext } from 'svelte';
+    import { SvelteSet } from 'svelte/reactivity';
 
-    export let rec : {[key:string]:any};
-    export let data : any[]
-    export let cols : CombiTableColumn[]
-    export let pk : string|undefined = undefined;
+    export let pk : string|number|undefined = undefined;
     export let editUrl : string|undefined = undefined;
     export let addUrl : string|undefined = undefined;
     export let newUrl : string|undefined = undefined;
     export let deleteUrl : string|undefined = undefined;
     export let deleteNextPage : string|undefined = undefined;
     export let isAdd = false;    
-    export let dateFormat = "yyyy-mm-dd";
 
-    function getRecField(col : string) {
-        let obj = rec;
-        const parts = col.split(".");
-        for (let i=0; i<parts.length-1; ++i) {
-            if (!obj || !(parts[i] in obj)) {
-                return undefined;
-            }
-            if (Array.isArray(obj[parts[i]])) {
-                obj = obj[parts[i]][0];
-            } else {
-                obj = obj[parts[i]];
-            }
-        }
-        if (!obj || !(parts[parts.length-1] in obj)) return undefined;
-        return obj[parts[parts.length-1]];
+    setContext("detailsfieldset", { registerGetValue, registerGetFieldError, registerIsDirty, updateDirty, registerResetValue, registerPersist });
+
+    let getValueFns = new SvelteSet<() => {value: any, col: CombiTableColumn}>();
+    function registerGetValue(fn: () => {value: any, col: CombiTableColumn}) {
+        getValueFns.add(fn);
+    }
+
+    let getFieldErrorFns = new SvelteSet<() => string|undefined>();
+    function registerGetFieldError(fn: () => string|undefined) {
+        getFieldErrorFns.add(fn);
+    }
+
+    let isDirtyFns = new SvelteSet<() => boolean>();
+    function registerIsDirty(fn: () => boolean) {
+        isDirtyFns.add(fn);
+    }
+
+    let resetValueFns = new SvelteSet<() => void>();
+    function registerResetValue(fn: () => void) {
+        resetValueFns.add(fn);
+    }
+
+    let persistFns = new SvelteSet<() => void>();
+    function registerPersist(fn: () => void) {
+        persistFns.add(fn);
     }
 
     $: dirty = false;
-    $: {
+    function updateDirty() {
         dirty = false;
-        if (data && cols && cols.length == data.length) {
-            for (let i=0; i<data.length; ++i) {
-                const recField = getRecField(cols[i].col);
-                if (!(!data[i] && !recField)) {
-                    if (Array.isArray(data[i]) && recField) {
-                        if (data[i].length != recField.length) {
-                            dirty = true;
-                            break;
-                        } else {
-                            for (let j=0; j<data[i].length; ++j) {
-                                if (data[i][j] != recField[j]) {
-                                    dirty = true;
-                                    break;
-                                }
-                            }
-                        }
-                    } else {
-                        if (data[i] != recField) {
-                            dirty = true;
-                            break;
-                        }
-                    }
-                }
+        isDirtyFns.forEach((fn) => {
+            if (fn()) {
+                dirty = true;
             }
-
-        }
+        })
     }
-
 
     // show dialogs
     $: validationErrors = undefined as string[]|string|undefined;
@@ -100,9 +86,8 @@
                 goto(prev);
             }
         } else {
-            for (let i=0; i<data.length; ++i) {
-                data[i] = getRecField(cols[i].col);
-                if (Array.isArray(data[i])) data[i] = [...data[i]];
+            for (let fn of resetValueFns) {
+                fn();
             }
             //data = [...data];
         }
@@ -112,13 +97,14 @@
     function validate() {
         let errors : string[] = [];
         let error : string|undefined = undefined;
-        for (let i=0; i<data.length; ++i) {
-            error = validateField(cols[i], data[i], dateFormat); 
+        for (let fn of getFieldErrorFns) {
+            error = fn(); 
             if (error) errors.push(error);
         }
         return errors;
     }
 
+    $: nextUrl = $page.url.pathname;
     async function saveEdit() {
         validationErrors = validate();
         if (validationErrors.length > 0) {
@@ -133,15 +119,17 @@
                 return;
             }
             const url = (isAdd ? addUrl : editUrl) ?? "";
+            nextUrl = $page.url.pathname;
             if (!pk) {
                 console.log("No pk defined");
                 return;
             }
             try {
                 let body : {[key:string]:any} = {};
-                body._pk = rec[pk] ?? undefined;
-                for (let i=0; i<data.length; ++i) {
-                    body[cols[i].col] = data[i];
+                body._pk = pk ?? undefined;
+                for (let fn of getValueFns) {
+                    let field = fn();
+                    body[field.col.col] = field.value;
                 };
                 const resp = await fetch(url, {
                     method: "POST",
@@ -170,13 +158,16 @@
                             }
                             infoText += "</ul>\n";
                         }
-                        showInfo(infoText);
-                        await invalidateAll();
                         if (body.url) {
-                            goto(body.url);
+                            nextUrl = body.url;
                         } else {
-                            //goto($page.url);
+                            nextUrl = $page.url.pathname;
                         }
+                        await invalidateAll();
+                        for (let fn of persistFns) {
+                            fn();
+                        }
+                        showInfo(infoText);
                     }
                 }
             } catch (e) {
@@ -201,7 +192,7 @@
         const resp = await fetch(deleteUrl, {
                 method: "POST",
                 headers: {"content-type": "application/json"},
-                body: JSON.stringify({_pk: rec[pk]}),
+                body: JSON.stringify({_pk: pk}),
             });
             if (!resp.ok) {
                 showError("Error deleting row");
@@ -222,29 +213,33 @@
     }
 </script>
 
-<div class="">
-    {#if (addUrl && newUrl
-    ) || editUrl || deleteUrl}
-        <div class="m-4 mt-8 mb-0">
-            {#if addUrl || editUrl }
-                <button class="btn btn-success mt-0 mb-0" disabled={!dirty} on:click={() => saveEdit()}>Save</button>
-                <button class="btn btn-neutral mt-0 mb-0" disabled={!dirty && !isAdd} on:click={() => cancelEdit()}>Cancel</button>
-            {/if}                 
-            {#if addUrl && newUrl }
-            <button class="btn btn-primary mt-0 mb-0" disabled={dirty || isAdd} on:click={async () => {await newEntry(newUrl);}}>New</button>
-            {/if}                 
-            {#if deleteUrl }
-            <button class="btn btn-error mt-0 mb-0" disabled={dirty} on:click={() => deleteRow()}>Delete</button>
-            {/if}                 
-        </div>    
-    {/if}                 
-<CombiTableDiscardChanges id="confirmEditDiscard1" okFn={confirmCancelEdit}/> 
+<div>
+    <slot />
+    <div class="">
+        {#if (addUrl && newUrl
+        ) || editUrl || deleteUrl}
+            <div class="m-4 mt-8 mb-0">
+                {#if addUrl || editUrl }
+                    <button class="btn btn-success mt-0 mb-0" disabled={!dirty} on:click={() => saveEdit()}>Save</button>
+                    <button class="btn btn-neutral mt-0 mb-0" disabled={!dirty && !isAdd} on:click={() => cancelEdit()}>Cancel</button>
+                {/if}                 
+                {#if addUrl && newUrl }
+                <button class="btn btn-primary mt-0 mb-0" disabled={dirty || isAdd} on:click={async () => {await newEntry(newUrl);}}>New</button>
+                {/if}                 
+                {#if deleteUrl }
+                <button class="btn btn-error mt-0 mb-0" disabled={dirty} on:click={() => deleteRow()}>Delete</button>
+                {/if}                 
+            </div>    
+        {/if}                 
+    </div>
+
 </div>
+
+<!-- Modal to confirm discarding changes -->
+<CombiTableDiscardChanges id="confirmEditDiscard1" okFn={confirmCancelEdit}/> 
 
 <!-- Modal to display validation errors -->
 <CombiTableValidateDialog id="validateDialog1" errors={validationErrors}/>
-
-<!-- Modal to confirm discarding edit -->
 
 
 <!-- Modal to display information after executing a function -->

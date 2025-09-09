@@ -1,6 +1,6 @@
 {
 	"name": "@mbakereth/combitable",
-	"version": "1.2.1",
+	"version": "1.2.2",
 	"private": false,
 	"license": "Apache-2.0",
 	"description": "SvelteKit table component using TailwindCSS and Daisy UI",
@@ -14,9 +14,7 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test:unit": "dotenv -e .env -- vitest",
 		"test": "dotenv -e .env -- npm run test:unit -- --run",
-		"prisma": "dotenv -e .env npm exec prisma"
-	},
-	"prisma": {
+		"prisma": "dotenv -e .env npm exec prisma",
 		"seed": "dotenv -e .env tsx prisma/seed.ts"
 	},
 	"files": [
