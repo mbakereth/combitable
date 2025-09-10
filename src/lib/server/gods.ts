@@ -35,7 +35,7 @@ export class GodsOps extends Ops {
                 return json({error: "Primary key invalid"});
             }
             const prisma = new PrismaClient();
-            await prisma.god.delete({where: {name: body._pk}});
+            await prisma.god.delete({where: {id: body._pk}});
             return json({pk: body._pk});
         } catch (e) {
             console.log(e);

@@ -1,6 +1,7 @@
 // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
 
 import type { CombiTableColumn } from "./combitabletypes";
+import { env } from '$env/dynamic/public';
 
 export interface PrismaFields {
     take? : number,
@@ -62,8 +63,9 @@ export class SearchUrl {
     constructor(url : URL|{[key:string]:any}, defaultTake = 20, emptySearch : string|undefined = "-") {
         this._url = url instanceof URL ? url : undefined;
         this.body = url instanceof URL ? undefined : url;
-        this.defaultTake = defaultTake;
+        this.defaultTake = parseInt(env.PUBLIC_SEARCHURL_DEFAULT_TAKE ?? "20");
         this.emptySearch = emptySearch;
+        this.insensitive = ['t', 'y', '1'].includes((env.PUBLIC_SEARCHURL_INSENSITIVE ?? "").toLowerCase().substring(0,1));
     }
 
     setSuffix(val : string|undefined) {
@@ -303,14 +305,14 @@ export class SearchUrl {
             // use query pareams
             let encodedBack = encodeURIComponent(partialBackUrl);
             this.url.searchParams.set("b", encodedBack);
-            if (String(this.url).length >= parseInt(process.env["SEARCHURL_MAX_LENGTH"] ?? ""+MAX_URL_LENGTH)) {
+            if (String(this.url).length >= parseInt(env.PUBLIC_SEARCHURL_MAX_LENGTH ?? ""+MAX_URL_LENGTH)) {
                 this.clipBack();
             }
         }
     }
 
     clipBack() {
-        while (String(this.url).length >= parseInt(process.env["SEARCHURL_MAX_LENGTH"] ?? ""+MAX_URL_LENGTH)) {
+        while (String(this.url).length >= parseInt(env.PUBLIC_SEARCHURL_MAX_LENGTH ?? ""+MAX_URL_LENGTH)) {
             //console.log("Clipping", String(this.url), String(this.url).length)
             let back : SearchUrl|null = this;
             if (!back) return;

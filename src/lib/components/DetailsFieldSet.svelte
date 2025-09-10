@@ -8,7 +8,8 @@
     import CombiTableConfirmDeleteDialog from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
     import { page } from '$app/stores';
     import { setContext } from 'svelte';
-    import { SvelteSet } from 'svelte/reactivity';
+    import { SvelteSet, SvelteMap } from 'svelte/reactivity';
+    import { PersistedFields } from '$lib/persistedfields';
 
     export let pk : string|number|undefined = undefined;
     export let editUrl : string|undefined = undefined;
@@ -17,12 +18,17 @@
     export let deleteUrl : string|undefined = undefined;
     export let deleteNextPage : string|undefined = undefined;
     export let isAdd = false;    
+    export let nextUrl : ((rec? : {[key:string]:any}) => string|undefined)|undefined = undefined;
+    export let persitance : PersistedFields | undefined = undefined;
 
-    setContext("detailsfieldset", { registerGetValue, registerGetFieldError, registerIsDirty, updateDirty, registerResetValue, registerPersist });
+    setContext("detailsfieldset", { registerGetAndSetValue, registerGetFieldError, registerIsDirty, updateDirty, registerResetValue, registerPersist });
 
     let getValueFns = new SvelteSet<() => {value: any, col: CombiTableColumn}>();
-    function registerGetValue(fn: () => {value: any, col: CombiTableColumn}) {
-        getValueFns.add(fn);
+    let setValueFns = new SvelteMap<string,(value: any) => void>();
+    function registerGetAndSetValue(getFn: () => {value: any, col: CombiTableColumn}, setFn: (value: any) => void) {
+        getValueFns.add(getFn);
+        let col = getFn().col.col;
+        setValueFns.set(col, setFn)
     }
 
     let getFieldErrorFns = new SvelteSet<() => string|undefined>();
@@ -46,7 +52,7 @@
     }
 
     $: dirty = false;
-    function updateDirty() {
+    export function updateDirty() {
         dirty = false;
         isDirtyFns.forEach((fn) => {
             if (fn()) {
@@ -67,6 +73,10 @@
         opInfo = info;
         (document.querySelector('#infoDialog1') as HTMLDialogElement)?.showModal(); 
     }
+    export function showInfoThenLoad(info : string) {
+        opInfo = info;
+        (document.querySelector('#infoDialog2') as HTMLDialogElement)?.showModal(); 
+    }
 
     async function cancelEdit() {
         if (isAdd) {
@@ -80,18 +90,40 @@
 
     async function confirmCancelEdit() {
         if (isAdd) {
-            let prev = $page.url.searchParams.get("prev");
+            let prev = $page.url.searchParams.get("prev") ?? (nextUrl ? nextUrl(undefined) : undefined);
+            if (persitance) {
+                persitance.delete();
+            }
             if (prev) {
                 await invalidateAll();
-                goto(prev);
+                goto(prev).then(() => {
+
+                });
             }
         } else {
+            if (persitance) {
+                persitance.delete();
+            }
             for (let fn of resetValueFns) {
                 fn();
             }
-            //data = [...data];
         }
 
+    }
+
+    async function nextPage() {
+        if (isAdd) {
+            let prev = urlToLoad;
+            if (persitance) {
+                persitance.delete();
+            }
+            if (prev) {
+                await invalidateAll();
+                goto(prev).then(() => {
+
+                });
+            }
+        }
     }
 
     function validate() {
@@ -104,7 +136,7 @@
         return errors;
     }
 
-    $: nextUrl = $page.url.pathname;
+    $: urlToLoad = nextUrl ? nextUrl() ?? $page.url.pathname : $page.url.pathname;
     async function saveEdit() {
         validationErrors = validate();
         if (validationErrors.length > 0) {
@@ -119,8 +151,8 @@
                 return;
             }
             const url = (isAdd ? addUrl : editUrl) ?? "";
-            nextUrl = $page.url.pathname;
-            if (!pk) {
+            urlToLoad = nextUrl ? (nextUrl(undefined) ?? $page.url.pathname) : $page.url.pathname;
+            if (!isAdd && !pk) {
                 console.log("No pk defined");
                 return;
             }
@@ -143,11 +175,6 @@
                     if (body.errors) {
                         showError(body.errors);
                     } else {
-                        //rec = body.row;
-                        /*for (let i=0; i<data.length; ++i) {
-                            //body[cols[i].col] = data[i];
-                            //data[i] = getRecField(cols[i].col)
-                        };*/
                         dirty = false;
                         let infoText = "Record saved";
                         if (body.info) {
@@ -159,15 +186,15 @@
                             infoText += "</ul>\n";
                         }
                         if (body.url) {
-                            nextUrl = body.url;
+                            urlToLoad = body.url;
                         } else {
-                            nextUrl = $page.url.pathname;
+                            urlToLoad = nextUrl ? nextUrl(body.row) ?? $page.url.pathname : $page.url.pathname;
                         }
                         await invalidateAll();
                         for (let fn of persistFns) {
                             fn();
                         }
-                        showInfo(infoText);
+                        showInfoThenLoad(infoText);
                     }
                 }
             } catch (e) {
@@ -244,6 +271,7 @@
 
 <!-- Modal to display information after executing a function -->
 <CombiTableInfoDialog id="infoDialog1" info={opInfo}/>
+<CombiTableInfoDialog id="infoDialog2" info={opInfo} okFn={nextPage}/>
 
 <!-- Modal to display delete confirmation -->
 <CombiTableConfirmDeleteDialog id="confirmDelete1" okFn={confirmDeleteRow}/>

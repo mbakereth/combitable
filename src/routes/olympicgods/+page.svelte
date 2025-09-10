@@ -42,5 +42,6 @@
     widthType={"fixed"}
 />
 
-<div class="hidden min-w-16 max-w-16"></div>
-<div class="hidden min-w-[4rem]"></div>
+<p class="mt-4 ml-4">
+    <a href="/">All Gods</a>
+</p>

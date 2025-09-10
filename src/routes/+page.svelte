@@ -4,9 +4,11 @@
     export let data;
     import CombiTable from '$lib/components/CombiTable.svelte';
     import type { CombiTableColumn } from '$lib/combitabletypes';
+    import { SearchUrl } from '$lib';
+    import { page } from '$app/stores';
 
     let columns : CombiTableColumn[] = [
-        {name: "Name", col: "name", type: "string", link: (row) => {return "/god/" + row.id}},
+        {name: "Name", col: "name", type: "string", link: (row) => {return detailsLink("/god/" + row.id)}},
         {name: "Gender", col: "gender", type: "select:string", values: ["m", "f"], names: ["m", "f"], minWidth: "[4rem]"},
         {name: "Died", col: "died", type: "boolean"},
         {name: "Type", col: "type", type: "select:integer", values: [0,1,2], names: ["God", "Titan", "Personification"]},
@@ -15,6 +17,21 @@
     ]
 
     $: rows = data.gods;
+
+    // back link using SearchUrl
+    const searchUrl = new SearchUrl($page.url);
+    let backUrl = searchUrl.popBack();
+    let backHref = backUrl ? backUrl?.url?.pathname :  null;
+    if (backHref && backUrl?.url?.search) backHref += "?" + backUrl?.url?.search;
+ 
+
+    function detailsLink(url : string) {
+        const backUrl = new SearchUrl($page.url);
+        const newUrl = new SearchUrl(new URL(url, $page.url));
+        newUrl.setBack(backUrl);
+        if (!newUrl.url) return "";
+        return newUrl.url.pathname + newUrl.url.search;
+    }
 
     async function killGods(pks : (string|number)[]) : Promise<{error? : string, info? : string}> {
         try {
@@ -46,7 +63,7 @@
 <CombiTable 
     rows={rows} 
     columns={columns} 
-    primaryKey="name"
+    primaryKey="id"
     defaultSort="name" 
     enableSort={true}
     enableFilter={true}
@@ -61,10 +78,13 @@
     urlSuffix=""
     navExtra={[{label: "New", fn: async () => {goto("/god/")}}]}
     bind:primaryKeysChecked={primaryKeysChecked}
-    link={(row) => {return "/god/" + row.id}}
 />
+<!-- 
+FOr whole row to be clickable, include this
+    link={(row) => {return "/god/" + row.id}}
+-->
 
-<p class="mt-4"><a href="/olympicgods" class="ml-4">Olympic Gods</a></p>
+<p class="mt-4">
+    <a href="/olympicgods" class="ml-4">Olympic Gods</a>
+</p>
 
-<div class="hidden min-w-16 max-w-16"></div>
-<div class="hidden min-w-[4rem]"></div>

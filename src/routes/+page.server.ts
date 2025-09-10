@@ -4,7 +4,6 @@ import { SearchUrl } from '$lib/searchurl';
 import { PrismaClient, Prisma } from '@prisma/client';
 
 /** @type {import('./$types').PageLoad} */
-import type { CombiTableColumn } from '$lib/combitabletypes';
 export async function load({ params, url, depends }) {
     const prisma = new PrismaClient();
 
@@ -19,7 +18,6 @@ export async function load({ params, url, depends }) {
           ...fields
     });
 
-    let g = Prisma.dmmf.datamodel.models;
     return {gods: gods, 
         havePrevious: searchUrl.defaultTake > 0 && searchUrl.getSkip()>0, 
         haveNext: searchUrl.defaultTake > 0 && gods.length >= searchUrl.getTake()

@@ -24,7 +24,7 @@
         }
     }*/
 
-    getContext<DetailsFieldSet>("detailsfieldset").registerGetValue(getValue);
+    getContext<DetailsFieldSet>("detailsfieldset").registerGetAndSetValue(getValue, setValue);
     getContext<DetailsFieldSet>("detailsfieldset").registerResetValue(resetValue);
     getContext<DetailsFieldSet>("detailsfieldset").registerGetFieldError(getFieldError);
     getContext<DetailsFieldSet>("detailsfieldset").registerIsDirty(isDirty);
@@ -48,11 +48,16 @@
             return {value: value as string[], col};
         } 
         return {value, col};
-        
+    }
+
+    function setValue(val: any) {
+        value = val;
+        if (col.type == "array:string") {
+            extraValue = "";
+        }
     }
 
     function persist() {
-        console.log("Persist", col.name, value, extraValue)
         if (col.type == "array:string") {
             if (extraValue) {
                 value.push(extraValue);

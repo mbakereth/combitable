@@ -1,9 +1,13 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
     export let data;
     import DetailsField from '$lib/components/DetailsField.svelte';
     import type { CombiTableColumn } from '$lib/combitabletypes';
     import DetailsFieldSet from '$lib/components/DetailsFieldSet.svelte';
+    import { SearchUrl } from '$lib';
+    import { PersistedFields } from '$lib/persistedfields'
+    import { page } from '$app/stores';
+    import { goto, invalidateAll, invalidate } from '$app/navigation';
+    import { browser } from '$app/environment';
 
     let columns : CombiTableColumn[] = [
         {name: "Name", col: "name", type: "string"},
@@ -14,22 +18,71 @@
         {name: "Mother", col: "mother.name", type: "string", nullable: true, maxWidth: "16", editMaxWidth: "16", autoCompleteLink:"/autocomplete/god/name"},
         {name: "Children", col: "children", type: "array:string", nullable: true, maxWidth: "16", editMaxWidth: "16", autoCompleteLink:"/autocomplete/god/name"},
     ]
+   //let columns = data.columns;
 
-    let rec : {[key:string]:any} = data.rec ?? {}
-    $: isAdd = data.rec === undefined
-
+    $: rec = data.rec;
+    $: isAdd = data.isAdd ?? false;
+    $: children = data.rec?.children ?? []
     $: fieldData = [rec?.name, rec?.gender, rec?.died, rec?.type, rec?.father?.name, rec?.mother?.name, rec?.children];
+
+    // this code is for persisting unsaved data if you click on
+    // another add button before saving (add Father in this example)
+    $: persist = browser ? new PersistedFields($page.url, columns) : undefined;
+    page.subscribe((value) => {
+        persist = new PersistedFields(value.url, columns);
+        if ( fieldData && persist.has()) {
+            //persist.restore(fieldData);
+            let fields = persist.get();
+            if (fields) {
+                for (let i=0; i<fields.length; ++i) {
+                    fieldData[i] = fields[i];
+                }
+            }
+        } else if (fieldData) {
+            for (let i=0; i<fieldData.length; ++i) {
+                fieldData[i] = fieldData[i];
+            }
+        }
+    });
+
+    // back link using SearchUrl
+    $: searchUrl = new SearchUrl($page.url);
+    $: backUrl = searchUrl.popBack();
+    $: backHref = backUrl ? backUrl?.url?.pathname :  null;
+    if (backHref && backUrl?.url?.search) backHref += "?" + backUrl?.url?.search;
+
+    async function newGodLink() {
+        let persist = new PersistedFields($page.url, columns);
+        persist.save(fieldData);
+        const backUrl = new SearchUrl($page.url);
+        const newUrl = new SearchUrl(new URL("/god/new", $page.url));
+        newUrl.setBack(backUrl);
+        if (!newUrl.url) return "";
+        await invalidateAll(); 
+        for (let i=0; i<fieldData.length; ++i) {
+            fieldData[i] = "";
+        }
+        return newUrl.url.pathname + newUrl.url.search;
+    }
+
+    function nextUrl(rec? : {[key:string]:any}) : string|undefined {
+        if (isAdd && backUrl) {
+            return backUrl?.url?.href
+        }  else {
+            if (rec) return "/god" + rec.id;
+            else return undefined;
+        }
+    }
 
 </script>
 
-<svelte:head>
-    <title>{fieldData[0] ?? "New god"}</title>
+<svelte:head><title>{isAdd? "New God" : data.rec?.name}</title>
 </svelte:head>
 
-{#if data.rec}
-    <h2 class="ml-4">{data.rec?.name ?? '<span class="italic">New god</span>'}</h2>
+{#if isAdd}
+    <h2 class="ml-4">New god</h2>
 {:else}
-    <h2 class="ml-4"><span class="italic">New god</span></h2>
+    <h2 class="ml-4">{data.rec?.name}</h2>
 {/if}
 
 {#if data.error}
@@ -38,12 +91,16 @@
 
     <DetailsFieldSet
         bind:isAdd={isAdd}
-        pk={rec.id}
+        pk={data.rec?.id}
         addUrl="/add"
+        newUrl="/god/new"
         editUrl="/edit"
         deleteUrl="/delete"
         deleteNextPage="/"
+        nextUrl={nextUrl}
+        persitance={persist} 
     >
+    <!-- persistance is only needed if persisting usaved data (see above) -->
 
         <div class="m-4 overflow-y-auto">
             <table class="table overflow-y-visible table-sm">
@@ -95,6 +152,7 @@
                                 col={columns[4]}
                                 bind:value={fieldData[4]}
                             />
+                            <button class="btn btn-default" on:click={async () => {goto(await newGodLink())}}>New...</button>
                         </td>
                     </tr>
 
@@ -113,7 +171,7 @@
                         <td>
                             <DetailsField
                                 col={columns[6]}
-                                bind:value={rec.children}
+                                bind:value={children}
                             />
                         </td>
                     </tr>
@@ -125,4 +183,9 @@
 
 {/if}
 
-<p class="m-4"><a href="/">Home</a></p>
+<p class="m-4">
+    <a href="/">Home</a>
+    {#if backHref }
+    <a href="{backHref}">Back</a>
+    {/if}
+</p>
