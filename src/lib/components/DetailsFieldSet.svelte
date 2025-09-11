@@ -10,6 +10,8 @@
     import { setContext } from 'svelte';
     import { SvelteSet, SvelteMap } from 'svelte/reactivity';
     import { PersistedFields } from '$lib/persistedfields';
+    import CombiTable from './CombiTable.svelte';
+    import { browser } from '$app/environment';
 
     export let pk : string|number|undefined = undefined;
     export let editUrl : string|undefined = undefined;
@@ -18,17 +20,23 @@
     export let deleteUrl : string|undefined = undefined;
     export let deleteNextPage : string|undefined = undefined;
     export let isAdd = false;    
-    export let nextUrl : ((rec? : {[key:string]:any}) => string|undefined)|undefined = undefined;
-    export let persitance : PersistedFields | undefined = undefined;
+    export let cancelNextPage : string|undefined = undefined;
+    export let saveNextPage : ((rec : {[key:string]:any}) => string)|undefined = undefined;
+    export let persistance : boolean = false;
+    export let data : any[]|undefined = undefined;
 
-    setContext("detailsfieldset", { registerGetAndSetValue, registerGetFieldError, registerIsDirty, updateDirty, registerResetValue, registerPersist });
+    $: persist = browser ? new PersistedFields($page.url, columns) : undefined;
+
+    setContext("detailsfieldset", { registerGetAndSetValue, registerGetFieldError, registerIsDirty, updateDirty, registerResetValue, registerPersist, newItemWithPersistanceLink });
 
     let getValueFns = new SvelteSet<() => {value: any, col: CombiTableColumn}>();
     let setValueFns = new SvelteMap<string,(value: any) => void>();
+    let columns : CombiTableColumn[] = []
     function registerGetAndSetValue(getFn: () => {value: any, col: CombiTableColumn}, setFn: (value: any) => void) {
         getValueFns.add(getFn);
-        let col = getFn().col.col;
-        setValueFns.set(col, setFn)
+        let col = getFn().col;
+        columns.push(col);
+        setValueFns.set(col.col, setFn)
     }
 
     let getFieldErrorFns = new SvelteSet<() => string|undefined>();
@@ -90,9 +98,9 @@
 
     async function confirmCancelEdit() {
         if (isAdd) {
-            let prev = $page.url.searchParams.get("prev") ?? (nextUrl ? nextUrl(undefined) : undefined);
-            if (persitance) {
-                persitance.delete();
+            let prev = $page.url.searchParams.get("prev") ?? cancelNextPage;
+            if (persistance && persist) {
+                persist.delete();
             }
             if (prev) {
                 await invalidateAll();
@@ -101,8 +109,8 @@
                 });
             }
         } else {
-            if (persitance) {
-                persitance.delete();
+            if (persistance && persist) {
+                persist.delete();
             }
             for (let fn of resetValueFns) {
                 fn();
@@ -111,11 +119,11 @@
 
     }
 
-    async function nextPage() {
+    async function pageOnSave() {
         if (isAdd) {
             let prev = urlToLoad;
-            if (persitance) {
-                persitance.delete();
+            if (persistance && persist) {
+                persist.delete();
             }
             if (prev) {
                 await invalidateAll();
@@ -136,7 +144,7 @@
         return errors;
     }
 
-    $: urlToLoad = nextUrl ? nextUrl() ?? $page.url.pathname : $page.url.pathname;
+    let urlToLoad = "";
     async function saveEdit() {
         validationErrors = validate();
         if (validationErrors.length > 0) {
@@ -151,7 +159,6 @@
                 return;
             }
             const url = (isAdd ? addUrl : editUrl) ?? "";
-            urlToLoad = nextUrl ? (nextUrl(undefined) ?? $page.url.pathname) : $page.url.pathname;
             if (!isAdd && !pk) {
                 console.log("No pk defined");
                 return;
@@ -188,7 +195,7 @@
                         if (body.url) {
                             urlToLoad = body.url;
                         } else {
-                            urlToLoad = nextUrl ? nextUrl(body.row) ?? $page.url.pathname : $page.url.pathname;
+                            urlToLoad = saveNextPage ? saveNextPage(body.row) ?? $page.url.href : $page.url.href;
                         }
                         await invalidateAll();
                         for (let fn of persistFns) {
@@ -238,6 +245,42 @@
         let joiner = url.includes("?") ? "&" : "?";
         goto(url + joiner + "prev=" + encodeURIComponent($page.url.toString()))
     }
+
+    /////
+    // Persistance
+
+    async function newItemWithPersistanceLink(url : URL) {
+        if (!data) {
+            console.log("Cannot persist as data not passed to DetailsFieldSet");
+            return;
+        }
+        let persist = new PersistedFields($page.url, columns);
+        persist.save(data);
+        await invalidateAll(); 
+        url.searchParams.set("edt","1")
+        return url.pathname + url.search;
+    }
+
+    page.subscribe((value) => {
+        if (persistance) {
+            let persist = new PersistedFields(value.url, columns);
+            if ( persist.has()) {
+                //persist.restore(fieldData);
+                let fields = persist.getAsMap();
+                if (fields) {
+                    console.log("Iterate over fields", fields)
+                    for (let col in fields) {
+                        let val = fields[col]
+                        let fn = setValueFns.get(col)
+                        if (fn) {
+                            console.log("Set", col, val)
+                            fn(val);
+                        }
+                    }
+                }
+            } 
+        }
+    });
 </script>
 
 <div>
@@ -271,7 +314,7 @@
 
 <!-- Modal to display information after executing a function -->
 <CombiTableInfoDialog id="infoDialog1" info={opInfo}/>
-<CombiTableInfoDialog id="infoDialog2" info={opInfo} okFn={nextPage}/>
+<CombiTableInfoDialog id="infoDialog2" info={opInfo} okFn={pageOnSave}/>
 
 <!-- Modal to display delete confirmation -->
 <CombiTableConfirmDeleteDialog id="confirmDelete1" okFn={confirmDeleteRow}/>

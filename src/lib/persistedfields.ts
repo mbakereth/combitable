@@ -45,13 +45,25 @@ export class PersistedFields {
     get() : any[]|undefined {
         let store = get(persistedFields);
         if (!(this.storageKey() in store)) return undefined;
-        let fields = JSON.parse(store[this.storageKey()]) as {val: string, col: string}[];
+        let fields = JSON.parse(store[this.storageKey()]) as {val: any, col: string}[];
         if (!fields) return undefined;
         let ret : any[] = new Array<any>(this.cols.length);
         for (let field of fields) {
             if ((field.col in this.colMap)) {
                 ret[this.colMap[field.col]] = field.val;
             }
+        }
+        return ret;
+    }
+
+    getAsMap() : {[key:string]:any}|undefined {
+        let store = get(persistedFields);
+        if (!(this.storageKey() in store)) return undefined;
+        let fields = JSON.parse(store[this.storageKey()]) as {val: any, col: string}[];
+        if (!fields) return undefined;
+        let ret : {[key:string]:any} = {};
+        for (let field of fields) {
+            ret[field.col] = field.val;
         }
         return ret;
     }

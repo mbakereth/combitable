@@ -3,7 +3,6 @@
     export let id : string;
     export let info : string
     export let okFn : () => void = () => {};
-    export let nextUrl : string|undefined = undefined;
 </script>
     
     

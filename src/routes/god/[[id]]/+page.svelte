@@ -3,6 +3,7 @@
     import DetailsField from '$lib/components/DetailsField.svelte';
     import type { CombiTableColumn } from '$lib/combitabletypes';
     import DetailsFieldSet from '$lib/components/DetailsFieldSet.svelte';
+    import PersistedNewButton from '$lib/components/PersistedNewButton.svelte';
     import { SearchUrl } from '$lib';
     import { PersistedFields } from '$lib/persistedfields'
     import { page } from '$app/stores';
@@ -28,22 +29,6 @@
     // this code is for persisting unsaved data if you click on
     // another add button before saving (add Father in this example)
     $: persist = browser ? new PersistedFields($page.url, columns) : undefined;
-    page.subscribe((value) => {
-        persist = new PersistedFields(value.url, columns);
-        if ( fieldData && persist.has()) {
-            //persist.restore(fieldData);
-            let fields = persist.get();
-            if (fields) {
-                for (let i=0; i<fields.length; ++i) {
-                    fieldData[i] = fields[i];
-                }
-            }
-        } else if (fieldData) {
-            for (let i=0; i<fieldData.length; ++i) {
-                fieldData[i] = fieldData[i];
-            }
-        }
-    });
 
     // back link using SearchUrl
     $: searchUrl = new SearchUrl($page.url);
@@ -62,16 +47,30 @@
         for (let i=0; i<fieldData.length; ++i) {
             fieldData[i] = "";
         }
+        newUrl.url.searchParams.set("edt","1")
         return newUrl.url.pathname + newUrl.url.search;
     }
 
-    function nextUrl(rec? : {[key:string]:any}) : string|undefined {
-        if (isAdd && backUrl) {
-            return backUrl?.url?.href
-        }  else {
-            if (rec) return "/god" + rec.id;
-            else return undefined;
-        }
+    function newGodUrl() {
+        const backUrl = new SearchUrl($page.url);
+        const newUrl = new SearchUrl(new URL("/god/new", $page.url));
+        newUrl.setBack(backUrl);
+        if (!newUrl.url) return $page.url;
+        console.log("newGodUrl", newUrl.url)
+        return newUrl.url;
+    }
+
+    function urlAftetSave(rec : {[key:string]:any}) : string {
+        if ($page.url.searchParams.get("edt") == "1") 
+            return backUrl?.url?.href ?? $page.url.href
+        if (isAdd)
+            return "/god/" + rec.id;
+        return $page.url.href;
+    }
+    function urlAfterCancel() : string {
+        if ($page.url.searchParams.get("edt") == "1") 
+            return backUrl?.url?.href ?? $page.url.href
+        return $page.url.href;
     }
 
 </script>
@@ -97,8 +96,10 @@
         editUrl="/edit"
         deleteUrl="/delete"
         deleteNextPage="/"
-        nextUrl={nextUrl}
-        persitance={persist} 
+        saveNextPage={urlAftetSave}
+        cancelNextPage={urlAfterCancel()}
+        persistance={true} 
+        data={fieldData}
     >
     <!-- persistance is only needed if persisting usaved data (see above) -->
 
@@ -152,7 +153,8 @@
                                 col={columns[4]}
                                 bind:value={fieldData[4]}
                             />
-                            <button class="btn btn-default" on:click={async () => {goto(await newGodLink())}}>New...</button>
+                            <!-- <button class="btn btn-default" on:click={async () => {goto(await newGodLink())}}>New...</button>-->
+                            <PersistedNewButton url={newGodUrl}>New...</PersistedNewButton>
                         </td>
                     </tr>
 
