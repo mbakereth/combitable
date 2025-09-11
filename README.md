@@ -61,7 +61,7 @@ More Details
 ------------
 
 For more details, close this repo 
-(https://github.com/mbakereth/combitable)[https://github.com/mbakereth/combitable]
+https://github.com/mbakereth/combitable
 and look at the documentation for the components and the `+page.svelte` files
 in the routes.
 
