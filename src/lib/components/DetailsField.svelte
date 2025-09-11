@@ -1,4 +1,20 @@
+<!--
+    @component For use with {@link DetailsFieldSet}.  A single field for
+    editing a row field, configured the same was as {@link CombiTable}    
+ -->
 <script lang="ts">
+    type Props = {
+
+        /** Table definition for this field.  See {@link CombiTableColumn} */
+        col : CombiTableColumn,
+
+        /** Bind a variable to hold the value to this */
+        value : any,
+
+        /** For date fields.  `yyyy-mm-dd`, `dd-mm-yyyy`, `mm-dd-yyyy`*/
+        dateFormat : string,
+    }
+
     import type { CombiTableColumn } from '$lib/combitabletypes';
     import { tick } from 'svelte';
     import { readonly } from 'svelte/store';
@@ -24,7 +40,7 @@
         }
     }*/
 
-    getContext<DetailsFieldSet>("detailsfieldset").registerGetAndSetValue(getValue, setValue);
+    getContext<DetailsFieldSet>("detailsfieldset").registerGetAndSetValue(getValue, setValue, setOriginalValue);
     getContext<DetailsFieldSet>("detailsfieldset").registerResetValue(resetValue);
     getContext<DetailsFieldSet>("detailsfieldset").registerGetFieldError(getFieldError);
     getContext<DetailsFieldSet>("detailsfieldset").registerIsDirty(isDirty);
@@ -51,6 +67,14 @@
     }
 
     function setValue(val: any) {
+        value = val;
+        if (col.type == "array:string") {
+            extraValue = "";
+        }
+    }
+
+    function setOriginalValue(val: any) {
+        origValue = val;
         value = val;
         if (col.type == "array:string") {
             extraValue = "";

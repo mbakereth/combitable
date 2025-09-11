@@ -193,13 +193,13 @@ export class GodsOps extends Ops {
                 return json({errors: "Primary key invalid"});
             }
             const prisma = new PrismaClient();
-            const pks = body.pks as string[];
+            const pks = body.pks as number[];
             await prisma.god.updateMany({
                 data: {
                     died: true
                 },
                 where: {
-                    name: { in: pks }
+                    id: { in: pks }
                 }
             });    
             return json({info: "Successful"})

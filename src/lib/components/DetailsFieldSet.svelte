@@ -1,4 +1,63 @@
+<!-- 
+    @component Groups a set of {@link DetailsField}s with add, delete, edit
+        functionality
+-->
 <script lang="ts">
+    type Props = {
+
+        /** 
+         * The primary key value for this row. Only needed for delete, edit, add 
+         */
+        pk? : string|number;
+
+        /**
+         * URL to call to save edits to existing row.
+         * 
+         * If not given, editing is not activated
+         */
+        editUrl? : string;
+
+        /**
+         * URL to call to save a new row.
+         * 
+         * If not given, adding rows is not activated
+         */
+        addUrl? : string;
+
+        /**
+         * URL to call to start adding a new row (without an existing row loaded).
+         * {@link SearchUrl} is used to add a back link to this.
+         * 
+         * If not given, adding rows is not activated
+         */
+        newUrl? : string;
+
+        /**
+         * URL to call to delete a row.
+         * 
+         * If not given, deleting rows is not activated
+         */
+        deleteUrl? : string;
+
+        /**
+         * Page to go to after deleting this row.  Default `/`
+         */
+        deleteNextPage? : string;
+
+        /**
+         * Bind to a variable to tell this component if it is adding an new
+         * row rather than editing an existing one
+         */
+        isAdd? : boolean;    
+
+        /**
+         * Page to go to after saving a page.  Default current page.
+         */
+        saveNextPage? : ((rec : {[key:string]:any}) => string);
+        persistance? : boolean;
+        data? : any[]|undefined;
+    }
+
     import { goto, invalidateAll } from '$app/navigation';
     import type { CombiTableColumn } from '$lib/combitabletypes';
     import CombiTableValidateDialog from '$lib/components/CombiTableErrorDialog.svelte';
@@ -12,6 +71,7 @@
     import { PersistedFields } from '$lib/persistedfields';
     import CombiTable from './CombiTable.svelte';
     import { browser } from '$app/environment';
+    import { SearchUrl } from '$lib/searchurl';
 
     export let pk : string|number|undefined = undefined;
     export let editUrl : string|undefined = undefined;
@@ -20,7 +80,6 @@
     export let deleteUrl : string|undefined = undefined;
     export let deleteNextPage : string|undefined = undefined;
     export let isAdd = false;    
-    export let cancelNextPage : string|undefined = undefined;
     export let saveNextPage : ((rec : {[key:string]:any}) => string)|undefined = undefined;
     export let persistance : boolean = false;
     export let data : any[]|undefined = undefined;
@@ -34,12 +93,14 @@
 
     let getValueFns = new SvelteSet<() => {value: any, col: CombiTableColumn}>();
     let setValueFns = new SvelteMap<string,(value: any) => void>();
+    let setOriginalValueFns = new SvelteMap<string,(value: any) => void>();
     let columns : CombiTableColumn[] = []
-    function registerGetAndSetValue(getFn: () => {value: any, col: CombiTableColumn}, setFn: (value: any) => void) {
+    function registerGetAndSetValue(getFn: () => {value: any, col: CombiTableColumn}, setFn: (value: any) => void, setOriginalFn: (value: any) => void) {
         getValueFns.add(getFn);
         let col = getFn().col;
         columns.push(col);
         setValueFns.set(col.col, setFn)
+        setOriginalValueFns.set(col.col, setOriginalFn)
     }
 
     let getFieldErrorFns = new SvelteSet<() => string|undefined>();
@@ -101,7 +162,7 @@
 
     async function confirmCancelEdit() {
         if (isAdd) {
-            let prev = $page.url.searchParams.get("prev") ?? cancelNextPage;
+            let prev = $page.url.searchParams.get("prev") ?? cancelUrl();
             if (persistance && persist) {
                 persist.delete();
             }
@@ -122,6 +183,26 @@
 
     }
 
+    function nextPageUrl(rec : {[key:string]:any}) {
+        let url = new SearchUrl($page.url);
+        let backUrl = url.popBack();
+        if ($page.url.searchParams.get("edt") == "1") 
+            return backUrl?.url?.href ?? $page.url.href
+        if (isAdd)
+            return saveNextPage ? saveNextPage(rec) : $page.url.href;
+        return $page.url.href;
+
+    }
+
+    function cancelUrl() {
+        let url = new SearchUrl($page.url);
+        let backUrl = url.popBack();
+        if ($page.url.searchParams.get("edt") == "1") 
+            return backUrl?.url?.href ?? $page.url.href
+        return backUrl?.url?.href ?? $page.url.href;
+
+    }
+
     async function pageOnSave() {
         if (isAdd) {
             let prev = urlToLoad;
@@ -130,9 +211,7 @@
             }
             if (prev) {
                 await invalidateAll();
-                goto(prev).then(() => {
-
-                });
+                goto(prev);
             }
         }
     }
@@ -198,7 +277,8 @@
                         if (body.url) {
                             urlToLoad = body.url;
                         } else {
-                            urlToLoad = saveNextPage ? saveNextPage(body.row) ?? $page.url.href : $page.url.href;
+                            //urlToLoad = saveNextPage ? saveNextPage(body.row) ?? $page.url.href : $page.url.href;
+                            urlToLoad = nextPageUrl(body.row);
                         }
                         //await invalidateAll();
                         for (let fn of persistFns) {
@@ -238,15 +318,19 @@
                 if (body.error) {
                     showError("Error deleting row");
                 } else {
+                    await invalidateAll();
                     goto(deleteNextPage ?? "/");
                 }
             }
     }
 
     async function newEntry(url : string) {
-        await invalidateAll(); 
-        let joiner = url.includes("?") ? "&" : "?";
-        goto(url + joiner + "prev=" + encodeURIComponent($page.url.toString()))
+        const backUrl = new SearchUrl($page.url);
+        const newUrl = new SearchUrl(new URL(url, $page.url));
+        newUrl.setBack(backUrl);
+        goto(newUrl?.url?.href ?? $page.url);
+        //await invalidateAll(); 
+        //goto(url)
     }
 
     /////
@@ -279,11 +363,32 @@
                         }
                     }
                 }
-            } else {
+            } else if (isAdd) {
                 setValueFns.forEach((value) => {
                     value(undefined)
                 });
-            } 
+            } else {                
+                getValueFns.forEach((fn) => {
+                    let field = fn();
+                    let setter = setOriginalValueFns.get(field.col.col)
+                    if (setter) setter(field.value)
+                })
+                updateDirty();
+            }
+        } else {
+            if (isAdd) {
+                setValueFns.forEach((value) => {
+                    value(undefined)
+                });
+            } else {                
+                getValueFns.forEach((fn) => {
+                    let field = fn();
+                    let setter = setOriginalValueFns.get(field.col.col)
+                    if (setter) setter(field.value)
+                })
+                updateDirty();
+            }
+
         }
     });
 </script>

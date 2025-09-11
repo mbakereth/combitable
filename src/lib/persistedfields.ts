@@ -4,6 +4,12 @@ import { persistedFields } from "$lib/stores";
 import { get } from 'svelte/store';
 
 
+/**
+ * Class for temporarily persisting field values when you click on a new 
+ * button while you have unsaved changes.
+ * 
+ * You shouldn't have to use this class directly.
+ */
 export class PersistedFields {
 
     private cols : CombiTableColumn[];

@@ -6,7 +6,6 @@
     import PersistedNewButton from '$lib/components/PersistedNewButton.svelte';
     import { SearchUrl } from '$lib';
     import { page } from '$app/stores';
-    import { browser } from '$app/environment';
 
     let columns : CombiTableColumn[] = [
         {name: "Name", col: "name", type: "string"},
@@ -21,6 +20,8 @@
 
     $: rec = data.rec;
     $: isAdd = data.isAdd ?? false;
+
+    // Elements in array fields must be primative values, not objects
     $: children = data.rec?.children ?? []
     $: fieldData = [rec?.name, rec?.gender, rec?.died, rec?.type, rec?.father?.name, rec?.mother?.name, rec?.children];
 
@@ -30,7 +31,7 @@
     $: backHref = backUrl ? backUrl?.url?.pathname :  null;
     if (backHref && backUrl?.url?.search) backHref += "?" + backUrl?.url?.search;
 
-    function newGodUrl() {
+    function chainedNewGodUrl() {
         const backUrl = new SearchUrl($page.url);
         const newUrl = new SearchUrl(new URL("/god/new", $page.url));
         newUrl.setBack(backUrl);
@@ -39,16 +40,7 @@
     }
 
     function urlAftetSave(rec : {[key:string]:any}) : string {
-        if ($page.url.searchParams.get("edt") == "1") 
-            return backUrl?.url?.href ?? $page.url.href
-        if (isAdd)
-            return "/god/" + rec.id;
-        return $page.url.href;
-    }
-    function urlAfterCancel() : string {
-        if ($page.url.searchParams.get("edt") == "1") 
-            return backUrl?.url?.href ?? $page.url.href
-        return $page.url.href;
+        return "/god/" + rec.id;
     }
 
 </script>
@@ -75,7 +67,6 @@
         deleteUrl="/delete"
         deleteNextPage="/"
         saveNextPage={urlAftetSave}
-        cancelNextPage={urlAfterCancel()}
         persistance={true} 
         data={fieldData}
     >
@@ -132,7 +123,7 @@
                                 bind:value={fieldData[4]}
                             />
                             <!-- <button class="btn btn-default" on:click={async () => {goto(await newGodLink())}}>New...</button>-->
-                            <PersistedNewButton url={newGodUrl}>New...</PersistedNewButton>
+                            <PersistedNewButton url={chainedNewGodUrl}>New...</PersistedNewButton>
                         </td>
                     </tr>
 

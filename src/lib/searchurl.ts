@@ -60,40 +60,85 @@ export class SearchUrl {
     emptySearch : string|undefined = "-";
     private insensitive = false;
 
-    constructor(url : URL|{[key:string]:any}, defaultTake = 20, emptySearch : string|undefined = "-") {
+    /**
+     * Construct from a URL
+     * @param url the URL to construct from (eg $page.url)
+     * @param defaultTake if passed, use this for pagination size.  If omitted
+     *     then `P`UBLIC_SEARCHURL_DEFAULT_TAKE` env variable is used.  
+     *     If that is also not present, 20 is used
+     * @param emptySearch For filtering, you can use this value to indicate
+     *     filter for empty values.  Default `-`
+     */
+    constructor(url : URL|{[key:string]:any}, defaultTake : number|undefined = undefined, emptySearch : string|undefined = "-") {
         this._url = url instanceof URL ? url : undefined;
         this.body = url instanceof URL ? undefined : url;
-        this.defaultTake = parseInt(env.PUBLIC_SEARCHURL_DEFAULT_TAKE ?? "20");
+        this.defaultTake = parseInt(env.PUBLIC_SEARCHURL_DEFAULT_TAKE ?? defaultTake ?? "20");
         this.emptySearch = emptySearch;
         this.insensitive = ['t', 'y', '1'].includes((env.PUBLIC_SEARCHURL_INSENSITIVE ?? "").toLowerCase().substring(0,1));
     }
 
+    /**
+     * You may have multiple tables in the same page, each with different filter and sort values.
+     * If this is the case, give each one a name with this method.
+     * @param val All URL parameters set by SearchUrl will have this appended, eg `"1"`, `"2"` etc.
+     * Default is no suffix
+     */
     setSuffix(val : string|undefined) {
         this.suffix = val ?? "";
     }
 
+    /**
+     * Returns the suffix set in `setSuffix`
+     * @returns 
+     */
     getSuffix() : string {
         return this.suffix;
     }
 
+    /**
+     * For some sorts, the id of the table is needed.  Default `id_pk`.
+     * 
+     * Relevant for Prisma only.  If you are not using the Prisma functionality
+     * you can ignore this,
+     * @param val 
+     */
     setIdColumn(val : string) {
         this.idColumn = val;
     }
 
+    /**
+     * Returns the value set `setIdColumn`
+     * @returns the name of the ID column
+     */
     getIdColumn() : string {
         return this.idColumn;
     }
 
+    /**
+     * For Prisma searches, indicate search should be case insensitve
+     * (only works where the Prisma API allows this to be set, ie in
+     * `contains`).  Default false
+     * @param val 
+     */
     setInsensitive(val : boolean) {
         this.insensitive = val;
     }
 
+    /**
+     * Returns whether Prisma contains searches are set to insensitive
+     * @returns the value set in `setInsensitive`
+     */
     getInsensitive() : boolean {
         return this.insensitive;
     }
 
     ///// sorting
 
+    /**
+     * Sets the sort URL parameter
+     * @param col the column to sort on
+     * @param direction the sort direction
+     */
     sort(col : string, direction? : "ascending"|"descending") {
         const curCol = this.url ? this.url.searchParams.get("s"+this.suffix) : (this.body?this.body["s"+this.suffix]:undefined);
         let sortCol = curCol;
@@ -118,6 +163,11 @@ export class SearchUrl {
         else if (this.body) this.body["s"+this.suffix] = dir + col;
     }
 
+    /**
+     * Returns the sorting set in the URL parameters
+     * @param defaultCol if there is no sort value in the URL parametersm return this,
+     * @returns the sort column and direction
+     */
     getSort(defaultCol : string="") : {sortCol: string, sortDirection : "ascending"|"descending"} {
         const curCol = this.url ? this.url.searchParams.get("s"+this.suffix) : (this.body?this.body["s"+this.suffix]:undefined);
         if (curCol == null) return {sortCol: defaultCol, sortDirection : "ascending"};
@@ -131,6 +181,10 @@ export class SearchUrl {
         return {sortCol: curCol.substring(1), sortDirection: "descending"};
     }
 
+    /**
+     * Set the default sort column, overriding what is in the constructor
+     * @param col the default column to sort by
+     */
     setDefaultSortCol(col : string) {
         const curCol = this.url ? this.url.searchParams.get("s"+this.suffix) : (this.body?this.body["s"+this.suffix]:undefined);
         if (curCol == null || curCol == "") {
@@ -142,6 +196,10 @@ export class SearchUrl {
 
     ///// individual ids
 
+    /**
+     * Sets the URL parameters to return only these IDs instead of a value-based filter
+     * @param vals the IDs to return
+     */
     ids(vals : number[]|undefined) {
         if (vals == undefined || vals.length == 0) {
             if (this.url) this.url.searchParams.delete("i"+this.suffix);
@@ -153,6 +211,10 @@ export class SearchUrl {
         }
     }
 
+    /**
+     * Returns the set of IDs from the URL parameters
+     * @returns IDs as set in `ids()`
+     */
     getIds() : number[] {
         const curIds = this.url ? this.url.searchParams.get("i"+this.suffix) : (this.body?this.body["i"+this.suffix]:undefined);
         if (!curIds) return []
@@ -161,11 +223,24 @@ export class SearchUrl {
 
     ///// filtering
 
-    setFilterComponent(col : string, value : string, label: string) {
-        return this.setFilterComponent_internal(col, value, "f"+this.suffix);
+    /**
+     * You can filter on multiple values (ANDed).  Add the given condition to the filters
+     * @param col filter on this column
+     * @param value the column must have this value (can include `*`)
+     */
+    setFilterComponent(col : string, value : string) {
+        this.setFilterComponent_internal(col, value, "f"+this.suffix);
     }
-    setPreFilterComponent(col : string, value : string, label: string) {
-        return this.setFilterComponent_internal(col, value, "pf"+this.suffix);
+
+    /**
+     * Pre-filters are applied regardless of what is in the regular filter set.
+     * Use this if you have a table that should only ever display a subset
+     * of the data even when there is no user-defined filter
+     * @param col column to filter by
+     * @param value the column must have this value (can include `*`)
+     */
+    setPreFilterComponent(col : string, value : string) {
+        this.setFilterComponent_internal(col, value, "pf"+this.suffix);
     }
 
     private setFilterComponent_internal(col : string, value : string, label: string) {
@@ -207,9 +282,20 @@ export class SearchUrl {
         }
     }
 
+    /**
+     * Set miltiple filters at once
+     * @param values column/value pairs
+     * @returns 
+     */
     setFilters(values: {[key:string]:string}) {
         return this.setFilters_internal(values, "f"+this.suffix);
     }
+
+    /**
+     * Set miltiple pre-filters at once
+     * @param values column/value pairs
+     * @returns 
+     */
     setPreFilters(values: {[key:string]:string}) {
         return this.setFilters_internal(values, "pf"+this.suffix);
     }
@@ -230,9 +316,18 @@ export class SearchUrl {
 
     }
 
+    /**
+     * Returns all the set filöters
+     * @returns filters are column/value pairs
+     */
     getFilters() : {[key:string]:string} {
         return this.getFilters_internal("f"+this.suffix);
     }
+
+    /**
+     * Returns all the set pre-filöters
+     * @returns pre-filters are column/value pairs
+     */
     getPreFilters() : {[key:string]:string} {
         return this.getFilters_internal("pf"+this.suffix);
     }
@@ -253,6 +348,11 @@ export class SearchUrl {
 
     ///// take and skip
 
+    /**
+     * Returns the take parameter in the URL which is the maximum number of
+     * results to return.  (Prisma `take` value)
+     * @returns the number of rows to return as set in the URL params
+     */
     getTake() : number {
         const take = this.url ? this.url.searchParams.get("t"+this.suffix) : (this.body?this.body["t"+this.suffix]:undefined);
         if (take) {
@@ -265,6 +365,12 @@ export class SearchUrl {
         return this.defaultTake;
     }
 
+    /**
+     * Returns the take parameter in the URL which is the maximum number of
+     * results skip before returning the `take` number of rows. 
+     * (Prisma `skip` value)
+     * @returns the number of rows to skip as set in the URL params
+     */
     getSkip() : number {
         const skip = this.url ? this.url.searchParams.get("k"+this.suffix) : (this.body?this.body["k"+this.suffix]:undefined);
         if (skip) {
@@ -277,41 +383,55 @@ export class SearchUrl {
         return 0;
     }
 
+    /**
+     * Puts the maximum number of rows to return in the URL params (Prisma `take`)
+     * @param val the number of rows to return
+     */
     take(val : number) : void {
         if (this.url) this.url.searchParams.set("t"+this.suffix, encodeURIComponent(""+val));
         else if (this.body) this.body.t = encodeURIComponent(""+val);
     }
 
+    /**
+     * Puts the number of rows to skip in the URL params (Prisma `skip`)
+     * @param val the number of rows to skip
+     */
     skip(val : number) : void {
         if (this.url) this.url.searchParams.set("k"+this.suffix, encodeURIComponent(""+val));
         else if (this.body) this.body.k = encodeURIComponent(""+val);
     }
 
+    /**
+     * Returns the URL-encoded search params
+     * @returns URL-encoded search params
+     */
     encode() : string {
         if (!this.url) return ""; // doesn't make sense for body
        return encodeURIComponent(this.url.search);
     }
 
-    setBack(back : SearchUrl, storage?: Storage) {
+    /**
+     * You can inplement go-to-previous-url functionality by setting the
+     * `b` field in the URL params to a `SearchUrl` using this method.
+     * 
+     * This `SearchUrl` can then be popped of with `popBack`.
+     * 
+     * Back URLs are chained so you can keep a stain by repeatedly calling
+     * `setBack` and `getBack`
+     * @param back the url to set as back (eg the current URL)
+     */
+    setBack(back : SearchUrl) {
         if (!this.url || !back.url) return; // only supported for query params
         let partialBackUrl = back.url.pathname + back.url.search;
-        if (storage) {
-            let stack : string[] = []
-            let stack_str = storage.getItem("history");
-            if (stack_str) stack = JSON.parse(stack_str);
-            stack.push(partialBackUrl)
-            storage.setItem("history", JSON.stringify(stack));
-        } else {
             // use query pareams
             let encodedBack = encodeURIComponent(partialBackUrl);
             this.url.searchParams.set("b", encodedBack);
             if (String(this.url).length >= parseInt(env.PUBLIC_SEARCHURL_MAX_LENGTH ?? ""+MAX_URL_LENGTH)) {
                 this.clipBack();
             }
-        }
     }
 
-    clipBack() {
+    private clipBack() {
         while (String(this.url).length >= parseInt(env.PUBLIC_SEARCHURL_MAX_LENGTH ?? ""+MAX_URL_LENGTH)) {
             //console.log("Clipping", String(this.url), String(this.url).length)
             let back : SearchUrl|null = this;
@@ -333,29 +453,32 @@ export class SearchUrl {
 
     }
 
-    popBack(storage?: Storage) : SearchUrl|null {
+    /**
+     * See `setBack` 
+     * @returns 
+     */
+    popBack() : SearchUrl|null {
         if (!this.url) return null; // only supported for query params
         let back : string|null = null;
-        if (storage) {
-            let stack : string[] = []
-            let stack_str = storage.getItem("history");
-            if (!stack_str) return null;
-            stack = JSON.parse(stack_str);
-            if (stack.length == 0) return null;
-            back = stack.pop() ?? null;
-            storage.setItem("history", JSON.stringify(stack));
-
-        } else {
-            back = this.url.searchParams.get("b");
-            if (!back) return null;
+        back = this.url.searchParams.get("b");
+        if (!back) return null;
             back = decodeURIComponent(back);
-        }
         let tempUrl = new URL(this.url.origin + back);
         let pathname = tempUrl.pathname;
         let newUrl = new URL(this.url.origin + pathname + tempUrl.search);
         return new SearchUrl(newUrl, this.defaultTake); 
     }
 
+    /**
+     * Return a prisma representation of the filter and search parameters
+     * @param models The PrismaModel for the model this is searching.  You can
+     *     pass `Prisma.dmmf.datamodel.models` for this
+     * @param modelName the Prisma name of the model (capitalized)
+     * @param defaultSearch If no search field is given in the command line,
+     *     sort by this.
+     * @param columns column configuration for all filterable/sortable columns
+     * @returns 
+     */
     getPrismaFields(models : readonly PrismaModel[], modelName: string, defaultSearch : string = "", columns: CombiTableColumn[]|undefined = undefined) : PrismaFields {
 
         let map : PrismaModelMaps = {}
@@ -519,6 +642,10 @@ export class SearchUrl {
         return orderBy;
     }
 
+    /**
+     * Convenience function to retun the URL search params as a string
+     * @returns string representation of URL search params
+     */
     searchParamsAsString() : string {
         if (!this.url) return "";
         return this.url.searchParams.toString();
