@@ -5,9 +5,7 @@
     import DetailsFieldSet from '$lib/components/DetailsFieldSet.svelte';
     import PersistedNewButton from '$lib/components/PersistedNewButton.svelte';
     import { SearchUrl } from '$lib';
-    import { PersistedFields } from '$lib/persistedfields'
     import { page } from '$app/stores';
-    import { goto, invalidateAll, invalidate } from '$app/navigation';
     import { browser } from '$app/environment';
 
     let columns : CombiTableColumn[] = [
@@ -26,37 +24,17 @@
     $: children = data.rec?.children ?? []
     $: fieldData = [rec?.name, rec?.gender, rec?.died, rec?.type, rec?.father?.name, rec?.mother?.name, rec?.children];
 
-    // this code is for persisting unsaved data if you click on
-    // another add button before saving (add Father in this example)
-    $: persist = browser ? new PersistedFields($page.url, columns) : undefined;
-
     // back link using SearchUrl
     $: searchUrl = new SearchUrl($page.url);
     $: backUrl = searchUrl.popBack();
     $: backHref = backUrl ? backUrl?.url?.pathname :  null;
     if (backHref && backUrl?.url?.search) backHref += "?" + backUrl?.url?.search;
 
-    async function newGodLink() {
-        let persist = new PersistedFields($page.url, columns);
-        persist.save(fieldData);
-        const backUrl = new SearchUrl($page.url);
-        const newUrl = new SearchUrl(new URL("/god/new", $page.url));
-        newUrl.setBack(backUrl);
-        if (!newUrl.url) return "";
-        await invalidateAll(); 
-        for (let i=0; i<fieldData.length; ++i) {
-            fieldData[i] = "";
-        }
-        newUrl.url.searchParams.set("edt","1")
-        return newUrl.url.pathname + newUrl.url.search;
-    }
-
     function newGodUrl() {
         const backUrl = new SearchUrl($page.url);
         const newUrl = new SearchUrl(new URL("/god/new", $page.url));
         newUrl.setBack(backUrl);
         if (!newUrl.url) return $page.url;
-        console.log("newGodUrl", newUrl.url)
         return newUrl.url;
     }
 

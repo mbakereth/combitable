@@ -25,6 +25,9 @@
     export let persistance : boolean = false;
     export let data : any[]|undefined = undefined;
 
+
+    let uuid = crypto.randomUUID();
+
     $: persist = browser ? new PersistedFields($page.url, columns) : undefined;
 
     setContext("detailsfieldset", { registerGetAndSetValue, registerGetFieldError, registerIsDirty, updateDirty, registerResetValue, registerPersist, newItemWithPersistanceLink });
@@ -75,24 +78,24 @@
 
     export function showError(errors: string[]|string) {
         validationErrors = errors;
-        (document.querySelector('#validateDialog1') as HTMLDialogElement)?.showModal(); 
+        (document.querySelector('#validateDialog1_'+uuid) as HTMLDialogElement)?.showModal(); 
     }
     export function showInfo(info : string) {
         opInfo = info;
-        (document.querySelector('#infoDialog1') as HTMLDialogElement)?.showModal(); 
+        (document.querySelector('#infoDialog1_'+uuid) as HTMLDialogElement)?.showModal(); 
     }
     export function showInfoThenLoad(info : string) {
         opInfo = info;
-        (document.querySelector('#infoDialog2') as HTMLDialogElement)?.showModal(); 
+        (document.querySelector('#infoDialog2_'+uuid) as HTMLDialogElement)?.showModal(); 
     }
 
     async function cancelEdit() {
         if (isAdd) {
-            (document.querySelector('#confirmEditDiscard1') as HTMLDialogElement)?.showModal(); 
+            (document.querySelector('#confirmEditDiscard1_'+uuid) as HTMLDialogElement)?.showModal(); 
         } else if (!dirty) {
             confirmCancelEdit();
         } else {
-            (document.querySelector('#confirmEditDiscard1') as HTMLDialogElement)?.showModal(); 
+            (document.querySelector('#confirmEditDiscard1_'+uuid) as HTMLDialogElement)?.showModal(); 
         }
     }
 
@@ -148,7 +151,7 @@
     async function saveEdit() {
         validationErrors = validate();
         if (validationErrors.length > 0) {
-            (document.querySelector('#validateDialog1') as HTMLDialogElement)?.showModal(); 
+            (document.querySelector('#validateDialog1_'+uuid) as HTMLDialogElement)?.showModal(); 
         } else {
             if (isAdd && !addUrl) {
                 console.log("No edit url defined");
@@ -197,7 +200,7 @@
                         } else {
                             urlToLoad = saveNextPage ? saveNextPage(body.row) ?? $page.url.href : $page.url.href;
                         }
-                        await invalidateAll();
+                        //await invalidateAll();
                         for (let fn of persistFns) {
                             fn();
                         }
@@ -212,7 +215,7 @@
     }
 
     function deleteRow() {
-        (document.querySelector('#confirmDelete1') as HTMLDialogElement)?.showModal(); 
+        (document.querySelector('#confirmDelete1_'+uuid) as HTMLDialogElement)?.showModal(); 
     }
     async function confirmDeleteRow() {
         if (!pk) {
@@ -268,16 +271,18 @@
                 //persist.restore(fieldData);
                 let fields = persist.getAsMap();
                 if (fields) {
-                    console.log("Iterate over fields", fields)
                     for (let col in fields) {
                         let val = fields[col]
                         let fn = setValueFns.get(col)
                         if (fn) {
-                            console.log("Set", col, val)
                             fn(val);
                         }
                     }
                 }
+            } else {
+                setValueFns.forEach((value) => {
+                    value(undefined)
+                });
             } 
         }
     });
@@ -306,15 +311,15 @@
 </div>
 
 <!-- Modal to confirm discarding changes -->
-<CombiTableDiscardChanges id="confirmEditDiscard1" okFn={confirmCancelEdit}/> 
+<CombiTableDiscardChanges id={"confirmEditDiscard1_"+uuid} okFn={confirmCancelEdit}/> 
 
 <!-- Modal to display validation errors -->
-<CombiTableValidateDialog id="validateDialog1" errors={validationErrors}/>
+<CombiTableValidateDialog id={"validateDialog1_"+uuid} errors={validationErrors}/>
 
 
 <!-- Modal to display information after executing a function -->
-<CombiTableInfoDialog id="infoDialog1" info={opInfo}/>
-<CombiTableInfoDialog id="infoDialog2" info={opInfo} okFn={pageOnSave}/>
+<CombiTableInfoDialog id={"infoDialog1_"+uuid} info={opInfo}/>
+<CombiTableInfoDialog id={"infoDialog2_"+uuid} info={opInfo} okFn={pageOnSave}/>
 
 <!-- Modal to display delete confirmation -->
-<CombiTableConfirmDeleteDialog id="confirmDelete1" okFn={confirmDeleteRow}/>
+<CombiTableConfirmDeleteDialog id={"confirmDelete1_"+uuid} okFn={confirmDeleteRow}/>
