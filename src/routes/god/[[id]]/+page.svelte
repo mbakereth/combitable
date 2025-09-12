@@ -68,8 +68,10 @@
         deleteNextPage="/"
         saveNextPage={urlAftetSave}
         persistance={true} 
+        columns={columns}
         data={fieldData}
     >
+
     <!-- persistance is only needed if persisting usaved data (see above) -->
 
         <div class="m-4 overflow-y-auto">

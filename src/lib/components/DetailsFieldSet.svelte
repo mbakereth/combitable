@@ -84,21 +84,20 @@
     export let saveNextPage : ((rec : {[key:string]:any}) => string)|undefined = undefined;
     export let persistance : boolean = false;
     export let data : any[]|undefined = undefined;
+    export let columns : CombiTableColumn[]|undefined = undefined;
 
     let uuid = crypto.randomUUID();
 
-    $: persist = browser ? new PersistedFields($page.url, columns) : undefined;
+    $: persist = browser && columns ? new PersistedFields($page.url, columns) : undefined;
 
     setContext("detailsfieldset", { registerGetAndSetValue, registerGetFieldError, registerIsDirty, updateDirty, registerResetValue, registerPersist, newItemWithPersistanceLink });
 
     let getValueFns = new SvelteSet<() => {value: any, col: CombiTableColumn}>();
     let setValueFns = new SvelteMap<string,(value: any) => void>();
     let setOriginalValueFns = new SvelteMap<string,(value: any) => void>();
-    let columns : CombiTableColumn[] = []
     function registerGetAndSetValue(getFn: () => {value: any, col: CombiTableColumn}, setFn: (value: any) => void, setOriginalFn: (value: any) => void) {
         getValueFns.add(getFn);
         let col = getFn().col;
-        columns.push(col);
         setValueFns.set(col.col, setFn)
         setOriginalValueFns.set(col.col, setOriginalFn)
     }
@@ -355,8 +354,8 @@
     // Persistance
 
     async function newItemWithPersistanceLink(url : URL) {
-        if (!data) {
-            console.log("Cannot persist as data not passed to DetailsFieldSet");
+        if (!data || !columns) {
+            console.log("Cannot persist as data or columns not passed to DetailsFieldSet");
             return;
         }
         let persist = new PersistedFields($page.url, columns);
@@ -368,6 +367,10 @@
 
     page.subscribe((value) => {
         if (persistance) {
+            if (!columns) {
+                console.log("Error: need to pass columns if setting persistance to true");
+                return;
+            }
             let persist = new PersistedFields(value.url, columns);
             if ( persist.has()) {
 
