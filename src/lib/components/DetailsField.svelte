@@ -21,6 +21,7 @@
     import { getContext } from 'svelte';
     import DetailsFieldSet from './DetailsFieldSet.svelte';
     import { invalidateAll } from '$app/navigation';
+    import { page } from '$app/state';
 
     export let col : CombiTableColumn;
     export let value : any;

@@ -71,6 +71,10 @@
         columns={columns}
         data={fieldData}
     >
+    <!-- 
+    If you don't set persistance to true, you don't need to pass columns
+    and rows
+    -->
 
     <!-- persistance is only needed if persisting usaved data (see above) -->
 

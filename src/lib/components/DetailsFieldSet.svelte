@@ -362,7 +362,13 @@
         persist.save(data);
         await invalidateAll(); 
         url.searchParams.set("edt","1")
-        return url.pathname + url.search;
+        /*data.forEach((item) => {
+            item = undefined;
+        })*/
+       resetValueFns.forEach((fn) => {
+        fn();
+       })
+        await goto(url.pathname + url.search);
     }
 
     page.subscribe((value) => {

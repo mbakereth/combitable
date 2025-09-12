@@ -15,7 +15,7 @@
          */
         url: () => URL;
     }
-    import { goto } from '$app/navigation';
+    import { goto, invalidateAll } from '$app/navigation';
     import DetailsFieldSet from './DetailsFieldSet.svelte';
     import { getContext } from 'svelte';
 
@@ -25,6 +25,6 @@
 
 </script>
 
-<button class="btn btn-default" on:click={async () => {goto(await newItemWithPersistanceLink(url()))}}>
+<button class="btn btn-default" on:click={async () => {await newItemWithPersistanceLink(url())}}>
     <slot/>
 </button>

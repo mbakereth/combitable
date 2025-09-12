@@ -79,7 +79,7 @@
         /**
          * URL to call to delete a row.  If not given, deleting is not activated.
          */
-        deleteUr? : string;
+        deleteUrl? : string;
 
         /**
          * If passed, any column in this map will be pre-populated with

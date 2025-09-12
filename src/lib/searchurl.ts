@@ -40,7 +40,7 @@ const MAX_URL_LENGTH = 2048;
  * Creates and parses URLs which have the following:
  * 
  *   - `s` sort field optionally prefixed with `+` or `-`
- *   - `f` filter string which is `fieldname:value`
+ *   - `f` filter string which is `fieldname:value`.  Multiple filters separated by comma
  *   - `t` take: return at most this number odf rows
  *   - `k` skip: skip  this number of rows
  *   - `b` back URL - all of the above, prefixed with the pathname and `?`, URL-encoded.
