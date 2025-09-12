@@ -370,6 +370,22 @@
         if (persistance) {
             let persist = new PersistedFields(value.url, columns);
             if ( persist.has()) {
+
+                if (isAdd) {
+                    getValueFns.forEach((fn) => {
+                        let field = fn();
+                        let setter = setOriginalValueFns.get(field.col.col)
+                        if (setter) setter(field.value)
+                    })
+                } else {                
+                    getValueFns.forEach((fn) => {
+                        let field = fn();
+                        let setter = setOriginalValueFns.get(field.col.col)
+                        if (setter) setter(field.value)
+                    })
+                    //updateDirty();
+                }
+
                 //persist.restore(fieldData);
                 let fields = persist.getAsMap();
                 if (fields) {
