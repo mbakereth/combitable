@@ -56,10 +56,11 @@
         saveNextPage? : ((rec : {[key:string]:any}) => string);
         persistance? : boolean;
         data? : any[]|undefined;
+
     }
 
     import { goto, invalidateAll } from '$app/navigation';
-    import type { CombiTableColumn } from '$lib/combitabletypes';
+    import type { CombiTableColumn, CombiTablePresets } from '$lib/combitabletypes';
     import CombiTableValidateDialog from '$lib/components/CombiTableErrorDialog.svelte';
     import CombiTableDiscardChanges from '$lib/components/CombiTableDiscardChanges.svelte';
     import { validateField } from '$lib/utils';
@@ -83,7 +84,6 @@
     export let saveNextPage : ((rec : {[key:string]:any}) => string)|undefined = undefined;
     export let persistance : boolean = false;
     export let data : any[]|undefined = undefined;
-
 
     let uuid = crypto.randomUUID();
 
@@ -186,10 +186,23 @@
     function nextPageUrl(rec : {[key:string]:any}) {
         let url = new SearchUrl($page.url);
         let backUrl = url.popBack();
+        let current = $page.url.href;
+        let currentUrl = $page.url;
         if ($page.url.searchParams.get("edt") == "1") 
             return backUrl?.url?.href ?? $page.url.href
-        if (isAdd)
-            return saveNextPage ? saveNextPage(rec) : $page.url.href;
+        //if (isAdd) {
+            if (saveNextPage) {
+                let page = saveNextPage(rec) ?? current;
+                let newUrl = new SearchUrl(new URL(page, currentUrl));
+                if (!(newUrl.url?.searchParams.get("b")) && backUrl) {
+                    newUrl.setBack(backUrl);
+                }
+                return newUrl.url?.href ?? current;
+            } else {
+                return current;
+            }
+
+        //}
         return $page.url.href;
 
     }
@@ -204,7 +217,8 @@
     }
 
     async function pageOnSave() {
-        if (isAdd) {
+        //if (isAdd) 
+        {
             let prev = urlToLoad;
             if (persistance && persist) {
                 persist.delete();
@@ -280,7 +294,6 @@
                             //urlToLoad = saveNextPage ? saveNextPage(body.row) ?? $page.url.href : $page.url.href;
                             urlToLoad = nextPageUrl(body.row);
                         }
-                        //await invalidateAll();
                         for (let fn of persistFns) {
                             fn();
                         }
@@ -319,7 +332,12 @@
                     showError("Error deleting row");
                 } else {
                     await invalidateAll();
-                    goto(deleteNextPage ?? "/");
+                    if (deleteNextPage) goto(deleteNextPage)
+                    else {
+                        let url = new SearchUrl($page.url);
+                        let back = url.popBack();
+                        goto(back?.url?.href ?? "/");
+                    }
                 }
             }
     }
@@ -364,9 +382,11 @@
                     }
                 }
             } else if (isAdd) {
-                setValueFns.forEach((value) => {
-                    value(undefined)
-                });
+                getValueFns.forEach((fn) => {
+                    let field = fn();
+                    let setter = setOriginalValueFns.get(field.col.col)
+                    if (setter) setter(field.value)
+                })
             } else {                
                 getValueFns.forEach((fn) => {
                     let field = fn();
@@ -377,9 +397,11 @@
             }
         } else {
             if (isAdd) {
-                setValueFns.forEach((value) => {
-                    value(undefined)
-                });
+                getValueFns.forEach((fn) => {
+                    let field = fn();
+                    let setter = setOriginalValueFns.get(field.col.col)
+                    if (setter) setter(field.value)
+                })
             } else {                
                 getValueFns.forEach((fn) => {
                     let field = fn();
