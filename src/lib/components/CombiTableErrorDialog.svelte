@@ -1,3 +1,8 @@
+<!--
+    @component Dialog to display an error
+    
+    You shouldn't need this directly.
+-->
 <script lang="ts">
     // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
     export let id : string;

@@ -35,7 +35,7 @@ export class GodsOps extends Ops {
                 return json({error: "Primary key invalid"});
             }
             const prisma = new PrismaClient();
-            await prisma.god.delete({where: {name: body._pk}});
+            await prisma.god.delete({where: {id: body._pk}});
             return json({pk: body._pk});
         } catch (e) {
             console.log(e);
@@ -49,7 +49,7 @@ export class GodsOps extends Ops {
             return {errors: "Primary key missing or invalid"};
         }
 
-        const {errors, god} = await GodsOps.validate(body);
+        const {errors, god, children} = await GodsOps.validate(body);
         if (errors) return {errors};
         let info : string|undefined = undefined;
 
@@ -69,7 +69,7 @@ export class GodsOps extends Ops {
                     let editGod : Prisma.GodUncheckedUpdateInput = {...god};
                     const res = await prisma.god.updateMany({
                         data: editGod,
-                        where: {name: body._pk}
+                        where: {id: body._pk}
                     });
                     newGod = await prisma.god.findFirstOrThrow({where: {name: god.name}});
                 }
@@ -80,6 +80,49 @@ export class GodsOps extends Ops {
                         mother: true,
                       },
                 });
+
+                // update children
+                const existingChildren = god.gender == "m" ?  
+                    await prisma.god.findMany({
+                        where: { father_id: retGod.id}
+                    }) :
+                    await prisma.god.findMany({
+                        where: { mother_id: retGod.id}
+                    });
+                let existingChildNames = existingChildren.map((x) => x.name);
+                
+                for (let name of existingChildNames) {
+                    if (!children || !(name in children)) {
+                        if (god.gender == "m") {
+                            await prisma.god.update({
+                                data: { father: {disconnect: {id: retGod.id}} },
+                                where: {name},
+                            })
+                        } else {
+                            await prisma.god.update({
+                                data: { mother: {disconnect: {id: retGod.id}} },
+                                where: {name},
+                            })
+
+                        }
+                    }
+                }
+                for  (let name of children ?? []) {
+                    if (!(name  in existingChildNames)) {
+                        if (god.gender == "m") {
+                            await prisma.god.update({
+                                data: { father: {connect: {id: retGod.id}} },
+                                where: {name},
+                            })
+                        } else {
+                            await prisma.god.update({
+                                data: { mother: {connect: {id: retGod.id}} },
+                                where: {name},
+                            })
+
+                        }
+                    }
+                }
             
                 return {row: retGod, info};
             } catch (e) {
@@ -92,7 +135,7 @@ export class GodsOps extends Ops {
 
     }
 
-    static async validate(body: {[key:string]:any}) : Promise<{errors? : string[]|string, god? : Prisma.GodCreateInput&Prisma.GodUncheckedCreateInput}> {
+    static async validate(body: {[key:string]:any}) : Promise<{errors? : string[]|string, god? : Prisma.GodCreateInput&Prisma.GodUncheckedCreateInput, children? : string[]}> {
         let errors : string[] = [];
         if (!Ops.isEmpty(body.gender) && (body.gender != "m" && body.gender != "f")) errors.push("Gender is invalid");
         if (Ops.isEmpty(body["died"])) errors.push("Died not given");
@@ -139,7 +182,7 @@ export class GodsOps extends Ops {
             father_id: Ops.isEmpty(body["father.name"]) ? null : father_id,
             mother_id: Ops.isEmpty(body["mother.name"]) ? null : mother_id,
         }
-        return { god };
+        return { god, children: body.children };
     }
 
     static async killGodsPost(event : RequestEvent)  : Promise<Response>  {
@@ -150,13 +193,13 @@ export class GodsOps extends Ops {
                 return json({errors: "Primary key invalid"});
             }
             const prisma = new PrismaClient();
-            const pks = body.pks as string[];
+            const pks = body.pks as number[];
             await prisma.god.updateMany({
                 data: {
                     died: true
                 },
                 where: {
-                    name: { in: pks }
+                    id: { in: pks }
                 }
             });    
             return json({info: "Successful"})

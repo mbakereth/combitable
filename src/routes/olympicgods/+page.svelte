@@ -1,3 +1,9 @@
+<!-- 
+This page demonstrate pre-filtering and linking/unlinking
+
+Linking sets a foreign key without creating the related object.  Unlinking
+clears it
+-->
 <script lang="ts">
     // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
     import { goto, invalidate } from '$app/navigation'
@@ -24,6 +30,7 @@
 
 <h2 class="ml-4">Olympic Gods</h2>
 
+<!-- See CombiTable documentation for details -->
 <CombiTable 
     rows={rows} 
     columns={columns} 
@@ -42,5 +49,6 @@
     widthType={"fixed"}
 />
 
-<div class="hidden min-w-16 max-w-16"></div>
-<div class="hidden min-w-[4rem]"></div>
+<p class="mt-4 ml-4">
+    <a href="/">All Gods</a>
+</p>

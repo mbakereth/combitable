@@ -147,6 +147,11 @@ const homeData : Home[] = [
         name: "Olympus"
     }
 ];
+
+const olympians = [
+    "Zeus", "Aphrodite", "Apollo", "Athena"
+];
+
 async function main() {
 
     await prisma.god.deleteMany();
@@ -183,8 +188,18 @@ async function main() {
         });
         console.log("Created", god.name)
         godName2Id[ret.name] = ret.id;
+
+    }
+
+    for (let name of olympians) {
+        await prisma.god.update({
+            data: {home: {connect: {name: "Olympus"}}},
+            where: {name}
+        })
+        console.log("Set home for " + name + " to Olympus")
     }
 }
+
 main()
     .then(async () => {
         await prisma.$disconnect()

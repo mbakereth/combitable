@@ -1,12 +1,16 @@
 <script lang="ts">
-    // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
+    // Copyright (c) 2025 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
     import { goto, invalidate } from '$app/navigation'
     export let data;
     import CombiTable from '$lib/components/CombiTable.svelte';
     import type { CombiTableColumn } from '$lib/combitabletypes';
+    import { SearchUrl } from '$lib';
+    import { page } from '$app/stores';
 
+    // this is passed to CombiTable and defines the columns in the table, their
+    // order, appearance, how to format/parse their value whether to make them clickable
     let columns : CombiTableColumn[] = [
-        {name: "Name", col: "name", type: "string", link: (row) => {return "/god/" + row.id}},
+        {name: "Name", col: "name", type: "string", link: (row) => {return detailsLink("/god/" + row.id)}},
         {name: "Gender", col: "gender", type: "select:string", values: ["m", "f"], names: ["m", "f"], minWidth: "[4rem]"},
         {name: "Died", col: "died", type: "boolean"},
         {name: "Type", col: "type", type: "select:integer", values: [0,1,2], names: ["God", "Titan", "Personification"]},
@@ -16,6 +20,23 @@
 
     $: rows = data.gods;
 
+    // back link using SearchUrl
+    const searchUrl = new SearchUrl($page.url);
+    let backUrl = searchUrl.popBack();
+    let backHref = backUrl ? backUrl?.url?.pathname :  null;
+    if (backHref && backUrl?.url?.search) backHref += "?" + backUrl?.url?.search;
+ 
+
+    function detailsLink(url : string) {
+        const backUrl = new SearchUrl($page.url);
+        const newUrl = new SearchUrl(new URL(url, $page.url));
+        newUrl.setBack(backUrl);
+        if (!newUrl.url) return "";
+        return newUrl.url.pathname + newUrl.url.search;
+    }
+
+    // This is to demonstrate operations, where you can create a button
+    // to act on one or more selected rows.  This is optional
     async function killGods(pks : (string|number)[]) : Promise<{error? : string, info? : string}> {
         try {
             let ret = await fetch("/killgods", {
@@ -31,10 +52,6 @@
             return {error: typeof(e) == "object" && e && "message" in e ? e.message as string : "Unknown error"}
         }
     }
-
-    $: primaryKeysChecked = [];
-    let table : CombiTable;
-
 </script>
 
 <svelte:head>
@@ -43,10 +60,13 @@
 
 <h2 class="ml-4">Greek Gods</h2>
 
+<!--
+    Creates a table.  See the documentation for CombiTable for details
+-->
 <CombiTable 
     rows={rows} 
     columns={columns} 
-    primaryKey="name"
+    primaryKey="id"
     defaultSort="name" 
     enableSort={true}
     enableFilter={true}
@@ -59,12 +79,11 @@
     widthType={"auto"}
     ops={[{label: "Kill", fn: killGods}]}
     urlSuffix=""
-    navExtra={[{label: "New", fn: async () => {goto("/god/")}}]}
-    bind:primaryKeysChecked={primaryKeysChecked}
-    link={(row) => {return "/god/" + row.id}}
+    navExtra={[{label: "New", fn: async () => {goto("/god/new")}}]}
 />
 
-<p class="mt-4"><a href="/olympicgods" class="ml-4">Olympic Gods</a></p>
+<!-- this link is to demonstate pre-filters and select functionality -->
+<p class="mt-4">
+    <a href="/olympicgods" class="ml-4">Olympic Gods</a>
+</p>
 
-<div class="hidden min-w-16 max-w-16"></div>
-<div class="hidden min-w-[4rem]"></div>

@@ -1,4 +1,161 @@
+<!--
+    @component Table component with adding, editing, deleting filtering
+        and type conversion from string fields    
+
+    Used in combination with {@link SearchUrl} which implements sorting
+    and filtering as URL parameters
+ -->
 <script lang="ts">
+
+    type Props = {
+
+        /** the rows to display */
+        rows : {[key:string]:any|undefined}[];
+
+        /**
+         * Column configuration, in the order they will be displayed
+         */
+        columns : CombiTableColumn[];
+
+        /**
+         * Whether to enable sorting.  Default false
+         */
+        enableSort? : boolean;
+
+        /**
+         * Whether to enable filtering.  Default false
+        */
+        enableFilter? : boolean;
+
+        /**
+         * If no sorting is defined in the URL, sort on this
+        */
+        defaultSort : string;
+
+        /**
+         * Date format for date cols.  Default `yyyy-mm-dd`.
+         * 
+         * Possible values `yyyy-mm-dd`, `dd-mm-yyyy`, `nn-dd-yyyy`
+        */
+        dateFormat? : string;
+
+        /**
+         * Number of rows to show per page.  Default 0 which is no pagination
+        */
+        paginate? : number;
+
+        /**
+         * Whether there are more rows before the ones passed to this table
+         * (activates the Previous button).  Default false
+        */
+        havePrevious? : boolean;
+
+        /**
+         * Whether there are more rows after the ones passed to this table
+         * (activates the Next button).  Default false
+        */
+        haveNext? : boolean;
+
+        /**
+         * URL to call to add a new row.  If not given, adding is not activated.
+         */
+        addUrl? : string;
+
+        /**
+         * URL to call to link this record to another.  If not given, linking is not activated.
+         */
+        linkUrl? : string;
+
+        /**
+         * URL to call to unlink this record from another.  If not given, unlinking is not activated.
+         */
+        unlinkUrl? : string;
+
+        /**
+         * URL to call to edit a row.  If not given, editing is not activated.
+         */
+        editUrl? : string;
+
+        /**
+         * URL to call to delete a row.  If not given, deleting is not activated.
+         */
+        deleteUr? : string;
+
+        /**
+         * If passed, any column in this map will be pre-populated with
+         * the corresponding value when a new record is being created.  If
+         * it is not here, the field will be empty.
+         */
+        presets? : CombiTablePresets;
+
+        /**
+         * Tailwind CSS class for clickable fields.  Default empty
+         */
+        linkFormat? : string;
+
+        /**
+         * Use this if you have multiple tables on one page.  Pass this
+         * as the suffix to {@link SearchUrl}
+         */
+        urlSuffix? : string;
+
+        /**
+         * Tailwind table with type `auto` or `fixed`.  Default `auto`
+         */
+        widthType? : "auto"|"fixed";
+
+        /**
+         * Primary key field name,  Only needed when activating, edit, add or delete.
+         */
+        primaryKey? : string;
+
+        /**
+         * Enable selecting rows.  Default false
+         */
+        select? : boolean;
+
+        /**
+         * Height of page not occupied by this table.  Needed to put the
+         * buttons at the bottom of the page and put a scrollbar on the table.
+         * 
+         * If not given, the whole page will scroll.
+         */
+        restOfScreenHeight? : number;
+
+        /**
+         * Whether to make the title row sticky.  Default false.
+        */
+        stickyHeadRow? : boolean;
+
+        /**
+         * Optional operations when setting `select` to true.
+         */
+        ops? : CombiTableOp[];
+
+        /**
+         * Turn on preview mode.  In this mode, only a small number of rows
+         * is displayed, without the manipulation buttons.  Intented to show
+         * the user what column configuration will look like.
+         * Default false.
+         */
+        preview? : boolean;
+
+        /**
+         * Use this to make a whole row linkable, as opposed to individual columns.
+         * 
+         * Will not give intended results if you have select buttons or operations
+         * (edit, delete) on the row.
+         */
+        link?: ((row:{[key:string]:any}, i? : number) => string);
+
+        /**
+         * Bind to this to get a list of primary keys that have been selected
+         * when `select` is true.
+         * Default empty set.
+         */
+        primaryKeysChecked? : (string|number)[];
+
+    }
     // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
     import { tick } from 'svelte';
     import { onMount } from 'svelte';
@@ -46,6 +203,8 @@
     export let ops : CombiTableOp[] = [];
     export let preview : boolean = false;
     export let link: ((row:{[key:string]:any}, i? : number) => string)|undefined = undefined;
+
+    let uuid = crypto.randomUUID();
 
     let haveOps = ops.length > 0;
     if (haveOps) select = true;
@@ -288,7 +447,7 @@
         if (!dirty) {
             confirmPrevious()
         } else {
-            (document.querySelector('#confirmPreviousDiscard') as HTMLDialogElement)?.showModal(); 
+            (document.querySelector('#confirmPreviousDiscard_'+uuid) as HTMLDialogElement)?.showModal(); 
         }
     }
     async function confirmPrevious() {
@@ -316,7 +475,7 @@
         if (!dirty) {
             confirmNext()
         } else {
-            (document.querySelector('#confirmNextDiscard') as HTMLDialogElement)?.showModal(); 
+            (document.querySelector('#confirmNextDiscard_'+uuid) as HTMLDialogElement)?.showModal(); 
         }
     }
     async function confirmNext() {
@@ -470,7 +629,7 @@
                 } catch (e) {
                     console.log(e);
                     validationErrors = "Dates must be " + dateFormat;
-                    (document.querySelector('#validateDialog') as HTMLDialogElement)?.showModal(); 
+                    (document.querySelector('#validateDialog_'+uuid) as HTMLDialogElement)?.showModal(); 
                 }
             }
         } else {
@@ -871,7 +1030,7 @@
         
         validationErrors = validate();
         if (validationErrors.length > 0) {
-            (document.querySelector('#validateDialog') as HTMLDialogElement)?.showModal(); 
+            (document.querySelector('#validateDialog_'+uuid) as HTMLDialogElement)?.showModal(); 
         } else {
             let url = editRow == -1 ? addUrl : (editRow == -2 ? linkUrl : editUrl);
             if (url == undefined) {
@@ -977,7 +1136,7 @@
         if (!dirty) {
             confirmCancelEdit();
         } else {
-            (document.querySelector('#confirmEditDiscard') as HTMLDialogElement)?.showModal(); 
+            (document.querySelector('#confirmEditDiscard_'+uuid) as HTMLDialogElement)?.showModal(); 
         }
     }
     function confirmCancelEdit() {
@@ -992,7 +1151,7 @@
     let deleteIdx = -1;
     function deleteRow(idx : number) {
         deleteIdx = idx;
-        (document.querySelector('#confirmDelete') as HTMLDialogElement)?.showModal(); 
+        (document.querySelector('#confirmDelete_'+uuid) as HTMLDialogElement)?.showModal(); 
     }
     async function confirmDeleteRow() {
         if (deleteUrl === undefined) {
@@ -1027,18 +1186,18 @@
     // show dialogs
     export function showInfo(info : string) {
         opInfo = info;
-        (document.querySelector('#infoDialog') as HTMLDialogElement)?.showModal(); 
+        (document.querySelector('#infoDialog_'+uuid) as HTMLDialogElement)?.showModal(); 
     }
 
     export function showError(errors: string[]|string) {
         validationErrors = errors;
-        (document.querySelector('#validateDialog') as HTMLDialogElement)?.showModal(); 
+        (document.querySelector('#validateDialog_'+uuid) as HTMLDialogElement)?.showModal(); 
     }
 
     // show dialogs
     function showReload(info : string) {
         opInfo = info;
-        (document.querySelector('#reloadDialog') as HTMLDialogElement)?.showModal(); 
+        (document.querySelector('#reloadDialog_'+uuid) as HTMLDialogElement)?.showModal(); 
     }
 
     ///// Custom operations
@@ -1081,7 +1240,7 @@
     let unlinkIdx = -1;
     function unlinkRow(idx : number) {
         unlinkIdx = idx;
-        (document.querySelector('#confirmUnlink') as HTMLDialogElement)?.showModal(); 
+        (document.querySelector('#confirmUnlink_'+uuid) as HTMLDialogElement)?.showModal(); 
     }
     async function confirmUnlinkRow() {
         if (unlinkUrl === undefined) {
@@ -1611,28 +1770,28 @@
 {/if}
 
 <!-- Modal to confirm discarding edit -->
-<CombiTableDiscardChanges id="confirmEditDiscard" okFn={confirmCancelEdit}/>
+<CombiTableDiscardChanges id={"confirmEditDiscard_"+uuid} okFn={confirmCancelEdit}/>
 
 <!-- Modal to confirm discarding edit when clicking previous -->
-<CombiTableDiscardChanges id="confirmPreviousDiscard" okFn={confirmPrevious}/>
+<CombiTableDiscardChanges id={"confirmPreviousDiscard_"+uuid} okFn={confirmPrevious}/>
 
 <!-- Modal to confirm discarding edit when clicking previous -->
-<CombiTableDiscardChanges id="confirmNextDiscard" okFn={confirmNext}/>
+<CombiTableDiscardChanges id={"confirmNextDiscard_"+uuid} okFn={confirmNext}/>
 
 <!-- Modal to confirm discarding edit when clicking previous -->
-<CombiTableDiscardChanges id="confirmUnlink" title="Unlink god from Olympus?" okFn={confirmUnlinkRow}/>
+<CombiTableDiscardChanges id={"confirmUnlink_"+uuid} title="Unlink god from Olympus?" okFn={confirmUnlinkRow}/>
 
 <!-- Modal to display validation errors -->
-<CombiTableValidateDialog id="validateDialog" errors={validationErrors}/>
+<CombiTableValidateDialog id={"validateDialog_"+uuid} errors={validationErrors}/>
 
 <!-- Modal to display information after executing a function -->
-<CombiTableInfoDialog id="infoDialog" info={opInfo}/>
+<CombiTableInfoDialog id={"infoDialog_"+uuid} info={opInfo}/>
 
 <!-- Modal to display info message then reload -->
-<CombiTableInfoDialog id="reloadDialog" info={opInfo} okFn={reload}/>
+<CombiTableInfoDialog id={"reloadDialog_"+uuid} info={opInfo} okFn={reload}/>
 
 <!-- Modal to display validation errors -->
-<CombiTableConfirmDeleteDialog id="confirmDelete" okFn={confirmDeleteRow}/>
+<CombiTableConfirmDeleteDialog id={"confirmDelete_"+uuid} okFn={confirmDeleteRow}/>
 
 <!-- To instantiate tailwind classes that are in variables therefore not seen by the preprocessor -->
 <div class="hidden -mt-[21px] ml-1 ml-6 -ml-6 table-fixed table-auto -mt-[21px] -mt-[42px] ml-1 ml-6 ml-12 w-[80px] w-[60px] w-[48px] -mt-[20px] -mt-[18px] ml-6 -ml-6 -ml-1 text-base-content align-middle sticky top-0 bg-required bg-base-200 -mt-[18px] -mt-[20px] -mt-[21px]"></div>

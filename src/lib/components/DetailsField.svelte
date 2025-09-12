@@ -1,12 +1,141 @@
+<!--
+    @component For use with {@link DetailsFieldSet}.  A single field for
+    editing a row field, configured the same was as {@link CombiTable}    
+ -->
 <script lang="ts">
+    type Props = {
+
+        /** Table definition for this field.  See {@link CombiTableColumn} */
+        col : CombiTableColumn,
+
+        /** Bind a variable to hold the value to this */
+        value : any,
+
+        /** For date fields.  `yyyy-mm-dd`, `dd-mm-yyyy`, `mm-dd-yyyy`*/
+        dateFormat : string,
+    }
+
     import type { CombiTableColumn } from '$lib/combitabletypes';
     import { tick } from 'svelte';
     import { readonly } from 'svelte/store';
+    import { getContext } from 'svelte';
+    import DetailsFieldSet from './DetailsFieldSet.svelte';
+    import { invalidateAll } from '$app/navigation';
 
     export let col : CombiTableColumn;
     export let value : any;
-    let origValue = value;
+    let origValue = (Array.isArray(value)) ? [...value] : value;
     export let dateFormat = "yyyy-mm-dd"; // or "yyyy-mm-dd" or "mm-dd-yyyy"
+
+    /*if (col.type == "select:string" || col.type == "select:integer") {
+        if (col.names && col.values) {
+            let matches = col.names.filter((val, idx) => (col.values??[])[idx] == value)
+            if (matches && matches.length > 0) value = matches[0]
+        } else if (col.names) {
+            let matches = col.names.filter((val, idx) => (col.names??[])[idx] == value)
+            if (matches && matches.length > 0) value = matches[0]
+        } else if (col.values) {
+            let matches = col.values.filter((val, idx) => (col.values??[])[idx] == value)
+            if (matches && matches.length > 0) value = matches[0]
+        }
+    }*/
+
+    getContext<DetailsFieldSet>("detailsfieldset").registerGetAndSetValue(getValue, setValue, setOriginalValue);
+    getContext<DetailsFieldSet>("detailsfieldset").registerResetValue(resetValue);
+    getContext<DetailsFieldSet>("detailsfieldset").registerGetFieldError(getFieldError);
+    getContext<DetailsFieldSet>("detailsfieldset").registerIsDirty(isDirty);
+    getContext<DetailsFieldSet>("detailsfieldset").registerPersist(persist);
+
+    function isEmpty(field : any) {
+        if ((col.type == "integer" || col.type == "select:integer" || col.type == "boolean")) {
+            if (field === undefined || field === "" || field === null) return true;
+        } else if (col.type.startsWith("array")) {
+            if (field === undefined || field === null || field === "" || (Array.isArray(field) && field.length == 0)) return true;
+        } else if (!field) return true;
+        return false;
+    }
+
+    
+    function getValue() : {value: any, col: CombiTableColumn} {
+        if (col.type == "array:string") {
+            if (extraValue) {
+                return {value: [...(value as string[]), extraValue], col}
+            }
+            return {value: value as string[], col};
+        } 
+        return {value, col};
+    }
+
+    function setValue(val: any) {
+        value = val;
+        if (col.type == "array:string") {
+            extraValue = "";
+        }
+    }
+
+    function setOriginalValue(val: any) {
+        origValue = val;
+        value = val;
+        if (col.type == "array:string") {
+            extraValue = "";
+        }
+    }
+
+    function persist() {
+        if (col.type == "array:string") {
+            if (extraValue) {
+                value.push(extraValue);
+                origValue = [...value];
+                extraValue = "";
+                displayValue = value;
+            }
+        } 
+        
+    }
+
+    function resetValue() {
+        if (Array.isArray(origValue)) {
+            value = [...origValue]
+        } else if (col.type.startsWith("select:")) {
+            value = origValue;
+
+        } else {
+            value = origValue;
+        }
+    }
+
+    function stringIsDate(val : string) {
+        if (dateFormat == "yyyy-mm-dd") return /^( *[0-9][0-9][0-9][0-9]-[0-9][0-9]?-[0-9][0-9]? *?)$/.test(val);
+        return /^( *[0-9][0-9]?-[0-9][0-9]?-[0-9][0-9][0-9][0-9] *?)$/.test(val) ;
+    }
+
+    function getFieldError() : string|undefined {
+        let errors : string[] = [];
+            if (!col.nullable && !col.readOnly && isEmpty(value)) {
+                return "Must enter a value for " + col.name;
+            } else if (value) {
+                if (col.type == "integer") {
+                    if (!/^ *([+-]?[0-9]+) *$/.test(value)) {
+                        return col.name + " must be an integer";
+                    }
+                } else if (col.type == "float") {
+                    if (!/^ *[-+]?([0-9]*[.])?[0-9]+([eE][-+]?\d+)? *$/.test(value)) {
+                        return col.name + " must be a number";
+                    }
+                } else if (col.type == "date") {
+                    if (!stringIsDate(value)) {
+                        return col.name + " must be in the form " + dateFormat;
+                    }
+
+                }
+            } else if (col.type == "datetime") {
+                if (!/^( *[0-9][0-9][0-9][0-9]-[0-9][0-9]?-[0-9][0-9](T[0-9][0-9]?:[0-9][0-9]?:[0-9][0-9]?(\.[0-9]*)?[A-Za-z]?)? *?)$/.test(value)) {
+                    return col.name + " must be in the form yyyy-mm-ddThh:99:ss.sssZ";
+                }
+            }
+
+        return undefined;
+    }
 
     let valueMap : {[key:string|number]:string|number} = {};
     if (col.type == "select:string" || col.type == "select:integer") {
@@ -47,7 +176,51 @@
         }
     } 
 
-    export let dirty = false;
+    $: dirty = false;
+    $: {
+        dirty = false;
+        const recField = origValue;
+        if (col.type == "array:string" && extraValue) dirty = true;
+        else if (!isEmpty(value) && isEmpty(recField)) dirty = true;
+        else if (isEmpty(value) && !isEmpty(recField)) dirty = true;
+        else if (isEmpty(value) && isEmpty(recField)) dirty = false;
+        else {
+            if (Array.isArray(value) && recField) {
+                if (value.length != recField.length) {
+                    dirty = true;
+                } else {
+                    for (let j=0; j<value.length; ++j) {
+                        if (value[j] != recField[j]) {
+                            dirty =  true;
+                        }
+                    }
+                }
+            } else if (col.type.startsWith("select:")) {               
+                 if (col.names && col.values) {
+                    let matches = col.values.filter((val, idx) => (col.values??[])[idx] == origValue)
+                    if (matches && matches.length > 0 && matches[0] != value) dirty = true;
+                } else if (col.names) {
+                    let matches = col.names.filter((val, idx) => (col.names??[])[idx] == origValue)
+                    if (matches && matches.length > 0 && matches[0] != value) dirty = true;
+                } else if (col.values) {
+                    let matches = col.values.filter((val, idx) => (col.values??[])[idx] == origValue)
+                    if (matches && matches.length > 0 && matches[0] != value) dirty = true;
+                }
+            } else {
+                if (value != recField) {
+                    dirty = true;
+                }
+            }
+        }
+        getContext<DetailsFieldSet>("detailsfieldset").updateDirty();
+
+    }
+
+    function isDirty() {
+        return dirty;
+    }
+
+    //export let dirty = false;
     export let editMenuOpen = false;
 
     export function printDate(date : Date|undefined|null|string, defaultValue="") : string {
@@ -294,7 +467,7 @@
                 let target = autoCompleteList;
                 if (target instanceof Element) {
                     //if (target.getBoundingClientRect().bottom > table.getBoundingClientRect().bottom) {
-                    //setTimeout(() => {target.scrollIntoView({behavior: "smooth", block: "nearest"})}, 100); // XXX disabled
+                    setTimeout(() => {target.scrollIntoView({behavior: "smooth", block: "nearest"})}, 100); // XXX disabled
                     //}
                 }
             } else {
