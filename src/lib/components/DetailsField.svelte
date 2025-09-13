@@ -13,6 +13,8 @@
 
         /** For date fields.  `yyyy-mm-dd`, `dd-mm-yyyy`, `mm-dd-yyyy`*/
         dateFormat : string,
+
+        editMenuOpen? : boolean,
     }
 
     import type { CombiTableColumn } from '$lib/combitabletypes';
@@ -25,6 +27,7 @@
 
     export let col : CombiTableColumn;
     export let value : any;
+    export let extraValue : string = "";
     let origValue = (Array.isArray(value)) ? [...value] : value;
     export let dateFormat = "yyyy-mm-dd"; // or "yyyy-mm-dd" or "mm-dd-yyyy"
 
@@ -147,7 +150,6 @@
         }
     }
     $: displayValue = value;
-    $: extraValue = "";
     $: {
         extraValue = "";
         if (value === undefined || value === null ||  value === "") { 
