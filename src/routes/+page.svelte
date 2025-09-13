@@ -21,11 +21,10 @@
     $: rows = data.gods;
 
     // back link using SearchUrl
-    const searchUrl = new SearchUrl($page.url);
-    let backUrl = searchUrl.popBack();
-    let backHref = backUrl ? backUrl?.url?.pathname :  null;
-    if (backHref && backUrl?.url?.search) backHref += "?" + backUrl?.url?.search;
- 
+    $: searchUrl = new SearchUrl($page.url);
+
+    // New button saves this page as its back link
+    $: newButtonSearchUrl = new SearchUrl(new URL("/god/new", $page.url), undefined, undefined, searchUrl);
 
     function detailsLink(url : string) {
         const backUrl = new SearchUrl($page.url);
@@ -79,7 +78,7 @@
     widthType={"auto"}
     ops={[{label: "Kill", fn: killGods}]}
     urlSuffix=""
-    navExtra={[{label: "New", fn: async () => {goto("/god/new")}}]}
+    navExtra={[{label: "New", fn: async () => {if (newButtonSearchUrl.url) goto(newButtonSearchUrl.url.href)}}]}
 />
 
 <!-- this link is to demonstate pre-filters and select functionality -->

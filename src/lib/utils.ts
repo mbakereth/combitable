@@ -1,7 +1,37 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import { PrismaClient, type Prisma } from '@prisma/client';
 import type { CombiTableColumn } from '../../dist';
+import { env } from '$env/dynamic/public';
 
+/**
+ * Provides autocomplete functionality with Prisma
+ * 
+ * This is designed to use inside a `+server.ts` file in a route which
+ * has parameters `table` and `col` 
+ * (for example `routes/autocomplete/[table][col]`).  It returns 
+ * an array of matches starting with the text in the `t` query parameter.
+ * The maximum number returned can be customised in the 
+ * `PUBLIC_COMBITABLE_AUTOCOMPLETE_TAKE` variable with a default of 10.
+ *    
+ *  ```ts
+ *  const prisma = new PrismaClient();
+ *  return await autocomplete(prisma, event, {god: ["**"]});
+ * ```
+ * 
+ * The third parameter is the tables and columns to arrow (we wouldn't want,
+ * for example, someone to call it with a table of user).
+ * 
+ * The format of the this parameter is an object whose keys are names of
+ * tables (Prisma lowercase version) and whose valoues is an array of
+ * allowed columns.  If that array is a single item and it is * then all
+ * columns are allowed.  If it is ** then all columns on related tables
+ * are allowed as well (eg "god.father.name").
+ * 
+ * @param client prisma client
+ * @param event the Sveltelkit request event
+ * @param cols tables and columns to allow (see description)
+ * @returns a JSON array of results
+ */
 export async function autocomplete(client : any, event : RequestEvent, cols? : {[key:string]: string[]}) : Promise<Response> {
     const table = event.params.table;
     const col = event.params.col;
@@ -27,7 +57,7 @@ export async function autocomplete(client : any, event : RequestEvent, cols? : {
 
     let text = event.url.searchParams.get("t");
     if (!text || text == "") {
-        return json("[]")
+        return json([])
     }
 
     if (!table || !col) {
@@ -54,7 +84,7 @@ export async function autocomplete(client : any, event : RequestEvent, cols? : {
         distinct,
         include,
         where,
-        take: 10,
+        take: env.PUBLIC_COMBITABLE_AUTOCOMPLETE_TAKE ? parseInt(env.PUBLIC_COMBITABLE_AUTOCOMPLETE_TAKE) :  10,
     };
     try {
             const res : {[key:string]:any}[] = await client[table??""].findMany(query); 

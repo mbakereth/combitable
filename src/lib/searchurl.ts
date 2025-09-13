@@ -69,12 +69,13 @@ export class SearchUrl {
      * @param emptySearch For filtering, you can use this value to indicate
      *     filter for empty values.  Default `-`
      */
-    constructor(url : URL|{[key:string]:any}, defaultTake : number|undefined = undefined, emptySearch : string|undefined = "-") {
+    constructor(url : URL|{[key:string]:any}, defaultTake : number|undefined = undefined, emptySearch : string|undefined = "-", backUrl : SearchUrl|undefined|null = undefined) {
         this._url = url instanceof URL ? url : undefined;
         this.body = url instanceof URL ? undefined : url;
         this.defaultTake = parseInt(env.PUBLIC_SEARCHURL_DEFAULT_TAKE ?? defaultTake ?? "20");
         this.emptySearch = emptySearch;
         this.insensitive = ['t', 'y', '1'].includes((env.PUBLIC_SEARCHURL_INSENSITIVE ?? "").toLowerCase().substring(0,1));
+        if (backUrl) this.setBack(backUrl);
     }
 
     /**

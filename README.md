@@ -245,6 +245,38 @@ CombiTable will validate your fields for missing values and invalid values for t
 
 See the example in the repo under `src/routes/main/god/{add|edit|delete}`
 
+Autocomplete
+------------
+
+The `autoCompleteLink` attribute in the CombiTableColumn turns on autocomplete.  With this feature, every time the user types a character, that URL is called with a URL parameter of `t` that is equal to the text in the field.  When implementing this, you should return an array of results as JSON.  If the array is not empty, it is displayed as a popup.
+
+The function `autocomplete` automates this if you are using prisma.  Pass it the Prisma client, the request event and a map of allowed tables and columns.  It is designed to use inside a `+server.ts` file in a route which
+has parameters `table` and `col` 
+(for example `routes/autocomplete/[table][col]`).  It returns 
+an array of matches starting with the text in the `t` query parameter.
+The maximum number returned can be customised in the 
+`PUBLIC_COMBITABLE_AUTOCOMPLETE_TAKE` variable with a default of 10.
+
+
+ The format of the this parameter is an object whose keys are names of
+ tables (Prisma lowercase version) and whose valoues is an array of
+ allowed columns.  If that array is a single item and it is * then all columns are allowed.  If it is ** then all columns on related tables
+ are allowed as well (eg "god.father.name").
+
+ An example `+server.ts` (from the example app in the repo) is: 
+
+ ```ts
+import { type RequestEvent } from '@sveltejs/kit';
+import { autocomplete } from '$lib/utils'
+import { PrismaClient, type Prisma } from '@prisma/client';
+
+export const GET = async (event : RequestEvent) => {
+    const prisma = new PrismaClient();
+    return await autocomplete(prisma, event, {god: ["**"]});
+}
+ ```
+
+
 Other Features
 --------------
 
@@ -322,3 +354,5 @@ Adding over Multiple Pages
 
 A common request from users is to navigate to a page to add a row to a related table, then navigate back without losing their unsaved edits.  DetailsFieldSet supports this with the `persistance` attribute and the PersistedNewButton component.  For an example, see the repo in
 `src/routes/main/god/[id]/+page.svelte`
+
+To make the button to jump to a new Add page, use the PersistedNewButton component.  An example is in the repo app.

@@ -172,9 +172,11 @@
             }
             if (prev) {
                 await invalidateAll();
-                goto(prev).then(() => {
-
-                });
+                goto(prev);
+            } else {
+                let searchUrl = new SearchUrl($page.url);
+                let backUrl = searchUrl.popBack();
+                if (backUrl?.url) goto (backUrl.url.href)
             }
         } else {
             if (persistance) {
