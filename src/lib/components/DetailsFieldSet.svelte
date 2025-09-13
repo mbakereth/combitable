@@ -54,8 +54,12 @@
          * Page to go to after saving a page.  Default current page.
          */
         saveNextPage? : ((rec : {[key:string]:any}) => string);
+
+        /**
+         * If true, enable persistance - temporarily saving data from one
+         * table while adding an entry to a related table
+         */
         persistance? : boolean;
-        data? : any[]|undefined;
 
     }
 
@@ -83,21 +87,21 @@
     export let isAdd = false;    
     export let saveNextPage : ((rec : {[key:string]:any}) => string)|undefined = undefined;
     export let persistance : boolean = false;
-    export let data : any[]|undefined = undefined;
-    export let columns : CombiTableColumn[]|undefined = undefined;
 
     let uuid = crypto.randomUUID();
 
-    $: persist = browser && columns ? new PersistedFields($page.url, columns) : undefined;
+    //$: persist = browser && columns ? new PersistedFields($page.url, columns) : undefined;
 
     setContext("detailsfieldset", { registerGetAndSetValue, registerGetFieldError, registerIsDirty, updateDirty, registerResetValue, registerPersist, newItemWithPersistanceLink });
 
     let getValueFns = new SvelteSet<() => {value: any, col: CombiTableColumn}>();
     let setValueFns = new SvelteMap<string,(value: any) => void>();
+    let columns : CombiTableColumn[] = [];
     let setOriginalValueFns = new SvelteMap<string,(value: any) => void>();
     function registerGetAndSetValue(getFn: () => {value: any, col: CombiTableColumn}, setFn: (value: any) => void, setOriginalFn: (value: any) => void) {
         getValueFns.add(getFn);
         let col = getFn().col;
+        columns.push(col);
         setValueFns.set(col.col, setFn)
         setOriginalValueFns.set(col.col, setOriginalFn)
     }
@@ -162,8 +166,9 @@
     async function confirmCancelEdit() {
         if (isAdd) {
             let prev = $page.url.searchParams.get("prev") ?? cancelUrl();
-            if (persistance && persist) {
-                persist.delete();
+            if (persistance) {
+                const persist = browser && columns ? new PersistedFields($page.url, columns) : undefined;
+                if (persist) persist.delete();
             }
             if (prev) {
                 await invalidateAll();
@@ -172,8 +177,9 @@
                 });
             }
         } else {
-            if (persistance && persist) {
-                persist.delete();
+            if (persistance) {
+                const persist = browser && columns ? new PersistedFields($page.url, columns) : undefined;
+                if (persist) persist.delete();
             }
             for (let fn of resetValueFns) {
                 fn();
@@ -219,8 +225,9 @@
         //if (isAdd) 
         {
             let prev = urlToLoad;
-            if (persistance && persist) {
-                persist.delete();
+            if (persistance) {
+                const persist = browser && columns ? new PersistedFields($page.url, columns) : undefined;
+                if (persist) persist.delete();
             }
             if (prev) {
                 await invalidateAll();
@@ -354,11 +361,12 @@
     // Persistance
 
     async function newItemWithPersistanceLink(url : URL) {
-        if (!data || !columns) {
-            console.log("Cannot persist as data or columns not passed to DetailsFieldSet");
-            return;
-        }
         let persist = new PersistedFields($page.url, columns);
+        let data : any[] = [];
+        getValueFns.forEach((fn) => {
+            let field = fn();
+            data.push(field.value)
+        })
         persist.save(data);
         await invalidateAll(); 
         url.searchParams.set("edt","1")

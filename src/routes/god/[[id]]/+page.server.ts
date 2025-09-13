@@ -19,7 +19,6 @@ export async function load({ params, url, depends }) {
             children_as_mother: God[],
             children: string[]}> =
             {children_as_father: [], children_as_mother: [], children: []}
-            console.log("Returnign empty record")
         return {
             rec,
             isAdd: true,
