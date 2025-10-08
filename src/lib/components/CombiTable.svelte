@@ -155,6 +155,12 @@
          */
         primaryKeysChecked? : (string|number)[];
 
+        /**
+         * Bind to this if you want to be able to disable/reenable all
+         * editinng
+        */
+       updateDisabled? : boolean
+
     }
     // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
     import { tick } from 'svelte';
@@ -174,6 +180,7 @@
     import CombiTableValidateDialog from '$lib/components/CombiTableErrorDialog.svelte';
     import CombiTableInfoDialog from '$lib/components/CombiTableInfoDialog.svelte';
     import CombiTableConfirmDeleteDialog from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
+    import { updated } from '$app/state';
 
     let table : Element;
 
@@ -203,6 +210,7 @@
     export let ops : CombiTableOp[] = [];
     export let preview : boolean = false;
     export let link: ((row:{[key:string]:any}, i? : number) => string)|undefined = undefined;
+    export let updateDisabled = false;
 
     let uuid = crypto.randomUUID();
 
@@ -286,6 +294,9 @@
     let exitWidthClass = editUrl ? "ml-1" : "-ml-6";
     let trashHeightClass = editUrl && unlinkUrl ? "-mt-[20px]" : (editUrl || unlinkUrl ? "-mt-[21px]" : "");
     let trashWidthClass = editUrl && unlinkUrl ? "ml-6" :  (editUrl || unlinkUrl ? "-ml-1" : "-ml-6");
+    let trashColorClass = updateDisabled ? "text-neutral-500" : "text-error"
+    let saveColorClass = updateDisabled ? "text-neutral-500" : "text-success"
+    let cancelColorClass = updateDisabled ? "text-neutral-500" : "text-error"
 
     // put the name of the primary key in pk
     // also save select maps
@@ -1418,7 +1429,7 @@
             {/if}
 
             <!-- add row -->
-            {#if (addUrl && editable) || linkUrl}
+            {#if !updateDisabled && ((addUrl && editable) || linkUrl)}
                 <tr class="0">
                     {#if editRow == -1 || editRow == -2}
                         {#if select}
@@ -1514,7 +1525,7 @@
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
                                     <span 
-                                    class="text-success flex pt-6 -ml-[20px] cursor-pointer" on:click={() => saveEdit()}>{@html checkIcon}</span>
+                                    class="{saveColorClass} flex pt-6 -ml-[20px] cursor-pointer" on:click={() => saveEdit()}>{@html checkIcon}</span>
                                 {:else}
                                     <span 
                                     class="text-neutral-500 flex pt-6 -ml-[20px]">{@html checkIcon}</span>
@@ -1523,7 +1534,7 @@
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <span 
-                                    class="text-error -mt-[22px] ml-[6px] flex cursor-pointer" on:click={() => cancelEdit()}>{@html crossIcon}</span>
+                                    class="{cancelColorClass} -mt-[22px] ml-[6px] flex cursor-pointer" on:click={() => cancelEdit()}>{@html crossIcon}</span>
                             </td>
                         {/if}
                     {:else}
@@ -1705,7 +1716,7 @@
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <!-- svelte-ignore a11y_no_static_element_interactions -->
                                     <span 
-                                    class="text-error {trashWidthClass} flex {trashHeightClass} cursor-pointer" on:click={() => deleteRow(rowidx)}>{@html trashIcon}</span>
+                                    class="{trashColorClass} {trashWidthClass} flex {trashHeightClass} cursor-pointer" on:click={() => {if (!updateDisabled) deleteRow(rowidx)}}>{@html trashIcon}</span>
                                 {/if}
                             </td>
                         {/if}
@@ -1717,7 +1728,7 @@
                                 <!-- svelte-ignore a11y-click-events-have-key-events -->
                                 <!-- svelte-ignore a11y-no-static-element-interactions -->
                                 <span 
-                                class="text-success flex pt-6 -ml-[20px] cursor-pointer" on:click={() => saveEdit()}>{@html checkIcon}</span>
+                                class="text-success flex pt-6 -ml-[20px] cursor-pointer" on:click={() => {if (!updateDisabled) saveEdit()}}>{@html checkIcon}</span>
                             {:else}
                                 <span 
                                 class="text-neutral-500 flex pt-6 -ml-[20px]">{@html checkIcon}</span>
@@ -1726,7 +1737,7 @@
                                 <!-- svelte-ignore a11y-no-static-element-interactions -->
                                 <!-- svelte-ignore a11y-click-events-have-key-events -->
                                 <span 
-                                class="text-error -mt-[22px] ml-[6px] flex cursor-pointer" on:click={() => cancelEdit()}>{@html crossIcon}</span>
+                                class="text-error -mt-[22px] ml-[6px] flex cursor-pointer" on:click={() => {if (!updateDisabled) cancelEdit()}}>{@html crossIcon}</span>
                         </td>
                     {/if}
                 </tr>
@@ -1752,7 +1763,7 @@
         {/if}
 
         {#if haveOps}
-            {@const disabled = rowsAreChecked? "" : "btn-disabled"}
+            {@const disabled = !updateDisabled && rowsAreChecked ? "" : "btn-disabled"}
             {#each ops as op}
                 <button class="btn btn-secondary {disabled} ml-3" on:click={() => execOp(op) }>{op.label}</button>
             {/each}
@@ -1760,9 +1771,9 @@
         {/if}
 
         {#if haveNavExtra}
-            {@const disabled = rowsAreChecked? "" : "btn-disabled"}
+            {@const disabled = !updateDisabled ? "" : "btn-disabled"}
             {#each navExtra as op}
-                <button class="btn btn-secondary ml-3" on:click={() => callExtra(op) }>{op.label}</button>
+                <button class="btn {disabled} btn-secondary ml-3" on:click={() => callExtra(op) }>{op.label}</button>
             {/each}
         {/if}
         {/if}
@@ -1795,7 +1806,7 @@
 
 <!-- To instantiate tailwind classes that are in variables therefore not seen by the preprocessor -->
 <div class="hidden -mt-[21px] ml-1 ml-6 -ml-6 table-fixed table-auto -mt-[21px] -mt-[42px] ml-1 ml-6 ml-12 w-[80px] w-[60px] w-[48px] -mt-[20px] -mt-[18px] ml-6 -ml-6 -ml-1 text-base-content align-middle sticky top-0 bg-required bg-base-200 -mt-[18px] -mt-[20px] -mt-[21px]"></div>
-<div class="hidden cursor-pointer hover:bg-base-200 hover:bg-neutral"></div>
+<div class="hidden cursor-pointer hover:bg-base-200 hover:bg-neutral text-error text-success text-neutral-500"></div>
 <style>
 .tail-icon {
   white-space: nowrap;
