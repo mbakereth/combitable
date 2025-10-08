@@ -156,10 +156,15 @@
         primaryKeysChecked? : (string|number)[];
 
         /**
-         * Bind to this if you want to be able to disable/reenable all
+         * Set this if you want to be able to disable/reenable all
          * editinng
         */
        updateDisabled? : boolean
+
+       /**
+        * Bind to this to find out when the table has unsaved data
+        */
+       dirty? : false
 
     }
     // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
@@ -211,6 +216,7 @@
     export let preview : boolean = false;
     export let link: ((row:{[key:string]:any}, i? : number) => string)|undefined = undefined;
     export let updateDisabled = false;
+    export let dirty = false;
 
     let uuid = crypto.randomUUID();
 
@@ -455,7 +461,7 @@
 
     // load previous page, confirming discard changes if dirty
     function previous() {
-        if (!dirty) {
+        if (!internalDirty) {
             confirmPrevious()
         } else {
             (document.querySelector('#confirmPreviousDiscard_'+uuid) as HTMLDialogElement)?.showModal(); 
@@ -483,7 +489,7 @@
 
     // load next page, confirming discard changes if dirty
     function next() {
-        if (!dirty) {
+        if (!internalDirty) {
             confirmNext()
         } else {
             (document.querySelector('#confirmNextDiscard_'+uuid) as HTMLDialogElement)?.showModal(); 
@@ -681,7 +687,8 @@
     $: searchParams = "";
     $: filters = {} as {[key:string]:string};
     $: haveFilters = false;
-    $: dirty = false;
+    $: internalDirty = false;
+    dirty = internalDirty;
     $: ids = [] as number[];
     $: {
         const url = new SearchUrl($page.url, paginate);
@@ -751,7 +758,8 @@
         }
 
 
-        dirty = true;
+        internalDirty = true;
+        dirty = internalDirty;
         for (let col in autoCompleteOpen) {
             autoCompleteOpen[col] = false;
         }
@@ -793,7 +801,8 @@
             autoCompleteData = []
         }
         
-        dirty = true;
+        internalDirty = true;
+        dirty = internalDirty;
     }
 
     /////
@@ -1012,7 +1021,8 @@
             }
         }
 
-        dirty = true;
+        internalDirty = true;
+        dirty = internalDirty;
         for (let col in editRowMenusOpen) {
             editRowMenusOpen[col] = false;
         }
@@ -1020,9 +1030,15 @@
 
     function editInputUpdate(evt : KeyboardEvent, col : CombiTableColumn) {
         if (editRow == -1 || editRow == -2) {
-            if (editRowText[col.col] != "") dirty = true;
+            if (editRowText[col.col] != "") {
+                internalDirty = true;
+                dirty = internalDirty;
+            }
         } else if (editRow !== undefined) {
-            if (editRowText[col.col] != rrows[editRow][col.col]) dirty = true;
+            if (editRowText[col.col] != rrows[editRow][col.col]) {
+                internalDirty = true;
+                dirty = internalDirty;
+            }
         }
     }
 
@@ -1033,7 +1049,8 @@
         if (preview) {
             clearEdit();
             editRow = undefined;
-            dirty = false;
+            internalDirty = false;
+            dirty = internalDirty;
             showInfo("Data not saved in preview mode");
             return;
 
@@ -1100,7 +1117,8 @@
                         }
                         clearEdit();
                         editRow = undefined;
-                        dirty = false;
+                        internalDirty = false;
+                        dirty = internalDirty;
                         if (body.info) {
                             showInfo(body.info);
                         }  
@@ -1144,7 +1162,7 @@
     }
 
     function cancelEdit() {
-        if (!dirty) {
+        if (!internalDirty) {
             confirmCancelEdit();
         } else {
             (document.querySelector('#confirmEditDiscard_'+uuid) as HTMLDialogElement)?.showModal(); 
@@ -1153,7 +1171,8 @@
     function confirmCancelEdit() {
             clearEdit();
             editRow = undefined;
-            dirty = false;
+            internalDirty = false;
+            dirty = internalDirty;
     }
 
     /////
@@ -1520,7 +1539,7 @@
                         {/each}
                         {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl}
                             <td class="w-4 last:sticky last:right-0 z-10 bg-base-100">
-                                {#if dirty}
+                                {#if internalDirty}
                                     <!-- svelte-ignore missing-declaration -->
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -1723,7 +1742,7 @@
                     {:else if editRow == rowidx}
                         <td class="w-4 last:sticky last:right-0 z-10 bg-base-100">
                             <!-- svelte-ignore a11y-click-events-have-key-events -->
-                            {#if dirty}
+                            {#if internalDirty}
                                 <!-- svelte-ignore missing-declaration -->
                                 <!-- svelte-ignore a11y-click-events-have-key-events -->
                                 <!-- svelte-ignore a11y-no-static-element-interactions -->
