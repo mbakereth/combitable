@@ -815,7 +815,7 @@
         let colName = col.col;
         let p : string|number|boolean|Date = "";
         if (typeof presets[colName] == 'function') {
-            let p = (presets[colName])();
+            p = (presets[colName])();
         } else {
             p = presets[colName];
         }
