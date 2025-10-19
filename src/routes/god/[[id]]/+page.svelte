@@ -69,9 +69,7 @@
         saveNextPage={urlAftetSave}
         persistance={true} 
     >
-
-    <!-- persistance is only needed if persisting usaved data (see above) -->
-
+    
         <div class="m-4 overflow-y-auto">
             <table class="table overflow-y-visible table-sm">
                 <tbody>

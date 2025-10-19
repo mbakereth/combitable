@@ -155,6 +155,8 @@
          */
         primaryKeysChecked? : (string|number)[];
 
+        onUpdate?: () => void ;
+
     }
     // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
     import { tick } from 'svelte';
@@ -203,6 +205,7 @@
     export let ops : CombiTableOp[] = [];
     export let preview : boolean = false;
     export let link: ((row:{[key:string]:any}, i? : number) => string)|undefined = undefined;
+    export let onUpdate : (()=>void) | undefined = undefined;
 
     let uuid = crypto.randomUUID();
 
@@ -1093,6 +1096,7 @@
                         if (body.info) {
                             showInfo(body.info);
                         }  
+                        if (onUpdate !== undefined) onUpdate();
                     }
                 }
             } catch (e) {
@@ -1181,7 +1185,8 @@
         }
         deleteIdx = -1;
         invalidateAll();
-    }
+        if (onUpdate !== undefined) onUpdate();
+}
 
     // show dialogs
     export function showInfo(info : string) {
