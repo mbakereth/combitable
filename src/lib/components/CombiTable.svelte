@@ -155,7 +155,17 @@
          */
         primaryKeysChecked? : (string|number)[];
 
-        onUpdate?: () => void ;
+        onUpdate?: () => Promise<void> ;
+        /**
+         * Set this if you want to be able to disable/reenable all
+         * editinng
+        */
+       updateDisabled? : boolean
+
+       /**
+        * Bind to this to find out when the table has unsaved data
+        */
+       dirty? : false
 
     }
     // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
@@ -176,6 +186,7 @@
     import CombiTableValidateDialog from '$lib/components/CombiTableErrorDialog.svelte';
     import CombiTableInfoDialog from '$lib/components/CombiTableInfoDialog.svelte';
     import CombiTableConfirmDeleteDialog from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
+    import { updated } from '$app/state';
 
     let table : Element;
 
@@ -205,7 +216,9 @@
     export let ops : CombiTableOp[] = [];
     export let preview : boolean = false;
     export let link: ((row:{[key:string]:any}, i? : number) => string)|undefined = undefined;
-    export let onUpdate : (()=>void) | undefined = undefined;
+    export let onUpdate : (()=>Promise<void>) | undefined = undefined;
+    export let updateDisabled = false;
+    export let dirty = false;
 
     let uuid = crypto.randomUUID();
 
@@ -289,6 +302,9 @@
     let exitWidthClass = editUrl ? "ml-1" : "-ml-6";
     let trashHeightClass = editUrl && unlinkUrl ? "-mt-[20px]" : (editUrl || unlinkUrl ? "-mt-[21px]" : "");
     let trashWidthClass = editUrl && unlinkUrl ? "ml-6" :  (editUrl || unlinkUrl ? "-ml-1" : "-ml-6");
+    let trashColorClass = updateDisabled ? "text-neutral-500" : "text-error"
+    let saveColorClass = updateDisabled ? "text-neutral-500" : "text-success"
+    let cancelColorClass = updateDisabled ? "text-neutral-500" : "text-error"
 
     // put the name of the primary key in pk
     // also save select maps
@@ -447,7 +463,7 @@
 
     // load previous page, confirming discard changes if dirty
     function previous() {
-        if (!dirty) {
+        if (!internalDirty) {
             confirmPrevious()
         } else {
             (document.querySelector('#confirmPreviousDiscard_'+uuid) as HTMLDialogElement)?.showModal(); 
@@ -475,7 +491,7 @@
 
     // load next page, confirming discard changes if dirty
     function next() {
-        if (!dirty) {
+        if (!internalDirty) {
             confirmNext()
         } else {
             (document.querySelector('#confirmNextDiscard_'+uuid) as HTMLDialogElement)?.showModal(); 
@@ -673,7 +689,8 @@
     $: searchParams = "";
     $: filters = {} as {[key:string]:string};
     $: haveFilters = false;
-    $: dirty = false;
+    $: internalDirty = false;
+    dirty = internalDirty;
     $: ids = [] as number[];
     $: {
         const url = new SearchUrl($page.url, paginate);
@@ -743,7 +760,8 @@
         }
 
 
-        dirty = true;
+        internalDirty = true;
+        dirty = internalDirty;
         for (let col in autoCompleteOpen) {
             autoCompleteOpen[col] = false;
         }
@@ -785,7 +803,8 @@
             autoCompleteData = []
         }
         
-        dirty = true;
+        internalDirty = true;
+        dirty = internalDirty;
     }
 
     /////
@@ -1004,7 +1023,8 @@
             }
         }
 
-        dirty = true;
+        internalDirty = true;
+        dirty = internalDirty;
         for (let col in editRowMenusOpen) {
             editRowMenusOpen[col] = false;
         }
@@ -1012,9 +1032,15 @@
 
     function editInputUpdate(evt : KeyboardEvent, col : CombiTableColumn) {
         if (editRow == -1 || editRow == -2) {
-            if (editRowText[col.col] != "") dirty = true;
+            if (editRowText[col.col] != "") {
+                internalDirty = true;
+                dirty = internalDirty;
+            }
         } else if (editRow !== undefined) {
-            if (editRowText[col.col] != rrows[editRow][col.col]) dirty = true;
+            if (editRowText[col.col] != rrows[editRow][col.col]) {
+                internalDirty = true;
+                dirty = internalDirty;
+            }
         }
     }
 
@@ -1025,7 +1051,8 @@
         if (preview) {
             clearEdit();
             editRow = undefined;
-            dirty = false;
+            internalDirty = false;
+            dirty = internalDirty;
             showInfo("Data not saved in preview mode");
             return;
 
@@ -1092,11 +1119,12 @@
                         }
                         clearEdit();
                         editRow = undefined;
-                        dirty = false;
+                        internalDirty = false;
+                        dirty = internalDirty;
                         if (body.info) {
                             showInfo(body.info);
                         }  
-                        if (onUpdate !== undefined) onUpdate();
+                        if (onUpdate !== undefined) await onUpdate();
                     }
                 }
             } catch (e) {
@@ -1137,7 +1165,7 @@
     }
 
     function cancelEdit() {
-        if (!dirty) {
+        if (!internalDirty) {
             confirmCancelEdit();
         } else {
             (document.querySelector('#confirmEditDiscard_'+uuid) as HTMLDialogElement)?.showModal(); 
@@ -1146,7 +1174,8 @@
     function confirmCancelEdit() {
             clearEdit();
             editRow = undefined;
-            dirty = false;
+            internalDirty = false;
+            dirty = internalDirty;
     }
 
     /////
@@ -1423,7 +1452,7 @@
             {/if}
 
             <!-- add row -->
-            {#if (addUrl && editable) || linkUrl}
+            {#if !updateDisabled && ((addUrl && editable) || linkUrl)}
                 <tr class="0">
                     {#if editRow == -1 || editRow == -2}
                         {#if select}
@@ -1514,12 +1543,12 @@
                         {/each}
                         {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl}
                             <td class="w-4 last:sticky last:right-0 z-10 bg-base-100">
-                                {#if dirty}
+                                {#if internalDirty}
                                     <!-- svelte-ignore missing-declaration -->
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
                                     <span 
-                                    class="text-success flex pt-6 -ml-[20px] cursor-pointer" on:click={() => saveEdit()}>{@html checkIcon}</span>
+                                    class="{saveColorClass} flex pt-6 -ml-[20px] cursor-pointer" on:click={() => saveEdit()}>{@html checkIcon}</span>
                                 {:else}
                                     <span 
                                     class="text-neutral-500 flex pt-6 -ml-[20px]">{@html checkIcon}</span>
@@ -1528,7 +1557,7 @@
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <span 
-                                    class="text-error -mt-[22px] ml-[6px] flex cursor-pointer" on:click={() => cancelEdit()}>{@html crossIcon}</span>
+                                    class="{cancelColorClass} -mt-[22px] ml-[6px] flex cursor-pointer" on:click={() => cancelEdit()}>{@html crossIcon}</span>
                             </td>
                         {/if}
                     {:else}
@@ -1710,19 +1739,19 @@
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <!-- svelte-ignore a11y_no_static_element_interactions -->
                                     <span 
-                                    class="text-error {trashWidthClass} flex {trashHeightClass} cursor-pointer" on:click={() => deleteRow(rowidx)}>{@html trashIcon}</span>
+                                    class="{trashColorClass} {trashWidthClass} flex {trashHeightClass} cursor-pointer" on:click={() => {if (!updateDisabled) deleteRow(rowidx)}}>{@html trashIcon}</span>
                                 {/if}
                             </td>
                         {/if}
                     {:else if editRow == rowidx}
                         <td class="w-4 last:sticky last:right-0 z-10 bg-base-100">
                             <!-- svelte-ignore a11y-click-events-have-key-events -->
-                            {#if dirty}
+                            {#if internalDirty}
                                 <!-- svelte-ignore missing-declaration -->
                                 <!-- svelte-ignore a11y-click-events-have-key-events -->
                                 <!-- svelte-ignore a11y-no-static-element-interactions -->
                                 <span 
-                                class="text-success flex pt-6 -ml-[20px] cursor-pointer" on:click={() => saveEdit()}>{@html checkIcon}</span>
+                                class="text-success flex pt-6 -ml-[20px] cursor-pointer" on:click={() => {if (!updateDisabled) saveEdit()}}>{@html checkIcon}</span>
                             {:else}
                                 <span 
                                 class="text-neutral-500 flex pt-6 -ml-[20px]">{@html checkIcon}</span>
@@ -1731,7 +1760,7 @@
                                 <!-- svelte-ignore a11y-no-static-element-interactions -->
                                 <!-- svelte-ignore a11y-click-events-have-key-events -->
                                 <span 
-                                class="text-error -mt-[22px] ml-[6px] flex cursor-pointer" on:click={() => cancelEdit()}>{@html crossIcon}</span>
+                                class="text-error -mt-[22px] ml-[6px] flex cursor-pointer" on:click={() => {if (!updateDisabled) cancelEdit()}}>{@html crossIcon}</span>
                         </td>
                     {/if}
                 </tr>
@@ -1757,7 +1786,7 @@
         {/if}
 
         {#if haveOps}
-            {@const disabled = rowsAreChecked? "" : "btn-disabled"}
+            {@const disabled = !updateDisabled && rowsAreChecked ? "" : "btn-disabled"}
             {#each ops as op}
                 <button class="btn btn-secondary {disabled} ml-3" on:click={() => execOp(op) }>{op.label}</button>
             {/each}
@@ -1765,9 +1794,9 @@
         {/if}
 
         {#if haveNavExtra}
-            {@const disabled = rowsAreChecked? "" : "btn-disabled"}
+            {@const disabled = !updateDisabled ? "" : "btn-disabled"}
             {#each navExtra as op}
-                <button class="btn btn-secondary ml-3" on:click={() => callExtra(op) }>{op.label}</button>
+                <button class="btn {disabled} btn-secondary ml-3" on:click={() => callExtra(op) }>{op.label}</button>
             {/each}
         {/if}
         {/if}
@@ -1800,7 +1829,7 @@
 
 <!-- To instantiate tailwind classes that are in variables therefore not seen by the preprocessor -->
 <div class="hidden -mt-[21px] ml-1 ml-6 -ml-6 table-fixed table-auto -mt-[21px] -mt-[42px] ml-1 ml-6 ml-12 w-[80px] w-[60px] w-[48px] -mt-[20px] -mt-[18px] ml-6 -ml-6 -ml-1 text-base-content align-middle sticky top-0 bg-required bg-base-200 -mt-[18px] -mt-[20px] -mt-[21px]"></div>
-<div class="hidden cursor-pointer hover:bg-base-200 hover:bg-neutral"></div>
+<div class="hidden cursor-pointer hover:bg-base-200 hover:bg-neutral text-error text-success text-neutral-500"></div>
 <style>
 .tail-icon {
   white-space: nowrap;

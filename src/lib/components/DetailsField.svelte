@@ -23,7 +23,7 @@
     import { getContext } from 'svelte';
     import DetailsFieldSet from './DetailsFieldSet.svelte';
     import { invalidateAll } from '$app/navigation';
-    import { page } from '$app/state';
+    import { page, updated } from '$app/state';
 
     export let col : CombiTableColumn;
     export let value : any;
@@ -49,6 +49,7 @@
     getContext<DetailsFieldSet>("detailsfieldset").registerGetFieldError(getFieldError);
     getContext<DetailsFieldSet>("detailsfieldset").registerIsDirty(isDirty);
     getContext<DetailsFieldSet>("detailsfieldset").registerPersist(persist);
+    getContext<DetailsFieldSet>("detailsfieldset").registerSetUpdateDisabled(setUpdateDisabled);
 
     function isEmpty(field : any) {
         if ((col.type == "integer" || col.type == "select:integer" || col.type == "boolean")) {
@@ -221,6 +222,11 @@
 
     function isDirty() {
         return dirty;
+    }
+
+    $: updateDisabled = false;
+    function setUpdateDisabled(val : boolean) {
+        updateDisabled = val;
     }
 
     //export let dirty = false;
@@ -524,10 +530,10 @@
     {@const cmaxwStyle = maxWidthStyle}
     {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
     {#if col.type == "date"}
-        <input type="text" class="input bg-base-200 w-40 {bg}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue} style="{editminwStyle} {editmaxwStyle}"  tabindex="0"/>
+        <input type="text" class="input bg-base-200 w-40 {bg}" disabled={updateDisabled} on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue} style="{editminwStyle} {editmaxwStyle}"  tabindex="0"/>
     {:else if col.autoCompleteLink && col.type != "array:string"}    
         <div class="acdropdown overflow:visible" bind:this={autoCompleteDiv}>
-            <input role="button" class="input m-0 -mb-1 w-full cursor-text {bg}" style="{editminwStyle} {editmaxwStyle}"  tabindex="0"
+            <input role="button" class="input m-0 -mb-1 w-full cursor-text {bg}" disabled={updateDisabled} style="{editminwStyle} {editmaxwStyle}"  tabindex="0"
                 on:keyup={(evt) => autoCompleteKeyPress(evt, value)}
                 on:blur={(evt) => handleACBlur(evt)}
                 bind:value={displayValue}/>
@@ -546,15 +552,15 @@
     {:else if col.type != "select:string" && col.type != "select:integer" && col.type != "boolean" && col.type != "array:string"}
         {#if col.editHeight}
             {#if col.default}
-                <textarea class="textarea bg-base-200 align-top {bg}" style="{editminwStyle} {editmaxwStyle} {editHeightStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
+                <textarea class="textarea bg-base-200 align-top {bg}" disabled={updateDisabled} style="{editminwStyle} {editmaxwStyle} {editHeightStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
             {:else}
-                <textarea class="textarea bg-base-200 align-top {bg}" style="{editminwStyle} {editmaxwStyle} {editHeightStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
+                <textarea class="textarea bg-base-200 align-top {bg}" style="{editminwStyle} {editmaxwStyle} {editHeightStyle}" disabled={updateDisabled} on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
             {/if}
         {:else}
             {#if col.default}
-                <input type="text" class="input bg-base-200 {bg}" style="{editminwStyle} {editmaxwStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"/>
+                <input type="text" class="input bg-base-200 {bg}" style="{editminwStyle} {editmaxwStyle}" disabled={updateDisabled} on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"/>
             {:else}
-                <input type="text" class="input bg-base-200 {bg}" style="{editminwStyle} {editmaxwStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"/>
+                <input type="text" class="input bg-base-200 {bg}" style="{editminwStyle} {editmaxwStyle}" disabled={updateDisabled} on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"/>
             {/if}
         {/if}
     {:else if col.type == "array:string"}
@@ -564,7 +570,7 @@
                 {#each displayValue as val, i}
                     <tr style="border-bottom-width: 0px!important;">
                         {#if !col.readOnly}
-                            <td class="w-16"><button class="btn btn-neutral btn-small h-8" on:click={() => removeElement(i)}>-</button></td>
+                            <td class="w-16"><button class="btn btn-neutral btn-small h-8" disabled={updateDisabled} on:click={() => removeElement(i)}>-</button></td>
                         {/if}
                         <td>{val}</td>
                     </tr>
@@ -575,7 +581,7 @@
                         <td>
                             {#if col.autoCompleteLink}
                                 <div class="acdropdown overflow:visible" bind:this={autoCompleteDiv}>
-                                    <input role="button" class="input m-0 -mb-1 w-full cursor-text {bg}" style="{editminwStyle} {editmaxwStyle}"  tabindex="0"
+                                    <input role="button" class="input m-0 -mb-1 w-full cursor-text {bg}" disabled={updateDisabled} style="{editminwStyle} {editmaxwStyle}"  tabindex="0"
                                         on:keyup={(evt) => autoCompleteKeyPress(evt, value)}
                                         on:blur={(evt) => handleACBlur(evt)}
                                         bind:value={extraValue}/>
@@ -592,7 +598,7 @@
                                     {/if}
                                 </div>
                             {:else}
-                                <input type="text" class="input bg-base-200" style="{editminwStyle} {editmaxwStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={extraValue}  tabindex="0"/>
+                                <input type="text" class="input bg-base-200" disabled={updateDisabled} style="{editminwStyle} {editmaxwStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={extraValue}  tabindex="0"/>
                             {/if}
                         </td>
                     {/if}
@@ -602,7 +608,8 @@
 
         </div>
     {:else if col.type == "boolean"}
-        <details class="dropdown overflow:visible" bind:open={editMenuOpen}  on:toggle={e => editDetailsClicked(e)}>
+        {@const disabled = updateDisabled ? "disabled" : ""}
+        <details class="dropdown overflow:visible {disabled}" bind:open={editMenuOpen}  on:toggle={e => editDetailsClicked(e)}>
             <summary class="btn m-0 -mb-1 w-full {bg}" style="{editminwStyle} {editmaxwStyle}"  tabindex="0"
                 on:blur={(evt) => handleEditBlur(evt)}
             >{displayValue}</summary>
@@ -625,7 +632,8 @@
             </ul>
         </details>  
     {:else if col.values}
-        <details class="dropdown overflow:visible" bind:open={editMenuOpen}  on:toggle={e => editDetailsClicked(e)}>
+        {@const disabled = updateDisabled ? "disabled" : ""}
+        <details class="dropdown overflow:visible {disabled}" bind:open={editMenuOpen}  on:toggle={e => editDetailsClicked(e)}>
             <summary class="btn m-0 -mb-1 w-full {bg}" style="{editminwStyle} {editmaxwStyle}"  tabindex="0"
                 on:blur={(evt) => handleEditBlur(evt)}
             >{displayValue}</summary>
@@ -673,6 +681,12 @@
 
 .acdropdown .dropdown-content {
   position: absolute;
+}
+
+details[disabled] summary,
+details.disabled summary {
+pointer-events: none; /* prevents click events */
+user-select: none; /* prevents text selection */
 }
 
 </style>

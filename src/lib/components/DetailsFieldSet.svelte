@@ -61,6 +61,16 @@
          */
         persistance? : boolean;
 
+        /**
+         * Set this if you want to be able to disable/reenable all
+         * editinng
+        */
+       updateDisabled? : boolean
+
+       /**
+        * Bind to this to find out when the table has unsaved data
+        */
+       dirty? : false
     }
 
     import { goto, invalidateAll } from '$app/navigation';
@@ -87,12 +97,14 @@
     export let isAdd = false;    
     export let saveNextPage : ((rec : {[key:string]:any}) => string)|undefined = undefined;
     export let persistance : boolean = false;
+    export let dirty = false;
+    export let updateDisabled = false;
 
     let uuid = crypto.randomUUID();
 
     //$: persist = browser && columns ? new PersistedFields($page.url, columns) : undefined;
 
-    setContext("detailsfieldset", { registerGetAndSetValue, registerGetFieldError, registerIsDirty, updateDirty, registerResetValue, registerPersist, newItemWithPersistanceLink });
+    setContext("detailsfieldset", { registerGetAndSetValue, registerGetFieldError, registerIsDirty, registerSetUpdateDisabled, updateDirty, registerResetValue, registerPersist, newItemWithPersistanceLink });
 
     let getValueFns = new SvelteSet<() => {value: any, col: CombiTableColumn}>();
     let setValueFns = new SvelteMap<string,(value: any) => void>();
@@ -116,6 +128,11 @@
         isDirtyFns.add(fn);
     }
 
+    let setUpadteDisabledFns = new SvelteSet<(val: boolean) => void>();
+    function registerSetUpdateDisabled(fn: () => void) {
+        setUpadteDisabledFns.add(fn);
+    }
+
     let resetValueFns = new SvelteSet<() => void>();
     function registerResetValue(fn: () => void) {
         resetValueFns.add(fn);
@@ -126,16 +143,22 @@
         persistFns.add(fn);
     }
 
-    $: dirty = false;
+    $: internalDirty = false;
     export function updateDirty() {
-        dirty = false;
+        internalDirty = false;
         isDirtyFns.forEach((fn) => {
             if (fn()) {
-                dirty = true;
+                internalDirty = true;
             }
         })
+        dirty = internalDirty;
     }
 
+    $: {
+        for (let fn of setUpadteDisabledFns) {
+            fn(updateDisabled)
+        }
+    }
     // show dialogs
     $: validationErrors = undefined as string[]|string|undefined;
     $: opInfo = "";
@@ -156,7 +179,7 @@
     async function cancelEdit() {
         if (isAdd) {
             (document.querySelector('#confirmEditDiscard1_'+uuid) as HTMLDialogElement)?.showModal(); 
-        } else if (!dirty) {
+        } else if (!internalDirty) {
             confirmCancelEdit();
         } else {
             (document.querySelector('#confirmEditDiscard1_'+uuid) as HTMLDialogElement)?.showModal(); 
@@ -286,7 +309,7 @@
                     if (body.errors) {
                         showError(body.errors);
                     } else {
-                        dirty = false;
+                        internalDirty = false;
                         let infoText = "Record saved";
                         if (body.info) {
                             let info : string[] = Array.isArray(body.info) ? body.info : [body.info];
@@ -453,18 +476,17 @@
 <div>
     <slot />
     <div class="">
-        {#if (addUrl && newUrl
-        ) || editUrl || deleteUrl}
+        {#if (addUrl && newUrl) || editUrl || deleteUrl}
             <div class="m-4 mt-8 mb-0">
                 {#if addUrl || editUrl }
-                    <button class="btn btn-success mt-0 mb-0" disabled={!dirty} on:click={() => saveEdit()}>Save</button>
-                    <button class="btn btn-neutral mt-0 mb-0" disabled={!dirty && !isAdd} on:click={() => cancelEdit()}>Cancel</button>
+                    <button class="btn btn-success mt-0 mb-0" disabled={updateDisabled || !internalDirty} on:click={() => saveEdit()}>Save</button>
+                    <button class="btn btn-neutral mt-0 mb-0" disabled={updateDisabled || (!internalDirty && !isAdd)} on:click={() => cancelEdit()}>Cancel</button>
                 {/if}                 
                 {#if addUrl && newUrl }
-                <button class="btn btn-primary mt-0 mb-0" disabled={dirty || isAdd} on:click={async () => {await newEntry(newUrl);}}>New</button>
+                <button class="btn btn-primary mt-0 mb-0" disabled={updateDisabled || internalDirty || isAdd} on:click={async () => {await newEntry(newUrl);}}>New</button>
                 {/if}                 
                 {#if deleteUrl }
-                <button class="btn btn-error mt-0 mb-0" disabled={dirty} on:click={() => deleteRow()}>Delete</button>
+                <button class="btn btn-error mt-0 mb-0" disabled={updateDisabled || internalDirty} on:click={() => deleteRow()}>Delete</button>
                 {/if}                 
             </div>    
         {/if}                 

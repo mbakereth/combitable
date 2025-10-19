@@ -349,10 +349,37 @@ The add, edit and delete URLs work the same way as for CombiTable.  After man ed
 
 When a record is deleted, by default it navigates to ? `/` on success.  You can override with with the `deleteNextPage` attribute to DetailsFieldSet.
 
-Adding over Multiple Pages
-==========================
+Adding Over Multiple Pages
+--------------------------
 
 A common request from users is to navigate to a page to add a row to a related table, then navigate back without losing their unsaved edits.  DetailsFieldSet supports this with the `persistance` attribute and the PersistedNewButton component.  For an example, see the repo in
 `src/routes/main/god/[id]/+page.svelte`
 
 To make the button to jump to a new Add page, use the PersistedNewButton component.  An example is in the repo app.
+
+Dirty Notification and Disabling Update
+---------------------------------------
+
+Both CombiTable and DetailsFieldSet have a `dirty` attribute.  If you bind to this, you can learn whether the data in the table are dirty or not.  Data in DetailsField's are dirty if they do not equal the input data (ie if the Save and Cancel buttons are enabled).  Data in CombiTable are dirty until edit/add is cancelled or saved.
+
+You can disable edit/add/delete by setting `updateDisabled` to `true`, both for CombiTable and DetailsFieldSet.
+
+A common pattern if you have two DetailsFieldSet instances on a page, two CombiTables or one of each, is to connect `dirty` and `updateDisabled`:
+
+```html
+<CombiTable
+    ...
+    bind:dirty={tableDirty}
+    updateDisabled={detailsDirty}
+/>
+
+<DetailsFieldSet
+    ...
+    bind:dirty={detailsDirty}
+    updateDisabled={tableDirty}
+>
+    ...
+</DetailsFieldSet>
+```
+
+Then if you are editing one, the other becomes uneditable until you save or cancel.
