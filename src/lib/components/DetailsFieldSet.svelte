@@ -71,6 +71,11 @@
         * Bind to this to find out when the table has unsaved data
         */
        dirty? : false
+
+       /**
+        * Extra buttons to place after along side the navigation buttons
+        */
+       extraButtons? : {label: string, action: () => undefined}[]
     }
 
     import { goto, invalidateAll } from '$app/navigation';
@@ -99,6 +104,7 @@
     export let persistance : boolean = false;
     export let dirty = false;
     export let updateDisabled = false;
+    export let extraButtons : {label: string, action: () => undefined}[] = []
 
     let uuid = crypto.randomUUID();
 
@@ -487,7 +493,10 @@
                 {/if}                 
                 {#if deleteUrl }
                 <button class="btn btn-error mt-0 mb-0" disabled={updateDisabled || internalDirty} on:click={() => deleteRow()}>Delete</button>
-                {/if}                 
+                {/if}    
+                {#each extraButtons as button}
+                <button class="btn mt-0 mb-0" on:click={button.action()}>{button.label}</button>
+                {/each}             
             </div>    
         {/if}                 
     </div>
