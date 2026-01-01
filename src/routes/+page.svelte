@@ -4,7 +4,7 @@
     export let data;
     import CombiTable from '$lib/components/CombiTable.svelte';
     import type { CombiTableColumn } from '$lib/combitabletypes';
-    import { SearchUrl } from '$lib';
+    import { SearchUrl } from '$lib/searchurl';
     import { page } from '$app/stores';
 
     // this is passed to CombiTable and defines the columns in the table, their
@@ -80,6 +80,7 @@
     urlSuffix=""
     navExtra={[{label: "New", fn: async () => {if (newButtonSearchUrl.url) goto(newButtonSearchUrl.url.href)}}]}
 />
+
 
 <!-- this link is to demonstate pre-filters and select functionality -->
 <p class="mt-4">

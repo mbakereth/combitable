@@ -1,7 +1,10 @@
 // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
-import { PrismaClient, type Prisma } from '@prisma/client'
+import { PrismaClient, type Prisma } from '../src/lib/generated/prisma/client'
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 
-const prisma = new PrismaClient();
+const connectionString = `${process.env.DATABASE_URL}`;
+const adapter = new PrismaBetterSqlite3({ url: connectionString });
+const prisma = new PrismaClient({adapter});
 
 interface God extends Prisma.GodUncheckedCreateInput {
     father_name : string|undefined,

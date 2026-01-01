@@ -82,7 +82,6 @@
     import type { CombiTableColumn, CombiTablePresets } from '$lib/combitabletypes';
     import CombiTableValidateDialog from '$lib/components/CombiTableErrorDialog.svelte';
     import CombiTableDiscardChanges from '$lib/components/CombiTableDiscardChanges.svelte';
-    import { validateField } from '$lib/utils';
     import CombiTableInfoDialog from '$lib/components/CombiTableInfoDialog.svelte';
     import CombiTableConfirmDeleteDialog from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
     import { page } from '$app/stores';

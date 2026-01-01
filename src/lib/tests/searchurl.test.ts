@@ -2,6 +2,7 @@
 
 import { test, expect } from 'vitest';
 import { SearchUrl } from '../searchurl'
+import { getPrismaFields } from '../server/prismafields'
 
 test('utils.searchUrl.sortAscending', async () => {
     let url = new URL("http://server.com/page");
@@ -139,7 +140,7 @@ test('utils.searchUrl.prismaFields', async () => {
     searchUrl.skip(10);
     searchUrl.setFilters({"key1": "val1", "key2.key3.key4": "val2"});
     searchUrl.sort("col1", "descending");
-    const fields = searchUrl.getPrismaFields([], "");
+    const fields = getPrismaFields(searchUrl, null, "");
     expect(fields.take).toBe(20);
     expect(fields.skip).toBe(10);
     expect(fields.orderBy?.col1).toBe("desc");
@@ -259,7 +260,7 @@ test('utils.searchUrl.prismaFieldsWithSuffix', async () => {
     searchUrl.skip(10);
     searchUrl.setFilters({"key1": "val1", "key2.key3.key4": "val2"});
     searchUrl.sort("col1", "descending");
-    const fields = searchUrl.getPrismaFields([], "");
+    const fields = getPrismaFields(searchUrl, null, "");
     expect(fields.take).toBe(20);
     expect(fields.skip).toBe(10);
     expect(fields.orderBy?.col1).toBe("desc");

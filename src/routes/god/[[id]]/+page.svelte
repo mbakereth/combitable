@@ -4,7 +4,7 @@
     import type { CombiTableColumn } from '$lib/combitabletypes';
     import DetailsFieldSet from '$lib/components/DetailsFieldSet.svelte';
     import PersistedNewButton from '$lib/components/PersistedNewButton.svelte';
-    import { SearchUrl } from '$lib';
+    import { SearchUrl } from '$lib/searchurl';
     import { page } from '$app/stores';
 
     let columns : CombiTableColumn[] = [
@@ -120,7 +120,6 @@
                                 col={columns[4]}
                                 bind:value={fieldData[4]}
                             />
-                            <!-- <button class="btn btn-default" on:click={async () => {goto(await newGodLink())}}>New...</button>-->
                             <PersistedNewButton url={chainedNewGodUrl}>New...</PersistedNewButton>
                         </td>
                     </tr>
@@ -149,7 +148,6 @@
         </div>
 
     </DetailsFieldSet>
-
 {/if}
 
 <p class="m-4">
@@ -158,3 +156,4 @@
     <a href="{backHref}">Back</a>
     {/if}
 </p>
+

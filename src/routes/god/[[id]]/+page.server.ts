@@ -1,4 +1,5 @@
-import { PrismaClient, type God } from '@prisma/client';
+import { PrismaClient, type God } from '$lib/generated/prisma/client';
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 
 function errorMessage(e : any) : string {
     if (typeof(e) == "string") return e;
@@ -9,7 +10,9 @@ function errorMessage(e : any) : string {
 /** @type {import('./$types').PageLoad} */
 import type { CombiTableColumn } from '@mbakereth/combitable';
 export async function load({ params, url, depends }) {
-    const prisma = new PrismaClient();
+    const connectionString = `${process.env.DATABASE_URL}`;
+    const adapter = new PrismaBetterSqlite3({ url: connectionString });
+    const prisma = new PrismaClient({adapter});
 
     if (params.id == "new") {
         let rec : Partial<God & {

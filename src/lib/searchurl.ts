@@ -3,13 +3,15 @@
 import type { CombiTableColumn } from "./combitabletypes";
 import { env } from '$env/dynamic/public';
 
+//declare type RuntimeModel = Omit<DMMF.Model, 'name'>;
+
 export interface PrismaFields {
     take? : number,
     skip? : number,
     where?: {[key:string]:any},
     orderBy?: {[key:string]: "asc"|"desc"},
 }
-interface PrismaField {
+export interface PrismaField {
     name: string,
     kind: string,
     type: string,
@@ -18,14 +20,14 @@ export interface PrismaModel {
     name: string,
     fields: readonly PrismaField[],
 };
-interface PrismaFieldMap {
+export interface PrismaFieldMap {
    [key:string]:PrismaField,
 }
-interface PrismaModelMap {
+export interface PrismaModelMap {
     name: string,
     fields: PrismaFieldMap,
 };
-interface PrismaModelMaps {
+export interface PrismaModelMaps {
     [key:string]: PrismaModelMap
 }
 
@@ -55,10 +57,10 @@ export class SearchUrl {
     private _url : URL|undefined = undefined;
     get url() { return this._url };
     readonly body : {[key:string]:any}|undefined = undefined;
-    private suffix = "";
-    private idColumn = "id_pk";
+    suffix = "";
+    idColumn = "id_pk";
     emptySearch : string|undefined = "-";
-    private insensitive = false;
+    insensitive = false;
 
     /**
      * Construct from a URL
@@ -470,83 +472,7 @@ export class SearchUrl {
         return new SearchUrl(newUrl, this.defaultTake); 
     }
 
-    /**
-     * Return a prisma representation of the filter and search parameters
-     * @param models The PrismaModel for the model this is searching.  You can
-     *     pass `Prisma.dmmf.datamodel.models` for this
-     * @param modelName the Prisma name of the model (capitalized)
-     * @param defaultSearch If no search field is given in the command line,
-     *     sort by this.
-     * @param columns column configuration for all filterable/sortable columns
-     * @returns 
-     */
-    getPrismaFields(models : readonly PrismaModel[], modelName: string, defaultSearch : string = "", columns: CombiTableColumn[]|undefined = undefined) : PrismaFields {
-
-        let map : PrismaModelMaps = {}
-        for (let model of models) {
-            let name = model.name;
-            let model1 : PrismaModelMap = {
-                name: name,
-                fields: {}
-            };
-            for (let field of model.fields) {
-                model1.fields[field.name] = field; 
-            }
-            map[name] = model1;
-        }
-
-        let ret : PrismaFields = {}
-        let { sortCol, sortDirection} = this.getSort();
-        const take = this.getTake();
-        if (take > 0) {
-            ret.take = take;
-            ret.skip = this.getSkip();
-        }
-        //if (!sortCol) sortCol = defaultSearch;
-        if (!sortCol) {
-            if (defaultSearch.substring(0,1) == "+") {
-                sortCol = defaultSearch.substring(1);
-                sortDirection = "ascending";
-            }
-            else if (defaultSearch.substring(0,1) == "-") {
-                sortCol = defaultSearch.substring(1);
-                sortDirection = "descending";
-            } else {
-                sortCol = defaultSearch;
-                sortDirection = "ascending";
-            }
-        }
-        if (sortCol != "") {
-            const colMatch = columns?.filter((val : {[key:string]:any}) => val.col == sortCol);
-            if (!(colMatch && colMatch.length > 0 && colMatch[0].prismaOrderByIgnore)) {
-                ret.orderBy = SearchUrl.makePrismaOrderBy(sortCol, sortDirection == "ascending" ? "asc" : "desc") 
-            }
-            /*ret.orderBy = {
-                [sortCol]: sortDirection == "ascending" ? "asc" : "desc",
-            };   */
-        }
-        let filters = this.getFilters();
-        let prefilters = this.getPreFilters();
-        let where : {[key:string]:any} = {}
-        for (let filter in filters) {
-            where = {...where, ...SearchUrl.makePrismaWhere(filter, filters[filter], map, modelName, this.suffix, this.emptySearch, columns, this.insensitive)};
-        }
-        for (let filter in prefilters) {
-            where = {...where, ...SearchUrl.makePrismaWhere(filter, prefilters[filter], map, modelName, this.suffix, this.emptySearch, columns, this.insensitive)};
-        }
-        const ids = this.getIds();
-        if (ids.length > 0) {
-            const inClause = {[this.idColumn]: {in: ids}};
-            where = {...where, ...inClause}
-        }
-        if (Object.keys(where).length !== 0) {
-            ret.where = where;
-        }        
-        return ret;
-    
-    }
-
-    private static makePrismaWhere(name : string, value : string, models : PrismaModelMaps, modelName: string, suffix : string="", emptySearch : string|undefined = undefined, columns: CombiTableColumn[]|undefined = undefined, insensitive : boolean = false) : {[key:string]:any} {
+    static makePrismaWhere(name : string, value : string, models : PrismaModelMaps, modelName: string, suffix : string="", emptySearch : string|undefined = undefined, columns: CombiTableColumn[]|undefined = undefined, insensitive : boolean = false) : {[key:string]:any} {
         if (name == "") return {};
         const colMatch = columns?.filter((val : {[key:string]:any}) => val.col == name);
         if (colMatch && colMatch.length > 0 && colMatch[0].prismaWhere) {
@@ -637,7 +563,7 @@ export class SearchUrl {
         return where;
     }
 
-    private static makePrismaOrderBy(name : string, direction : "asc"|"desc", suffix : string="") : {[key:string]:any} {
+     static makePrismaOrderBy(name : string, direction : "asc"|"desc", suffix : string="") : {[key:string]:any} {
         if (name == "") return {};
         const parts = name.split(".");
         let type : string|undefined = undefined;

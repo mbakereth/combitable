@@ -1,15 +1,19 @@
 // Copyright (c) 2025 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
 
 import { SearchUrl } from '$lib/searchurl';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma,  } from '$lib/generated/prisma/client';
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
+import { getPrismaFields } from '$lib/server/prismafields'
 
 /** @type {import('./$types').PageLoad} */
 export async function load({ params, url, depends }) {
-    const prisma = new PrismaClient();
-
+    const connectionString = `${process.env.DATABASE_URL}`;
+    console.log("Connection string 1", connectionString)
+    const adapter = new PrismaBetterSqlite3({ url: connectionString });
+    const prisma = new PrismaClient({adapter});
     const searchUrl = new SearchUrl(url);
     searchUrl.setDefaultSortCol("name"); // if no sort parameter is given on the command line, sort by this field
-    const fields = searchUrl.getPrismaFields(Prisma.dmmf.datamodel.models, "God", "name");
+    const fields = getPrismaFields(searchUrl, prisma, "God", "name");
     const gods = await prisma.god.findMany({
         include: {
             father: true,

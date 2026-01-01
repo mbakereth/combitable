@@ -1,8 +1,9 @@
 // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
 
 import { json, type RequestEvent } from '@sveltejs/kit';
-import { PrismaClient, type Prisma } from '@prisma/client';
-import type { God } from '@prisma/client'
+import { PrismaClient, type Prisma } from '$lib/generated/prisma/client';
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
+import type { God } from '$lib/generated/prisma/client'
 import { Ops } from './ops';
 
 export class GodsOps extends Ops {
@@ -34,7 +35,10 @@ export class GodsOps extends Ops {
             if (Ops.isEmpty(body._pk)) {
                 return json({error: "Primary key invalid"});
             }
-            const prisma = new PrismaClient();
+
+            const connectionString = `${process.env.DATABASE_URL}`;
+            const adapter = new PrismaBetterSqlite3({ url: connectionString });
+            const prisma = new PrismaClient({adapter});
             await prisma.god.delete({where: {id: body._pk}});
             return json({pk: body._pk});
         } catch (e) {
@@ -55,7 +59,9 @@ export class GodsOps extends Ops {
 
         if (god) {
             try {
-                const prisma = new PrismaClient();
+                const connectionString = `${process.env.DATABASE_URL}`;
+                const adapter = new PrismaBetterSqlite3({ url: connectionString });
+                const prisma = new PrismaClient({adapter});
                 let newGod: God;
                 if (add) {
                     delete god.father_id;
@@ -151,7 +157,9 @@ export class GodsOps extends Ops {
         let father_id = 0;
         let mother_id = 0;
 
-        const prisma = new PrismaClient();
+        const connectionString = `${process.env.DATABASE_URL}`;
+        const adapter = new PrismaBetterSqlite3({ url: connectionString });
+        const prisma = new PrismaClient({adapter});
 
         if (body["father.name"]) {
             try {
@@ -192,7 +200,9 @@ export class GodsOps extends Ops {
             if (Ops.isEmpty(body.pks)) {
                 return json({errors: "Primary key invalid"});
             }
-            const prisma = new PrismaClient();
+            const connectionString = `${process.env.DATABASE_URL}`;
+            const adapter = new PrismaBetterSqlite3({ url: connectionString });
+            const prisma = new PrismaClient({adapter});
             const pks = body.pks as number[];
             await prisma.god.updateMany({
                 data: {
@@ -217,7 +227,9 @@ export class GodsOps extends Ops {
         }
 
         try {
-            const prisma = new PrismaClient();
+            const connectionString = `${process.env.DATABASE_URL}`;
+            const adapter = new PrismaBetterSqlite3({ url: connectionString });
+            const prisma = new PrismaClient({adapter});
             const olympus = await prisma.home.findUniqueOrThrow({
                 where: { name: "Olympus"}
             });
@@ -248,7 +260,9 @@ export class GodsOps extends Ops {
         }
 
         try {
-            const prisma = new PrismaClient();
+            const connectionString = `${process.env.DATABASE_URL}`;
+            const adapter = new PrismaBetterSqlite3({ url: connectionString });
+            const prisma = new PrismaClient({adapter});
             const olympus = await prisma.home.findUniqueOrThrow({
                 where: { name: "Olympus"}
             });
