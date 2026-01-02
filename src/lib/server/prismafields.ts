@@ -4,6 +4,8 @@ declare type RuntimeModel = Omit<{[key:string]:any}, 'name'>;
 import { SearchUrl } from '../searchurl'
 import type { PrismaFields, PrismaModelMap, PrismaModelMaps } from '../searchurl'
 
+export declare type CombiTablePrismaClient = PrismaClient;
+
 /**
  * Return a prisma representation of the filter and search parameters
  * @param models The PrismaModel for the model this is searching.  You can

@@ -1,5 +1,4 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import { PrismaClient, type Prisma } from '$lib/generated/prisma/client';
 import type { CombiTableColumn } from '$lib/combitabletypes';
 import { env } from '$env/dynamic/public';
 

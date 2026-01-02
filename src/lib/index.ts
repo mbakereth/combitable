@@ -5,7 +5,8 @@ export { default as DetailsField } from '$lib/components/DetailsField.svelte';
 export { default as DetailsFieldSet } from '$lib/components/DetailsFieldSet.svelte';
 export { default as PersistedNewButton } from '$lib/components/PersistedNewButton.svelte';
 export type { CombiTableColumn, CombiTablePresets, PrismaWhereFunction } from '$lib/combitabletypes';
-export { SearchUrl, type PrismaFields } from '$lib/searchurl';
+export { SearchUrl } from '$lib/searchurl';
+export type { PrismaFields } from '$lib/searchurl';
 export { PersistedFields } from '$lib/persistedfields';
 export {default as upIcon} from "$lib/assets/prime--sort-up-fill.svg?raw"
 export {default as downIcon} from "$lib/assets/prime--sort-down-fill.svg?raw"
@@ -19,3 +20,4 @@ export {default as CombiTableInfoDialog} from '$lib/components/CombiTableInfoDia
 export {default as CombiTableConfirmDeleteDialog} from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
 export { autocomplete, parseDate, stringIsDate, validateField, asBoolean, asBooleanOrUndefined, asNumber, asNumberOrUndefined, asString, printDate } from '$lib/utils';
 export { persistedFields } from '$lib/stores';
+//export { getPrismaFields} from '$lib/server/prismafields';

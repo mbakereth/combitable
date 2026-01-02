@@ -1,7 +1,7 @@
 // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
 
 import { json, type RequestEvent } from '@sveltejs/kit';
-import { PrismaClient, type Prisma } from '$lib/generated/prisma/client';
+import { PrismaClient, type Prisma } from '$lib/generated/prisma/client'
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import type { God } from '$lib/generated/prisma/client'
 import { Ops } from './ops';

@@ -585,4 +585,5 @@ export class SearchUrl {
         return this.url.searchParams.toString();
 
     }
+
 }
