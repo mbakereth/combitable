@@ -814,7 +814,7 @@
                                 filterText[col] = filterDateText(date, PartialDateType.month);
                             } else if (parts[1] == PartialDateType.year+"") {
                                 let date = parseDate(parts[0], "yyyy-mm-dd")
-                                filterText[col] = filterDateText(date, PartialDateType.month);
+                                filterText[col] = filterDateText(date, PartialDateType.year);
                             } 
                         }
 
