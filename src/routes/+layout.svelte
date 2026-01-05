@@ -1,5 +1,5 @@
 <script>
-    import "tailwindcss/tailwind.css";
+    import "../app.css";
 </script>
 <svelte:head>
   <title>CombiTable Test</title>
