@@ -847,6 +847,16 @@
     let autoCompleteOpen : {[key:string]:boolean} = {};
     columns.forEach((val: CombiTableColumn, i: number) => {autoCompleteOpen[val.col] = false})
 
+    function autoCompleteUpdate_filter(col : CombiTableColumn, value : string|undefined|null) {
+        if (value) {
+            filterText[col.col] = value;
+            for (let col in autoCompleteOpen) {
+                autoCompleteOpen[col] = false;
+            }
+            filter(col, value);
+        }
+    }
+
     function autoCompleteUpdate(col : CombiTableColumn, value : string|undefined|null) {
         if (value == undefined || value == null || value == "") {
             /*editRowSelectValue[col.col] = "";
@@ -868,8 +878,17 @@
         autoCompleteData = [];
     }
 
-    async function autoCompleteKeyPress(evt: KeyboardEvent, col : CombiTableColumn, value : string|undefined) {
+    async function autoCompleteKeyPress(evt: KeyboardEvent, col : CombiTableColumn, value : string|undefined, isFilter: boolean) {
         if (!col.autoCompleteLink) return;
+
+        if (evt.key === 'Enter' && value) {
+            filterText[col.col] = value;
+            for (let col in autoCompleteOpen) {
+                autoCompleteOpen[col] = false;
+            }
+            filter(col, value);
+        }
+
         if (value && value.length > 0) {
             autoCompleteOpen[col.col] = true;
 
@@ -1547,6 +1566,24 @@
                                         {/each}
                                     </ul>
                                 </details>
+                            {:else if col.autoCompleteLink}    
+                                <div class="acdropdown overflow:visible">
+                                    <input role="button" class="input m-0 -mb-1 w-full bg-base-200" style="{editminwStyle} {editmaxwStyle}"
+                                        on:keyup={(evt) => autoCompleteKeyPress(evt, col, filterText[col.col], true)}
+                                        on:focusout={(event) => {handleACBlur(event, col)}}
+                                        bind:value={filterText[col.col]}/>
+                                    <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+                                    {#if autoCompleteOpen[col.col]}
+                                    <ul bind:this={autoCompleteDivs[col.col]} class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 p-2 mt-2 shadow" style="{dropdownwidthStyle}" tabindex="0">
+                                        {#each autoCompleteData as name}
+                                            <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                            <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                            <!-- svelte-ignore a11y-missing-attribute -->
+                                            <li><a on:click={() => autoCompleteUpdate_filter(col, name)}>{name}</a></li>
+                                        {/each}
+                                    </ul>
+                                    {/if}
+                                </div>
                             {:else}
                                 <input type="text" class="input bg-base-200 w-full" style="{editminwStyle} {editmaxwStyle}" 
                                     bind:value={filterText[col.col]} 
@@ -1631,8 +1668,8 @@
                                             </details>
                                         {:else if col.autoCompleteLink}    
                                             <div class="acdropdown overflow:visible">
-                                                <input role="button" class="input m-0 -mb-1 w-full {bg} cursor-text" style="{editminwStyle} {editmaxwStyle}"
-                                                    on:keyup={(evt) => autoCompleteKeyPress(evt, col, editRowText[col.col])}
+                                                <input role="button" class="input m-0 -mb-1 w-full {bg}" style="{editminwStyle} {editmaxwStyle}"
+                                                    on:keyup={(evt) => autoCompleteKeyPress(evt, col, editRowText[col.col], false)}
                                                     on:focusout={(event) => {handleACBlur(event, col)}}
                                                     bind:value={editRowText[col.col]}/>
                                                 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
@@ -1808,7 +1845,7 @@
                                         {:else if col.autoCompleteLink}    
                                             <div class="acdropdown overflow:visible">
                                                 <input role="button" class="input m-0 -mb-1 w-full {bg} cursor-text" style="{editminwStyle} {editmaxwStyle}"
-                                                    on:keyup={(evt) => autoCompleteKeyPress(evt, col, editRowText[col.col])}
+                                                    on:keyup={(evt) => autoCompleteKeyPress(evt, col, editRowText[col.col], false)}
                                                     on:focusout={(event) => {handleACBlur(event, col)}}
                                                     bind:value={editRowText[col.col]}/>
                                                 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
