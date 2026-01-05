@@ -8,7 +8,6 @@ import { getPrismaFields } from '$lib/server/prismafields'
 /** @type {import('./$types').PageLoad} */
 export async function load({ params, url, depends }) {
     const connectionString = `${process.env.DATABASE_URL}`;
-    console.log("Connection string 1", connectionString)
     const adapter = new PrismaBetterSqlite3({ url: connectionString });
     const prisma = new PrismaClient({adapter});
     const searchUrl = new SearchUrl(url);

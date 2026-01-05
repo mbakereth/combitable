@@ -73,6 +73,7 @@ export function getPrismaFields(su: SearchUrl, prisma : PrismaClient|null, model
     for (let filter in prefilters) {
         where = {...where, ...SearchUrl.makePrismaWhere(filter, prefilters[filter], map, modelName, su.suffix, su.emptySearch, columns, su.insensitive)};
     }
+    //console.log(JSON.stringify(where, null, 4))
     const ids = su.getIds();
     if (ids.length > 0) {
         const inClause = {[su.idColumn]: {in: ids}};

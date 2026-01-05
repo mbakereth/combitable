@@ -115,7 +115,6 @@
     }
 
     function stringIsDateMonth(val : string) {
-        if (dateFormat == "yyyy-mm-dd") return /^( *[0-9][0-9][0-9][0-9][/\.-][0-9][0-9]? *?)$/.test(val);
         return /^( *[0-9][0-9]?[/\.-][0-9][0-9][0-9][0-9] *?)$/.test(val) ;
     }
 

@@ -67,6 +67,7 @@
     rows={rows} 
     columns={columns} 
     primaryKey="id"
+    dateFormat="dd-mm-yyyy"
     defaultSort="name" 
     enableSort={true}
     enableFilter={true}

@@ -2,6 +2,8 @@
 
 import type { CombiTableColumn } from "./combitabletypes";
 import { env } from '$env/dynamic/public';
+import { PartialDateType } from "./types";
+import { PartialDateMonth_Day, PartialDateYear_Day, PartialDateYear_Month } from "./utils";
 
 //declare type RuntimeModel = Omit<DMMF.Model, 'name'>;
 
@@ -36,6 +38,20 @@ interface OrderByObj {[key:string]: "asc"|"desc"}
 type OrderBy = "asc"|"desc"|{[key:string]: OrderByObj|OrderBy}
 
 const MAX_URL_LENGTH = 2048;
+
+function getNextDay(date : Date) {
+    let tomorrow = new Date(date)
+    tomorrow.setDate(date.getDate() + 1)
+    return tomorrow;
+}
+
+function approxDayMinus(date : Date) {
+    return new Date(new Date(date).getTime()-(1000));
+}
+
+function approxDayPlus(date : Date) {
+    return new Date(new Date(date).getTime()+(1000));
+}
 
 /**
  * 
@@ -74,7 +90,7 @@ export class SearchUrl {
     constructor(url : URL|{[key:string]:any}, defaultTake : number|undefined = undefined, emptySearch : string|undefined = "-", backUrl : SearchUrl|undefined|null = undefined) {
         this._url = url instanceof URL ? url : undefined;
         this.body = url instanceof URL ? undefined : url;
-        this.defaultTake = parseInt(env.PUBLIC_SEARCHURL_DEFAULT_TAKE ?? defaultTake ?? "20");
+        this.defaultTake = parseInt((env.PUBLIC_SEARCHURL_DEFAULT_TAKE ?? defaultTake ?? "20")+"");
         this.emptySearch = emptySearch;
         this.insensitive = ['t', 'y', '1'].includes((env.PUBLIC_SEARCHURL_INSENSITIVE ?? "").toLowerCase().substring(0,1));
         if (backUrl) this.setBack(backUrl);
@@ -511,6 +527,7 @@ export class SearchUrl {
             console.log("Warning: type for " + name + " not found - setting to String");
         }
         let value1 : string|number|boolean|Date|null = value;
+        let value2: Date|null = null;
         if (type == "Boolean") {
             value1 = ["1", "yes", "y", "true", "t"+suffix, "on"].includes(value.toLocaleLowerCase());
         } else if (type == "Int") {
@@ -518,7 +535,36 @@ export class SearchUrl {
         } else if (type == "Float") {
             value1 = value == "" ? null : parseFloat(value);
         } else if (type == "DateTime") {
-            value1 = value == "" ? null : new Date(value);
+            value1 = null;
+            if (value != "") {
+                let parts1 = value.split("_");
+                value1 = new Date(parts1[0]);
+                if (parts1.length > 0) {
+                    if (parts1[1] == PartialDateType.month + "") { 
+                        value2 = new Date(parts1[0]);
+                        value1.setDate(1);
+                        value2.setDate(1);
+                        if (value2.getMonth() < 12) {
+                            value2.setMonth(value2.getMonth()+1)
+                        } else {
+                            value2.setMonth(0);
+                            value2.setFullYear(value2.getFullYear()+1)
+                        }
+                    } else if (parts1[1] == PartialDateType.year + "") { 
+                        value2 = new Date(parts1[0]);
+                        value1.setDate(1);
+                        value1.setMonth(0);
+                        value2.setDate(1);
+                        value2.setMonth(0);
+                        value2.setFullYear(value2.getFullYear()+1);
+                    }
+                }
+            }
+            if (value2 == null) {
+                value2 = getNextDay(value1 as Date);
+                console.log("Value2", value2)
+                
+            }
         } else {
             if (value1.length > 1 && value1.endsWith("*") && !(value1.substring(0, value1.length-1).includes("*"))) {
                 // escape special characters _ and %
@@ -546,7 +592,19 @@ export class SearchUrl {
                 if (insensitive) return {[name]: {startsWith: value1, mode: 'insensitive'}} ;
                 return {[name]: {startsWith: value1}} ;
             }
-            return {[name]: value1}
+            if (value2 == null) {
+                if (typeof(value1) == "object") { // date
+                    console.log("Date", new Date((value1 as Date).toISOString().split("T")[0]), value1 as Date)
+                    return {[name]: new Date((value1 as Date).toISOString().split("T")[0])}
+
+                }
+                return {[name]: value1}
+            } else {
+                return {AND: [
+                    {[name]: {gte: approxDayMinus(value1 as Date)}},
+                    {[name]: {lt: approxDayMinus(value2 as Date)}},
+                ]}
+            }
         }
 
         let where : {[key:string]:any} = {};

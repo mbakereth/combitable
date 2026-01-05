@@ -299,7 +299,6 @@
     }
 
     export function stringIsDateMonth(val : string) {
-        if (dateFormat == "yyyy-mm-dd") return /^( *[0-9][0-9][0-9][0-9][/\.-][0-9][0-9]? *?)$/.test(val);
         return /^( *[0-9][0-9]?[/\.-][0-9][0-9][0-9][0-9] *?)$/.test(val) ;
     }
 
@@ -311,17 +310,18 @@
         return stringIsDate(val) || stringIsDateMonth(val) || stringIsDateYear(val);
     }
 
-    export function parseDate(val : string) : Date {
+    export function parseDate(val : string, df:string|undefined=undefined) : Date {
         val = val.trim();
+        if (df == undefined) df = dateFormat;
         if (val.indexOf("T") > 0) {
             val = val.split("T")[0];
             return parseISODate(val);
         }
         const parts = val.includes("-") ? val.trim().split("-") : (val.includes(".") ? val.trim().split(".") : val.trim().split("/"));
-        if (parts.length != 3) throw Error("Date " + val + " should be " + dateFormat);
+        if (parts.length != 3) throw Error("Date " + val + " should be " + df);
         let dateStr = parts[2] + "-" + parts[1] + "-" + parts[0];
-        if (dateFormat == "yyyy-mm-dd") dateStr = val;
-        if (dateFormat == "mm-dd-yyyy") dateStr = parts[2] + "-" + parts[0] + "-" + parts[1];
+        if (df == "yyyy-mm-dd") dateStr = val;
+        if (df == "mm-dd-yyyy") dateStr = parts[2] + "-" + parts[0] + "-" + parts[1];
         return parseISODate(dateStr);
     }
 
@@ -336,11 +336,11 @@
         let type :PartialDateType = PartialDateType.date;
         if (parts.length == 2) {
             if (dateFormat == "yyyy-mm-dd") {
-                parts.push("15"); 
+                parts = [parts[1], parts[0], PartialDateMonth_Day+""];
             } else if (dateFormat == "mm-dd-yyyy") {
                 parts = [parts[0], ""+PartialDateMonth_Day, parts[1]]
             } else { // dd-mm-yyyy
-                parts.unshift("15"); 
+                parts.unshift(PartialDateMonth_Day+""); 
             }
             type = PartialDateType.month;
         } else if (parts.length == 1) {
@@ -355,11 +355,9 @@
             type = PartialDateType.year;
         } else if (parts.length != 3) throw Error("Date " + val + " should be " + dateFormat);
         let dateStr = parts[2] + "-" + parts[1] + "-" + parts[0];
-        if (dateFormat == "yyyy-mm-dd") dateStr = val;
-        if (dateFormat == "mm-dd-yyyy") dateStr = parts[2] + "-" + parts[0] + "-" + parts[1];
+        if (dateFormat == "yyyy-mm-dd") dateStr = parts[0] + "-" + parts[1] + "-" + parts[2];
+        else if (dateFormat == "mm-dd-yyyy") dateStr = parts[2] + "-" + parts[0] + "-" + parts[1];
         let date = parseISODate(dateStr);
-        if (type == PartialDateType.date) {
-        }
         return {date, type};
     }
 
@@ -706,24 +704,26 @@
                 }
                 
             }
-        } else if (col.type == "date") {
+        } else if (col.type == "date" || col.type == "partialdate") {
             if (value == undefined || value == "") {
                 delete filters[col.col];
                 filters = {...filters};
             } else {
                 try {
-                    if (typeof(value) == "boolean" || (value && !stringIsDate(value))) {
+                    if (typeof(value) == "boolean" || (value && !stringIsPartialDate(value))) {
                         throw new Error("Date format")
                     };
                     if (typeof(value) == "boolean") filters[col.col] = value ? "Yes" : "No";
                     else filters[col.col] = value ?? "";
                     const val = filters[col.col];
-                    const dateTime = new Date(parseDate(val)).toISOString();
+                    const partialDate = parsePartialDate(val);
+                    filterText[col.col] = filterDateText(partialDate.date, partialDate.type);
+                    const dateTime = partialDate.date.toISOString();
                     let parts = dateTime.split("T")
-                    filters = {...filters, [col.col]: parts[0]}
+                    filters = {...filters, [col.col]: parts[0] + "_" + partialDate.type}
                 } catch (e) {
                     console.log(e);
-                    validationErrors = "Dates must be " + dateFormat;
+                    validationErrors = "Dates must be " + dateFormat + ", mm-yyyy or yyyy";
                     (document.querySelector('#validateDialog_'+uuid) as HTMLDialogElement)?.showModal(); 
                 }
             }
@@ -746,6 +746,16 @@
         searchParams = `?${url.searchParamsAsString()}`;
         goto(searchParams);
 
+    }
+
+    function filterDateText(date : Date, type: PartialDateType) : string {
+        if (type == PartialDateType.date || type == PartialDateType.datetime) {
+            return printDate(date);
+        } else if (type == PartialDateType.month) {
+            return ((date.getMonth()+1)+"").padStart(2, '0') + "-" + (date.getFullYear()+"").padStart(4, '0');
+        } else {
+            return (date.getFullYear() + "").padStart(4, '0');
+        }
     }
 
     async function clearIds() {
@@ -794,6 +804,20 @@
                     if (columns[i].type == "boolean") {
                         filterText[col] = urlfilters[col] == "t" ? "Yes" : "No"
                         filterValues[col] = urlfilters[col];
+                    } else if (columns[i].type == "date" || columns[i].type == "partialdate") {
+                        let parts = urlfilters[col].split("_")
+                        if (parts.length > 1) {
+                            if (parts[1] == PartialDateType.datetime+"" || parts[1] == PartialDateType.date+"") {
+                                filterText[col] = parts[0]
+                            } else if (parts[1] == PartialDateType.month+"") {
+                                let date = parseDate(parts[0], "yyyy-mm-dd")
+                                filterText[col] = filterDateText(date, PartialDateType.month);
+                            } else if (parts[1] == PartialDateType.year+"") {
+                                let date = parseDate(parts[0], "yyyy-mm-dd")
+                                filterText[col] = filterDateText(date, PartialDateType.month);
+                            } 
+                        }
+
                     } else if (columns[i].type == "select:string" || columns[i].type == "select:integer") {
                             let values = columns[i].values ?? [];
                             let names = columns[i].names ?? values;
@@ -986,7 +1010,6 @@
 
                 } else {
                     let val = getColumn(rrows[rowidx], col)
-                    console.log("Edit", val)
                     let dateType : PartialDateType = PartialDateType.date;
                     if (col.type == "partialdate" && typeof(val) == "object" && "type" in val) {
                         dateType = val.type
@@ -1489,24 +1512,24 @@
                         {@const dropdownwidthStyle = col.dropdownWidth ? "width:" + col.dropdownWidth : ";"}
                         <td class="align-bottom" style="{cmaxwStyle}">
                             {#if col.type == "boolean"}
-                            <details class="dropdown overflow:visible" bind:open={filterMenusOpen[col.col]}  on:toggle={e => filterDetailsClicked(col)}>
-                                <summary class="btn m-0 -mb-1 w-full" style="{editminwStyle} {editmaxwStyle}">{filterText[col.col] ?? ""}</summary>
-                                <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 p-2 mt-2 shadow" style="{dropdownwidthStyle}">
-                                    <!-- svelte-ignore a11y-missing-attribute -->
-                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                    <li><a on:click={() => filter(col, undefined)}>Clear</a></li>
-                                    <!-- svelte-ignore a11y-missing-attribute -->
-                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                    <li><a on:click={() => filter(col, false)}>No</a></li>
-                                    <!-- svelte-ignore a11y-missing-attribute -->
-                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                    <li><a on:click={() => filter(col, true)}>Yes</a></li>
-                                </ul>
-                            </details>  
+                                <details class="dropdown overflow:visible" bind:open={filterMenusOpen[col.col]}  on:toggle={e => filterDetailsClicked(col)}>
+                                    <summary class="btn m-0 -mb-1 w-full" style="{editminwStyle} {editmaxwStyle}">{filterText[col.col] ?? ""}</summary>
+                                    <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+                                    <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box -z-1 p-2 mt-2 shadow" style="{dropdownwidthStyle}">
+                                        <!-- svelte-ignore a11y-missing-attribute -->
+                                        <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                        <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                        <li><a on:click={() => filter(col, undefined)}>Clear</a></li>
+                                        <!-- svelte-ignore a11y-missing-attribute -->
+                                        <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                        <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                        <li><a on:click={() => filter(col, false)}>No</a></li>
+                                        <!-- svelte-ignore a11y-missing-attribute -->
+                                        <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                        <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                        <li><a on:click={() => filter(col, true)}>Yes</a></li>
+                                    </ul>
+                                </details>  
                             {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
                                 <details class="dropdown overflow:visible" bind:open={filterMenusOpen[col.col]}  on:toggle={e => filterDetailsClicked(col)}>
                                     <summary class="btn m-0 -mb-1 w-full" style="{editminwStyle} {editmaxwStyle}">{filterText[col.col] ?? ""}</summary>

@@ -109,7 +109,6 @@ export function stringIsDate(val : string, dateFormat="yyyy-mm-dd") {
 }
 
 export function stringIsDateMonth(val : string, dateFormat="yyyy-mm-dd") {
-    if (dateFormat == "yyyy-mm-dd") return /^( *[0-9][0-9][0-9][0-9][/\.-][0-9][0-9]? *?)$/.test(val);
     return /^( *[0-9][0-9]?[/\.-][0-9][0-9][0-9][0-9] *?)$/.test(val) ;
 }
 
