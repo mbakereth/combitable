@@ -32,6 +32,7 @@ export type GodAvgAggregateOutputType = {
   mother_id: number | null
   type: number | null
   home_id: number | null
+  birth_date_type: number | null
 }
 
 export type GodSumAggregateOutputType = {
@@ -40,6 +41,7 @@ export type GodSumAggregateOutputType = {
   mother_id: number | null
   type: number | null
   home_id: number | null
+  birth_date_type: number | null
 }
 
 export type GodMinAggregateOutputType = {
@@ -51,6 +53,8 @@ export type GodMinAggregateOutputType = {
   died: boolean | null
   type: number | null
   home_id: number | null
+  birth_date: Date | null
+  birth_date_type: number | null
 }
 
 export type GodMaxAggregateOutputType = {
@@ -62,6 +66,8 @@ export type GodMaxAggregateOutputType = {
   died: boolean | null
   type: number | null
   home_id: number | null
+  birth_date: Date | null
+  birth_date_type: number | null
 }
 
 export type GodCountAggregateOutputType = {
@@ -73,6 +79,8 @@ export type GodCountAggregateOutputType = {
   died: number
   type: number
   home_id: number
+  birth_date: number
+  birth_date_type: number
   _all: number
 }
 
@@ -83,6 +91,7 @@ export type GodAvgAggregateInputType = {
   mother_id?: true
   type?: true
   home_id?: true
+  birth_date_type?: true
 }
 
 export type GodSumAggregateInputType = {
@@ -91,6 +100,7 @@ export type GodSumAggregateInputType = {
   mother_id?: true
   type?: true
   home_id?: true
+  birth_date_type?: true
 }
 
 export type GodMinAggregateInputType = {
@@ -102,6 +112,8 @@ export type GodMinAggregateInputType = {
   died?: true
   type?: true
   home_id?: true
+  birth_date?: true
+  birth_date_type?: true
 }
 
 export type GodMaxAggregateInputType = {
@@ -113,6 +125,8 @@ export type GodMaxAggregateInputType = {
   died?: true
   type?: true
   home_id?: true
+  birth_date?: true
+  birth_date_type?: true
 }
 
 export type GodCountAggregateInputType = {
@@ -124,6 +138,8 @@ export type GodCountAggregateInputType = {
   died?: true
   type?: true
   home_id?: true
+  birth_date?: true
+  birth_date_type?: true
   _all?: true
 }
 
@@ -222,6 +238,8 @@ export type GodGroupByOutputType = {
   died: boolean
   type: number
   home_id: number | null
+  birth_date: Date | null
+  birth_date_type: number | null
   _count: GodCountAggregateOutputType | null
   _avg: GodAvgAggregateOutputType | null
   _sum: GodSumAggregateOutputType | null
@@ -256,6 +274,8 @@ export type GodWhereInput = {
   died?: Prisma.BoolFilter<"God"> | boolean
   type?: Prisma.IntFilter<"God"> | number
   home_id?: Prisma.IntNullableFilter<"God"> | number | null
+  birth_date?: Prisma.DateTimeNullableFilter<"God"> | Date | string | null
+  birth_date_type?: Prisma.IntNullableFilter<"God"> | number | null
   father?: Prisma.XOR<Prisma.GodNullableScalarRelationFilter, Prisma.GodWhereInput> | null
   mother?: Prisma.XOR<Prisma.GodNullableScalarRelationFilter, Prisma.GodWhereInput> | null
   children_as_father?: Prisma.GodListRelationFilter
@@ -272,6 +292,8 @@ export type GodOrderByWithRelationInput = {
   died?: Prisma.SortOrder
   type?: Prisma.SortOrder
   home_id?: Prisma.SortOrderInput | Prisma.SortOrder
+  birth_date?: Prisma.SortOrderInput | Prisma.SortOrder
+  birth_date_type?: Prisma.SortOrderInput | Prisma.SortOrder
   father?: Prisma.GodOrderByWithRelationInput
   mother?: Prisma.GodOrderByWithRelationInput
   children_as_father?: Prisma.GodOrderByRelationAggregateInput
@@ -291,6 +313,8 @@ export type GodWhereUniqueInput = Prisma.AtLeast<{
   died?: Prisma.BoolFilter<"God"> | boolean
   type?: Prisma.IntFilter<"God"> | number
   home_id?: Prisma.IntNullableFilter<"God"> | number | null
+  birth_date?: Prisma.DateTimeNullableFilter<"God"> | Date | string | null
+  birth_date_type?: Prisma.IntNullableFilter<"God"> | number | null
   father?: Prisma.XOR<Prisma.GodNullableScalarRelationFilter, Prisma.GodWhereInput> | null
   mother?: Prisma.XOR<Prisma.GodNullableScalarRelationFilter, Prisma.GodWhereInput> | null
   children_as_father?: Prisma.GodListRelationFilter
@@ -307,6 +331,8 @@ export type GodOrderByWithAggregationInput = {
   died?: Prisma.SortOrder
   type?: Prisma.SortOrder
   home_id?: Prisma.SortOrderInput | Prisma.SortOrder
+  birth_date?: Prisma.SortOrderInput | Prisma.SortOrder
+  birth_date_type?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.GodCountOrderByAggregateInput
   _avg?: Prisma.GodAvgOrderByAggregateInput
   _max?: Prisma.GodMaxOrderByAggregateInput
@@ -326,6 +352,8 @@ export type GodScalarWhereWithAggregatesInput = {
   died?: Prisma.BoolWithAggregatesFilter<"God"> | boolean
   type?: Prisma.IntWithAggregatesFilter<"God"> | number
   home_id?: Prisma.IntNullableWithAggregatesFilter<"God"> | number | null
+  birth_date?: Prisma.DateTimeNullableWithAggregatesFilter<"God"> | Date | string | null
+  birth_date_type?: Prisma.IntNullableWithAggregatesFilter<"God"> | number | null
 }
 
 export type GodCreateInput = {
@@ -333,6 +361,8 @@ export type GodCreateInput = {
   gender: string
   died: boolean
   type: number
+  birth_date?: Date | string | null
+  birth_date_type?: number | null
   father?: Prisma.GodCreateNestedOneWithoutChildren_as_fatherInput
   mother?: Prisma.GodCreateNestedOneWithoutChildren_as_motherInput
   children_as_father?: Prisma.GodCreateNestedManyWithoutFatherInput
@@ -349,6 +379,8 @@ export type GodUncheckedCreateInput = {
   died: boolean
   type: number
   home_id?: number | null
+  birth_date?: Date | string | null
+  birth_date_type?: number | null
   children_as_father?: Prisma.GodUncheckedCreateNestedManyWithoutFatherInput
   children_as_mother?: Prisma.GodUncheckedCreateNestedManyWithoutMotherInput
 }
@@ -358,6 +390,8 @@ export type GodUpdateInput = {
   gender?: Prisma.StringFieldUpdateOperationsInput | string
   died?: Prisma.BoolFieldUpdateOperationsInput | boolean
   type?: Prisma.IntFieldUpdateOperationsInput | number
+  birth_date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  birth_date_type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   father?: Prisma.GodUpdateOneWithoutChildren_as_fatherNestedInput
   mother?: Prisma.GodUpdateOneWithoutChildren_as_motherNestedInput
   children_as_father?: Prisma.GodUpdateManyWithoutFatherNestedInput
@@ -374,6 +408,8 @@ export type GodUncheckedUpdateInput = {
   died?: Prisma.BoolFieldUpdateOperationsInput | boolean
   type?: Prisma.IntFieldUpdateOperationsInput | number
   home_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  birth_date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  birth_date_type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children_as_father?: Prisma.GodUncheckedUpdateManyWithoutFatherNestedInput
   children_as_mother?: Prisma.GodUncheckedUpdateManyWithoutMotherNestedInput
 }
@@ -387,6 +423,8 @@ export type GodCreateManyInput = {
   died: boolean
   type: number
   home_id?: number | null
+  birth_date?: Date | string | null
+  birth_date_type?: number | null
 }
 
 export type GodUpdateManyMutationInput = {
@@ -394,6 +432,8 @@ export type GodUpdateManyMutationInput = {
   gender?: Prisma.StringFieldUpdateOperationsInput | string
   died?: Prisma.BoolFieldUpdateOperationsInput | boolean
   type?: Prisma.IntFieldUpdateOperationsInput | number
+  birth_date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  birth_date_type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type GodUncheckedUpdateManyInput = {
@@ -405,6 +445,8 @@ export type GodUncheckedUpdateManyInput = {
   died?: Prisma.BoolFieldUpdateOperationsInput | boolean
   type?: Prisma.IntFieldUpdateOperationsInput | number
   home_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  birth_date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  birth_date_type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type GodNullableScalarRelationFilter = {
@@ -431,6 +473,8 @@ export type GodCountOrderByAggregateInput = {
   died?: Prisma.SortOrder
   type?: Prisma.SortOrder
   home_id?: Prisma.SortOrder
+  birth_date?: Prisma.SortOrder
+  birth_date_type?: Prisma.SortOrder
 }
 
 export type GodAvgOrderByAggregateInput = {
@@ -439,6 +483,7 @@ export type GodAvgOrderByAggregateInput = {
   mother_id?: Prisma.SortOrder
   type?: Prisma.SortOrder
   home_id?: Prisma.SortOrder
+  birth_date_type?: Prisma.SortOrder
 }
 
 export type GodMaxOrderByAggregateInput = {
@@ -450,6 +495,8 @@ export type GodMaxOrderByAggregateInput = {
   died?: Prisma.SortOrder
   type?: Prisma.SortOrder
   home_id?: Prisma.SortOrder
+  birth_date?: Prisma.SortOrder
+  birth_date_type?: Prisma.SortOrder
 }
 
 export type GodMinOrderByAggregateInput = {
@@ -461,6 +508,8 @@ export type GodMinOrderByAggregateInput = {
   died?: Prisma.SortOrder
   type?: Prisma.SortOrder
   home_id?: Prisma.SortOrder
+  birth_date?: Prisma.SortOrder
+  birth_date_type?: Prisma.SortOrder
 }
 
 export type GodSumOrderByAggregateInput = {
@@ -469,6 +518,7 @@ export type GodSumOrderByAggregateInput = {
   mother_id?: Prisma.SortOrder
   type?: Prisma.SortOrder
   home_id?: Prisma.SortOrder
+  birth_date_type?: Prisma.SortOrder
 }
 
 export type GodCreateNestedOneWithoutChildren_as_fatherInput = {
@@ -527,6 +577,18 @@ export type IntFieldUpdateOperationsInput = {
   divide?: number
 }
 
+export type NullableDateTimeFieldUpdateOperationsInput = {
+  set?: Date | string | null
+}
+
+export type NullableIntFieldUpdateOperationsInput = {
+  set?: number | null
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
 export type GodUpdateOneWithoutChildren_as_fatherNestedInput = {
   create?: Prisma.XOR<Prisma.GodCreateWithoutChildren_as_fatherInput, Prisma.GodUncheckedCreateWithoutChildren_as_fatherInput>
   connectOrCreate?: Prisma.GodCreateOrConnectWithoutChildren_as_fatherInput
@@ -573,14 +635,6 @@ export type GodUpdateManyWithoutMotherNestedInput = {
   update?: Prisma.GodUpdateWithWhereUniqueWithoutMotherInput | Prisma.GodUpdateWithWhereUniqueWithoutMotherInput[]
   updateMany?: Prisma.GodUpdateManyWithWhereWithoutMotherInput | Prisma.GodUpdateManyWithWhereWithoutMotherInput[]
   deleteMany?: Prisma.GodScalarWhereInput | Prisma.GodScalarWhereInput[]
-}
-
-export type NullableIntFieldUpdateOperationsInput = {
-  set?: number | null
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
 }
 
 export type GodUncheckedUpdateManyWithoutFatherNestedInput = {
@@ -658,6 +712,8 @@ export type GodCreateWithoutChildren_as_fatherInput = {
   gender: string
   died: boolean
   type: number
+  birth_date?: Date | string | null
+  birth_date_type?: number | null
   father?: Prisma.GodCreateNestedOneWithoutChildren_as_fatherInput
   mother?: Prisma.GodCreateNestedOneWithoutChildren_as_motherInput
   children_as_mother?: Prisma.GodCreateNestedManyWithoutMotherInput
@@ -673,6 +729,8 @@ export type GodUncheckedCreateWithoutChildren_as_fatherInput = {
   died: boolean
   type: number
   home_id?: number | null
+  birth_date?: Date | string | null
+  birth_date_type?: number | null
   children_as_mother?: Prisma.GodUncheckedCreateNestedManyWithoutMotherInput
 }
 
@@ -686,6 +744,8 @@ export type GodCreateWithoutChildren_as_motherInput = {
   gender: string
   died: boolean
   type: number
+  birth_date?: Date | string | null
+  birth_date_type?: number | null
   father?: Prisma.GodCreateNestedOneWithoutChildren_as_fatherInput
   mother?: Prisma.GodCreateNestedOneWithoutChildren_as_motherInput
   children_as_father?: Prisma.GodCreateNestedManyWithoutFatherInput
@@ -701,6 +761,8 @@ export type GodUncheckedCreateWithoutChildren_as_motherInput = {
   died: boolean
   type: number
   home_id?: number | null
+  birth_date?: Date | string | null
+  birth_date_type?: number | null
   children_as_father?: Prisma.GodUncheckedCreateNestedManyWithoutFatherInput
 }
 
@@ -714,6 +776,8 @@ export type GodCreateWithoutFatherInput = {
   gender: string
   died: boolean
   type: number
+  birth_date?: Date | string | null
+  birth_date_type?: number | null
   mother?: Prisma.GodCreateNestedOneWithoutChildren_as_motherInput
   children_as_father?: Prisma.GodCreateNestedManyWithoutFatherInput
   children_as_mother?: Prisma.GodCreateNestedManyWithoutMotherInput
@@ -728,6 +792,8 @@ export type GodUncheckedCreateWithoutFatherInput = {
   died: boolean
   type: number
   home_id?: number | null
+  birth_date?: Date | string | null
+  birth_date_type?: number | null
   children_as_father?: Prisma.GodUncheckedCreateNestedManyWithoutFatherInput
   children_as_mother?: Prisma.GodUncheckedCreateNestedManyWithoutMotherInput
 }
@@ -746,6 +812,8 @@ export type GodCreateWithoutMotherInput = {
   gender: string
   died: boolean
   type: number
+  birth_date?: Date | string | null
+  birth_date_type?: number | null
   father?: Prisma.GodCreateNestedOneWithoutChildren_as_fatherInput
   children_as_father?: Prisma.GodCreateNestedManyWithoutFatherInput
   children_as_mother?: Prisma.GodCreateNestedManyWithoutMotherInput
@@ -760,6 +828,8 @@ export type GodUncheckedCreateWithoutMotherInput = {
   died: boolean
   type: number
   home_id?: number | null
+  birth_date?: Date | string | null
+  birth_date_type?: number | null
   children_as_father?: Prisma.GodUncheckedCreateNestedManyWithoutFatherInput
   children_as_mother?: Prisma.GodUncheckedCreateNestedManyWithoutMotherInput
 }
@@ -789,6 +859,8 @@ export type GodUpdateWithoutChildren_as_fatherInput = {
   gender?: Prisma.StringFieldUpdateOperationsInput | string
   died?: Prisma.BoolFieldUpdateOperationsInput | boolean
   type?: Prisma.IntFieldUpdateOperationsInput | number
+  birth_date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  birth_date_type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   father?: Prisma.GodUpdateOneWithoutChildren_as_fatherNestedInput
   mother?: Prisma.GodUpdateOneWithoutChildren_as_motherNestedInput
   children_as_mother?: Prisma.GodUpdateManyWithoutMotherNestedInput
@@ -804,6 +876,8 @@ export type GodUncheckedUpdateWithoutChildren_as_fatherInput = {
   died?: Prisma.BoolFieldUpdateOperationsInput | boolean
   type?: Prisma.IntFieldUpdateOperationsInput | number
   home_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  birth_date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  birth_date_type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children_as_mother?: Prisma.GodUncheckedUpdateManyWithoutMotherNestedInput
 }
 
@@ -823,6 +897,8 @@ export type GodUpdateWithoutChildren_as_motherInput = {
   gender?: Prisma.StringFieldUpdateOperationsInput | string
   died?: Prisma.BoolFieldUpdateOperationsInput | boolean
   type?: Prisma.IntFieldUpdateOperationsInput | number
+  birth_date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  birth_date_type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   father?: Prisma.GodUpdateOneWithoutChildren_as_fatherNestedInput
   mother?: Prisma.GodUpdateOneWithoutChildren_as_motherNestedInput
   children_as_father?: Prisma.GodUpdateManyWithoutFatherNestedInput
@@ -838,6 +914,8 @@ export type GodUncheckedUpdateWithoutChildren_as_motherInput = {
   died?: Prisma.BoolFieldUpdateOperationsInput | boolean
   type?: Prisma.IntFieldUpdateOperationsInput | number
   home_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  birth_date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  birth_date_type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children_as_father?: Prisma.GodUncheckedUpdateManyWithoutFatherNestedInput
 }
 
@@ -869,6 +947,8 @@ export type GodScalarWhereInput = {
   died?: Prisma.BoolFilter<"God"> | boolean
   type?: Prisma.IntFilter<"God"> | number
   home_id?: Prisma.IntNullableFilter<"God"> | number | null
+  birth_date?: Prisma.DateTimeNullableFilter<"God"> | Date | string | null
+  birth_date_type?: Prisma.IntNullableFilter<"God"> | number | null
 }
 
 export type GodUpsertWithWhereUniqueWithoutMotherInput = {
@@ -892,6 +972,8 @@ export type GodCreateWithoutHomeInput = {
   gender: string
   died: boolean
   type: number
+  birth_date?: Date | string | null
+  birth_date_type?: number | null
   father?: Prisma.GodCreateNestedOneWithoutChildren_as_fatherInput
   mother?: Prisma.GodCreateNestedOneWithoutChildren_as_motherInput
   children_as_father?: Prisma.GodCreateNestedManyWithoutFatherInput
@@ -906,6 +988,8 @@ export type GodUncheckedCreateWithoutHomeInput = {
   mother_id?: number | null
   died: boolean
   type: number
+  birth_date?: Date | string | null
+  birth_date_type?: number | null
   children_as_father?: Prisma.GodUncheckedCreateNestedManyWithoutFatherInput
   children_as_mother?: Prisma.GodUncheckedCreateNestedManyWithoutMotherInput
 }
@@ -943,6 +1027,8 @@ export type GodCreateManyFatherInput = {
   died: boolean
   type: number
   home_id?: number | null
+  birth_date?: Date | string | null
+  birth_date_type?: number | null
 }
 
 export type GodCreateManyMotherInput = {
@@ -953,6 +1039,8 @@ export type GodCreateManyMotherInput = {
   died: boolean
   type: number
   home_id?: number | null
+  birth_date?: Date | string | null
+  birth_date_type?: number | null
 }
 
 export type GodUpdateWithoutFatherInput = {
@@ -960,6 +1048,8 @@ export type GodUpdateWithoutFatherInput = {
   gender?: Prisma.StringFieldUpdateOperationsInput | string
   died?: Prisma.BoolFieldUpdateOperationsInput | boolean
   type?: Prisma.IntFieldUpdateOperationsInput | number
+  birth_date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  birth_date_type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   mother?: Prisma.GodUpdateOneWithoutChildren_as_motherNestedInput
   children_as_father?: Prisma.GodUpdateManyWithoutFatherNestedInput
   children_as_mother?: Prisma.GodUpdateManyWithoutMotherNestedInput
@@ -974,6 +1064,8 @@ export type GodUncheckedUpdateWithoutFatherInput = {
   died?: Prisma.BoolFieldUpdateOperationsInput | boolean
   type?: Prisma.IntFieldUpdateOperationsInput | number
   home_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  birth_date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  birth_date_type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children_as_father?: Prisma.GodUncheckedUpdateManyWithoutFatherNestedInput
   children_as_mother?: Prisma.GodUncheckedUpdateManyWithoutMotherNestedInput
 }
@@ -986,6 +1078,8 @@ export type GodUncheckedUpdateManyWithoutFatherInput = {
   died?: Prisma.BoolFieldUpdateOperationsInput | boolean
   type?: Prisma.IntFieldUpdateOperationsInput | number
   home_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  birth_date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  birth_date_type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type GodUpdateWithoutMotherInput = {
@@ -993,6 +1087,8 @@ export type GodUpdateWithoutMotherInput = {
   gender?: Prisma.StringFieldUpdateOperationsInput | string
   died?: Prisma.BoolFieldUpdateOperationsInput | boolean
   type?: Prisma.IntFieldUpdateOperationsInput | number
+  birth_date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  birth_date_type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   father?: Prisma.GodUpdateOneWithoutChildren_as_fatherNestedInput
   children_as_father?: Prisma.GodUpdateManyWithoutFatherNestedInput
   children_as_mother?: Prisma.GodUpdateManyWithoutMotherNestedInput
@@ -1007,6 +1103,8 @@ export type GodUncheckedUpdateWithoutMotherInput = {
   died?: Prisma.BoolFieldUpdateOperationsInput | boolean
   type?: Prisma.IntFieldUpdateOperationsInput | number
   home_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  birth_date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  birth_date_type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children_as_father?: Prisma.GodUncheckedUpdateManyWithoutFatherNestedInput
   children_as_mother?: Prisma.GodUncheckedUpdateManyWithoutMotherNestedInput
 }
@@ -1019,6 +1117,8 @@ export type GodUncheckedUpdateManyWithoutMotherInput = {
   died?: Prisma.BoolFieldUpdateOperationsInput | boolean
   type?: Prisma.IntFieldUpdateOperationsInput | number
   home_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  birth_date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  birth_date_type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type GodCreateManyHomeInput = {
@@ -1029,6 +1129,8 @@ export type GodCreateManyHomeInput = {
   mother_id?: number | null
   died: boolean
   type: number
+  birth_date?: Date | string | null
+  birth_date_type?: number | null
 }
 
 export type GodUpdateWithoutHomeInput = {
@@ -1036,6 +1138,8 @@ export type GodUpdateWithoutHomeInput = {
   gender?: Prisma.StringFieldUpdateOperationsInput | string
   died?: Prisma.BoolFieldUpdateOperationsInput | boolean
   type?: Prisma.IntFieldUpdateOperationsInput | number
+  birth_date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  birth_date_type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   father?: Prisma.GodUpdateOneWithoutChildren_as_fatherNestedInput
   mother?: Prisma.GodUpdateOneWithoutChildren_as_motherNestedInput
   children_as_father?: Prisma.GodUpdateManyWithoutFatherNestedInput
@@ -1050,6 +1154,8 @@ export type GodUncheckedUpdateWithoutHomeInput = {
   mother_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   died?: Prisma.BoolFieldUpdateOperationsInput | boolean
   type?: Prisma.IntFieldUpdateOperationsInput | number
+  birth_date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  birth_date_type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children_as_father?: Prisma.GodUncheckedUpdateManyWithoutFatherNestedInput
   children_as_mother?: Prisma.GodUncheckedUpdateManyWithoutMotherNestedInput
 }
@@ -1062,6 +1168,8 @@ export type GodUncheckedUpdateManyWithoutHomeInput = {
   mother_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   died?: Prisma.BoolFieldUpdateOperationsInput | boolean
   type?: Prisma.IntFieldUpdateOperationsInput | number
+  birth_date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  birth_date_type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 
@@ -1113,6 +1221,8 @@ export type GodSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = ru
   died?: boolean
   type?: boolean
   home_id?: boolean
+  birth_date?: boolean
+  birth_date_type?: boolean
   father?: boolean | Prisma.God$fatherArgs<ExtArgs>
   mother?: boolean | Prisma.God$motherArgs<ExtArgs>
   children_as_father?: boolean | Prisma.God$children_as_fatherArgs<ExtArgs>
@@ -1130,6 +1240,8 @@ export type GodSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extension
   died?: boolean
   type?: boolean
   home_id?: boolean
+  birth_date?: boolean
+  birth_date_type?: boolean
   father?: boolean | Prisma.God$fatherArgs<ExtArgs>
   mother?: boolean | Prisma.God$motherArgs<ExtArgs>
   home?: boolean | Prisma.God$homeArgs<ExtArgs>
@@ -1144,6 +1256,8 @@ export type GodSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extension
   died?: boolean
   type?: boolean
   home_id?: boolean
+  birth_date?: boolean
+  birth_date_type?: boolean
   father?: boolean | Prisma.God$fatherArgs<ExtArgs>
   mother?: boolean | Prisma.God$motherArgs<ExtArgs>
   home?: boolean | Prisma.God$homeArgs<ExtArgs>
@@ -1158,9 +1272,11 @@ export type GodSelectScalar = {
   died?: boolean
   type?: boolean
   home_id?: boolean
+  birth_date?: boolean
+  birth_date_type?: boolean
 }
 
-export type GodOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "gender" | "father_id" | "mother_id" | "died" | "type" | "home_id", ExtArgs["result"]["god"]>
+export type GodOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "gender" | "father_id" | "mother_id" | "died" | "type" | "home_id" | "birth_date" | "birth_date_type", ExtArgs["result"]["god"]>
 export type GodInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   father?: boolean | Prisma.God$fatherArgs<ExtArgs>
   mother?: boolean | Prisma.God$motherArgs<ExtArgs>
@@ -1198,6 +1314,8 @@ export type $GodPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
     died: boolean
     type: number
     home_id: number | null
+    birth_date: Date | null
+    birth_date_type: number | null
   }, ExtArgs["result"]["god"]>
   composites: {}
 }
@@ -1634,6 +1752,8 @@ export interface GodFieldRefs {
   readonly died: Prisma.FieldRef<"God", 'Boolean'>
   readonly type: Prisma.FieldRef<"God", 'Int'>
   readonly home_id: Prisma.FieldRef<"God", 'Int'>
+  readonly birth_date: Prisma.FieldRef<"God", 'DateTime'>
+  readonly birth_date_type: Prisma.FieldRef<"God", 'Int'>
 }
     
 

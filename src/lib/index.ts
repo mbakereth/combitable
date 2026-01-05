@@ -4,7 +4,7 @@ export { default as CombiTable } from '$lib/components/CombiTable.svelte';
 export { default as DetailsField } from '$lib/components/DetailsField.svelte';
 export { default as DetailsFieldSet } from '$lib/components/DetailsFieldSet.svelte';
 export { default as PersistedNewButton } from '$lib/components/PersistedNewButton.svelte';
-export type { CombiTableColumn, CombiTablePresets, PrismaWhereFunction } from '$lib/combitabletypes';
+export type { CombiTableColumn, CombiTablePresets, PrismaWhereFunction, ColumnType } from '$lib/combitabletypes';
 export { SearchUrl } from '$lib/searchurl';
 export type { PrismaFields } from '$lib/searchurl';
 export { PersistedFields } from '$lib/persistedfields';
@@ -18,6 +18,6 @@ export {default as CombiTableDiscardChanges} from '$lib/components/CombiTableDis
 export {default as CombiTableValidateDialog} from '$lib/components/CombiTableErrorDialog.svelte';
 export {default as CombiTableInfoDialog} from '$lib/components/CombiTableInfoDialog.svelte';
 export {default as CombiTableConfirmDeleteDialog} from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
-export { autocomplete, parseDate, stringIsDate, validateField, asBoolean, asBooleanOrUndefined, asNumber, asNumberOrUndefined, asString, printDate } from '$lib/utils';
+export { autocomplete, parseDate, stringIsDate, stringIsPartialDate, stringIsDateMonth, stringIsDateYear, validateField, asBoolean, asBooleanOrUndefined, asNumber, asNumberOrUndefined, asString, printDate } from '$lib/utils';
 export { persistedFields } from '$lib/stores';
 //export { getPrismaFields} from '$lib/server/prismafields';

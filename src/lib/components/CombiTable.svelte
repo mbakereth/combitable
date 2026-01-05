@@ -187,6 +187,8 @@
     import CombiTableInfoDialog from '$lib/components/CombiTableInfoDialog.svelte';
     import CombiTableConfirmDeleteDialog from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
     import { updated } from '$app/state';
+    import { PartialDateType } from '$lib/types';
+    import { PartialDateYear_Month, PartialDateYear_Day, PartialDateMonth_Day } from '$lib/utils';
 
     let table : Element;
 
@@ -276,9 +278,37 @@
         return String(date.getDate()).padStart(2, '0') + "-" + String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getFullYear())
     }
 
+    export function printPartialDate(date : Date|undefined|null, dateType: PartialDateType) : string {
+        if (!date) return "-";
+        if (dateType == PartialDateType.year) {
+            return String(date.getFullYear());
+        } else if (dateType == PartialDateType.month) {
+            return String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getFullYear());
+        } else if (dateFormat == "yyyy-mm-dd") {
+            return String(date.getFullYear()) + "-" + String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getDate()).padStart(2, '0')
+        }
+        if (dateFormat == "mm-dd-yyyy") {
+            return String(date.getMonth()).padStart(2, '0') + "-" + String((date.getDate())+1).padStart(2, '0') + "-" + String(date.getFullYear())
+        }
+        return String(date.getDate()).padStart(2, '0') + "-" + String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getFullYear())
+    }
+
     export function stringIsDate(val : string) {
-        if (dateFormat == "yyyy-mm-dd") return /^( *[0-9][0-9][0-9][0-9]-[0-9][0-9]?-[0-9][0-9]? *?)$/.test(val);
-        return /^( *[0-9][0-9]?-[0-9][0-9]?-[0-9][0-9][0-9][0-9] *?)$/.test(val) ;
+        if (dateFormat == "yyyy-mm-dd") return /^( *[0-9][0-9][0-9][0-9][/\.-][0-9][0-9]?[/\.-][0-9][0-9]? *?)$/.test(val);
+        return /^( *[0-9][0-9]?[/\.-][0-9][0-9]?[/\.-][0-9][0-9][0-9][0-9] *?)$/.test(val) ;
+    }
+
+    export function stringIsDateMonth(val : string) {
+        if (dateFormat == "yyyy-mm-dd") return /^( *[0-9][0-9][0-9][0-9][/\.-][0-9][0-9]? *?)$/.test(val);
+        return /^( *[0-9][0-9]?[/\.-][0-9][0-9][0-9][0-9] *?)$/.test(val) ;
+    }
+
+    export function stringIsDateYear(val : string) {
+        return /^( *[0-9][0-9][0-9][0-9] *?)$/.test(val);
+    }
+
+    export function stringIsPartialDate(val : string) {
+        return stringIsDate(val) || stringIsDateMonth(val) || stringIsDateYear(val);
     }
 
     export function parseDate(val : string) : Date {
@@ -287,12 +317,50 @@
             val = val.split("T")[0];
             return parseISODate(val);
         }
-        const parts = val.trim().split("-");
+        const parts = val.includes("-") ? val.trim().split("-") : (val.includes(".") ? val.trim().split(".") : val.trim().split("/"));
         if (parts.length != 3) throw Error("Date " + val + " should be " + dateFormat);
         let dateStr = parts[2] + "-" + parts[1] + "-" + parts[0];
         if (dateFormat == "yyyy-mm-dd") dateStr = val;
         if (dateFormat == "mm-dd-yyyy") dateStr = parts[2] + "-" + parts[0] + "-" + parts[1];
         return parseISODate(dateStr);
+    }
+
+    export function parsePartialDate(val : string) : {date: Date, type: PartialDateType} {
+        val = val.trim();
+        if (val.indexOf("T") > 0) {
+            val = val.split("T")[0];
+            let date = parseISODate(val);
+            return {date, type: PartialDateType.datetime};
+        }
+        let parts = val.includes("-") ? val.trim().split("-") : (val.includes(".") ? val.trim().split(".") : val.trim().split("/"));
+        let type :PartialDateType = PartialDateType.date;
+        if (parts.length == 2) {
+            if (dateFormat == "yyyy-mm-dd") {
+                parts.push("15"); 
+            } else if (dateFormat == "mm-dd-yyyy") {
+                parts = [parts[0], ""+PartialDateMonth_Day, parts[1]]
+            } else { // dd-mm-yyyy
+                parts.unshift("15"); 
+            }
+            type = PartialDateType.month;
+        } else if (parts.length == 1) {
+            if (dateFormat == "yyyy-mm-dd") {
+                parts.push(PartialDateYear_Month+"");
+                parts.push(PartialDateYear_Day+"");
+            } else if (dateFormat == "mm-dd-yyyy") {
+                parts = [PartialDateYear_Month+"", PartialDateYear_Day+"", parts[0]]
+            } else { // dd-mm-yyyy
+                parts = [PartialDateYear_Day+"", PartialDateYear_Month+"", parts[0]]
+            }
+            type = PartialDateType.year;
+        } else if (parts.length != 3) throw Error("Date " + val + " should be " + dateFormat);
+        let dateStr = parts[2] + "-" + parts[1] + "-" + parts[0];
+        if (dateFormat == "yyyy-mm-dd") dateStr = val;
+        if (dateFormat == "mm-dd-yyyy") dateStr = parts[2] + "-" + parts[0] + "-" + parts[1];
+        let date = parseISODate(dateStr);
+        if (type == PartialDateType.date) {
+        }
+        return {date, type};
     }
 
     // SVG wants to display with a new line.  Depending on what icons
@@ -373,12 +441,13 @@
         return val == undefined ? undefined : asNumber(val);
     }
 
-    function asString(val : string|number|boolean|undefined|Date, type : string|undefined=undefined) : string {
+    function asString(val : string|number|boolean|undefined|Date, type : string|undefined=undefined, dateType: PartialDateType=PartialDateType.date) : string {
         if (val == undefined) return "";
         if (typeof(val) == "boolean") return val ? "Yes" : "No";
         if (typeof(val) == "number") return val+"";
         if (typeof(val) == "string") return val;
         if (val instanceof Date && type=="date") printDate(val)
+        if (val instanceof Date && type=="partialdate") printPartialDate(val, dateType)
         if (val instanceof Date) return printDate(val);
         if (typeof(val) == "object" && "name" in val) return val["name"];
         return ""+val;
@@ -428,7 +497,11 @@
                     }
                 }
             } else {
-                res = res && part in res ? res[part] : undefined;
+                if (col.type == "partialdate") {
+                    res = res && part in res ? {date: res[part], type: res[part+"_type"] as PartialDateType} : undefined;
+                } else {
+                    res = res && part in res ? res[part] : undefined;
+                }
             }
         }
         return res;
@@ -440,6 +513,9 @@
         if (val == undefined) return "-";
         if (typeof(val) == "boolean") {
             return val ? "Yes" : "No";
+        }
+        if (typeof(val) == "object" && col.type == "partialdate") {
+            return printPartialDate(val.date as Date, val.type as PartialDateType);
         }
         if (col.type == "date") {
             if (val instanceof Date) {
@@ -910,7 +986,12 @@
 
                 } else {
                     let val = getColumn(rrows[rowidx], col)
-                    editRowText[colName] = asString(val, col.type);
+                    console.log("Edit", val)
+                    let dateType : PartialDateType = PartialDateType.date;
+                    if (col.type == "partialdate" && typeof(val) == "object" && "type" in val) {
+                        dateType = val.type
+                    }
+                    editRowText[colName] = asString(printPartialDate(val.date, dateType), col.type, dateType);
                 }
                 editRowText = {...editRowText}
             }
@@ -956,7 +1037,14 @@
                 } else {
                     //let val = presets && col.col in presets ? presets[col.col] : undefined;
                     const val = getPreset(col);
-                    editRowText[colName] = asString(val, col.type);
+                    let dateType : PartialDateType = PartialDateType.date;
+                    if (col.type == "partialdate" && col.col + "_type" in rrows[rowidx]) {
+                        dateType = rrows[rowidx][col.col + "_type"] as PartialDateType
+                    }
+                    /*if (col.type == "partialdate" && typeof(val) == "object" && "type" in val) {
+                        dateType = val.type
+                    }*/
+                    editRowText[colName] = asString(val, col.type, dateType);
                 }
                 editRowText = {...editRowText}
             }
@@ -1084,6 +1172,8 @@
                         data[col.col] = asNumberOrUndefined(editRowText[col.col]);
                     } else if (col.type == "date") {
                         data[col.col] = asStringOrUndefined(editRowText[col.col], col.type);
+                    } else if (col.type == "partialdate") {
+                        data[col.col] = asStringOrUndefined(editRowText[col.col], col.type);
                     } else if (col.type == "datetime") {
                         data[col.col] = asStringOrUndefined(editRowText[col.col], col.type);
                     } else {
@@ -1154,12 +1244,17 @@
                         errors.push(col.name + " must be in the form " + dateFormat);
                     }
 
+                } else if (col.type == "partialdate") {
+                    if (!stringIsPartialDate(editRowText[col.col])) {
+                        errors.push(col.name + " must be in the form " + dateFormat);
+                    }
+
                 }
             } else if (col.type == "datetime") {
                 if (!/^( *[0-9][0-9][0-9][0-9]-[0-9][0-9]?-[0-9][0-9](T[0-9][0-9]?:[0-9][0-9]?:[0-9][0-9]?(\.[0-9]*)?[A-Za-z]?)? *?)$/.test(editRowText[col.col])) {
                     errors.push(col.name + " must be in the form yyyy-mm-ddThh:99:ss.sssZ");
                 }
-            }
+            } 
         }
         return errors;
     }

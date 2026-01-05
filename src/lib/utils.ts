@@ -1,7 +1,7 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { CombiTableColumn } from '$lib/combitabletypes';
+import type { CombiTableColumn, ColumnType } from '$lib/combitabletypes';
 import { env } from '$env/dynamic/public';
-
+import { PartialDateType } from '$lib/types'
 /**
  * Provides autocomplete functionality with Prisma
  * 
@@ -104,8 +104,21 @@ export async function autocomplete(client : any, event : RequestEvent, cols? : {
 }
 
 export function stringIsDate(val : string, dateFormat="yyyy-mm-dd") {
-    if (dateFormat == "yyyy-mm-dd") return /^( *[0-9][0-9][0-9][0-9]-[0-9][0-9]?-[0-9][0-9]? *?)$/.test(val);
-    return /^( *[0-9][0-9]?-[0-9][0-9]?-[0-9][0-9][0-9][0-9] *?)$/.test(val) ;
+    if (dateFormat == "yyyy-mm-dd") return /^( *[0-9][0-9][0-9][0-9][/\.-][0-9][0-9]?[/\.-][0-9][0-9]? *?)$/.test(val);
+    return /^( *[0-9][0-9]?[/\.-][0-9][0-9]?[/\.-][0-9][0-9][0-9][0-9] *?)$/.test(val) ;
+}
+
+export function stringIsDateMonth(val : string, dateFormat="yyyy-mm-dd") {
+    if (dateFormat == "yyyy-mm-dd") return /^( *[0-9][0-9][0-9][0-9][/\.-][0-9][0-9]? *?)$/.test(val);
+    return /^( *[0-9][0-9]?[/\.-][0-9][0-9][0-9][0-9] *?)$/.test(val) ;
+}
+
+export function stringIsDateYear(val : string, dateFormat="yyyy-mm-dd") {
+    return /^( *[0-9][0-9][0-9][0-9] *?)$/.test(val);
+}
+
+export function stringIsPartialDate(val : string, dateFormat="yyyy-mm-dd") {
+    return stringIsDate(val, dateFormat) || stringIsDateMonth(val, dateFormat) || stringIsDateYear(val, dateFormat);
 }
 
 export function validateField(col : CombiTableColumn, value: string|number|Date|null|boolean|undefined, dateFormat = "yyyy-mm-dd") {
@@ -123,6 +136,11 @@ export function validateField(col : CombiTableColumn, value: string|number|Date|
             }
         } else if (col.type == "date" && typeof(value) == "string") {
             if (!stringIsDate(value, dateFormat)) {
+                error = col.name + " must be in the form " + dateFormat;
+            }
+
+        } else if (col.type == "partialdate" && typeof(value) == "string") {
+            if (!stringIsPartialDate(value, dateFormat)) {
                 error = col.name + " must be in the form " + dateFormat;
             }
 
@@ -171,17 +189,18 @@ export function asNumberOrUndefined(val : string|number|boolean|undefined) : num
     return val == undefined ? undefined : asNumber(val);
 }
 
-export function asString(val : string|number|boolean|undefined|Date, type : string|undefined=undefined, dateFormat="yyyy-mm-dd") : string {
+export function asString(val : string|number|boolean|undefined|Date, type : ColumnType|undefined=undefined, dateFormat="yyyy-mm-dd", dateType: PartialDateType=PartialDateType.date) : string {
     if (val == undefined) return "";
     if (typeof(val) == "boolean") return val ? "Yes" : "No";
     if (typeof(val) == "number") return val+"";
     if (typeof(val) == "string") return val;
     if (val instanceof Date && type=="date") printDate(val, dateFormat)
+    if (val instanceof Date && type=="date") printPartialDate(val, dateType, dateFormat)
     if (val instanceof Date) return printDate(val, dateFormat);
     if (typeof(val) == "object" && "name" in val) return val["name"];
     return ""+val;
 }
-export function asStringOrUndefined(val : string|number|boolean|undefined, type : string|undefined=undefined) : string|undefined {
+export function asStringOrUndefined(val : string|number|boolean|undefined, type : ColumnType|undefined=undefined) : string|undefined {
     if (typeof(val) == "string" && val == "") return undefined;
     return val == undefined ? undefined : asString(val, type);
 }
@@ -189,6 +208,21 @@ export function asStringOrUndefined(val : string|number|boolean|undefined, type 
 export function printDate(date : Date|undefined|null, dateFormat="yyyy-mm-dd") : string {
     if (!date) return "-";
     if (dateFormat == "yyyy-mm-dd") {
+        return String(date.getFullYear()) + "-" + String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getDate()).padStart(2, '0')
+    }
+    if (dateFormat == "mm-dd-yyyy") {
+        return String(date.getMonth()).padStart(2, '0') + "-" + String((date.getDate())+1).padStart(2, '0') + "-" + String(date.getFullYear())
+    }
+    return String(date.getDate()).padStart(2, '0') + "-" + String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getFullYear())
+}
+
+export function printPartialDate(date : Date|undefined|null, type: PartialDateType, dateFormat="yyyy-mm-dd") : string {
+    if (!date) return "-";
+    if (type == PartialDateType.year) {
+        return String(date.getFullYear());
+    } else if (type == PartialDateType.month) {
+        return String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getFullYear()) 
+    } else if (dateFormat == "yyyy-mm-dd") {
         return String(date.getFullYear()) + "-" + String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getDate()).padStart(2, '0')
     }
     if (dateFormat == "mm-dd-yyyy") {
@@ -215,3 +249,7 @@ export function parseDate(val : string, dateFormat : string) : Date {
     if (dateFormat == "mm-dd-yyyy") dateStr = parts[2] + "-" + parts[0] + "-" + parts[1];
     return parseISODate(dateStr);
 }
+
+export const PartialDateYear_Month = 7;
+export const PartialDateYear_Day = 1;
+export const PartialDateMonth_Day = 15;

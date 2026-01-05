@@ -597,7 +597,9 @@ export const GodScalarFieldEnum = {
   mother_id: 'mother_id',
   died: 'died',
   type: 'type',
-  home_id: 'home_id'
+  home_id: 'home_id',
+  birth_date: 'birth_date',
+  birth_date_type: 'birth_date_type'
 } as const
 
 export type GodScalarFieldEnum = (typeof GodScalarFieldEnum)[keyof typeof GodScalarFieldEnum]
@@ -651,6 +653,13 @@ export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 
  * Reference to a field of type 'Boolean'
  */
 export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+    
+
+
+/**
+ * Reference to a field of type 'DateTime'
+ */
+export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
     
 
 

@@ -268,10 +268,13 @@ The maximum number returned can be customised in the
  ```ts
 import { type RequestEvent } from '@sveltejs/kit';
 import { autocomplete } from '$lib/utils'
-import { PrismaClient, type Prisma } from '@prisma/client';
+import { PrismaClient, type Prisma } from '../src/lib/generated/prisma/client';
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 
 export const GET = async (event : RequestEvent) => {
-    const prisma = new PrismaClient();
+    const connectionString = `${process.env.DATABASE_URL}`;
+    const adapter = new PrismaBetterSqlite3({ url: connectionString });
+    const prisma = new PrismaClient({adapter});
     return await autocomplete(prisma, event, {god: ["**"]});
 }
  ```

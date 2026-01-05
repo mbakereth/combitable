@@ -19,6 +19,8 @@ model God {
     died                    Boolean
     type                    Int
     home_id                 Int?              
+    birth_date              DateTime?
+    birth_date_type         Int?              // 0=datetime 1=date 2=month 3=year
 
     father                  God?              @relation("father", references: [id], fields: [father_id], onDelete: Cascade)
     mother                  God?              @relation("mother", references: [id], fields: [mother_id], onDelete: Cascade)

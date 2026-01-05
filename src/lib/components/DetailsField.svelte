@@ -110,8 +110,21 @@
     }
 
     function stringIsDate(val : string) {
-        if (dateFormat == "yyyy-mm-dd") return /^( *[0-9][0-9][0-9][0-9]-[0-9][0-9]?-[0-9][0-9]? *?)$/.test(val);
-        return /^( *[0-9][0-9]?-[0-9][0-9]?-[0-9][0-9][0-9][0-9] *?)$/.test(val) ;
+        if (dateFormat == "yyyy-mm-dd") return /^( *[0-9][0-9][0-9][0-9][/\.-][0-9][0-9]?[/\.-][0-9][0-9]? *?)$/.test(val);
+        return /^( *[0-9][0-9]?[/\.-][0-9][0-9]?[/\.-][0-9][0-9][0-9][0-9] *?)$/.test(val) ;
+    }
+
+    function stringIsDateMonth(val : string) {
+        if (dateFormat == "yyyy-mm-dd") return /^( *[0-9][0-9][0-9][0-9][/\.-][0-9][0-9]? *?)$/.test(val);
+        return /^( *[0-9][0-9]?[/\.-][0-9][0-9][0-9][0-9] *?)$/.test(val) ;
+    }
+
+    function stringIsDateYear(val : string) {
+        return /^( *[0-9][0-9][0-9][0-9] *?)$/.test(val);
+    }
+
+    function stringIsPartialDate(val: string) {
+        return stringIsDate(val) || stringIsDateMonth(val) || stringIsDateYear(val);
     }
 
     function getFieldError() : string|undefined {
@@ -129,6 +142,11 @@
                     }
                 } else if (col.type == "date") {
                     if (!stringIsDate(value)) {
+                        return col.name + " must be in the form " + dateFormat;
+                    }
+
+                } else if (col.type == "partialdate") {
+                    if (!stringIsPartialDate(value)) {
                         return col.name + " must be in the form " + dateFormat;
                     }
 

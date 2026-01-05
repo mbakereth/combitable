@@ -18,9 +18,26 @@ export class Ops {
         return /^ *[-+]?([0-9]*[.])?[0-9]+([eE][-+]?\d+)? *$/.test(val);
     }
 
-    static isDate(val : string|undefined|null) {
+    static isDate(val : string|undefined|null, dateFormat="yyyy-mm-dd") {
         if (!val) return false;
-        return /^([0-9][0-9][0-9][0-9]-[0-9][0-9]?-[0-9][0-9]?)$/.test(val.toString())
+        if (dateFormat == "yyyy-mm-dd") return /^([0-9][0-9][0-9][0-9][/\.-][0-9][0-9]?[/\.-][0-9][0-9]?)$/.test(val.toString())
+        return /^([0-9][0-9]?[/\.-][0-9][0-9]?[/\.-][0-9][0-9][0-9][0-9])$/.test(val.toString())
+    }
+
+    static isDateMonth(val : string|undefined|null, dateFormat="yyyy-mm-dd") {
+        if (!val) return false;
+        if (dateFormat == "yyyy-mm-dd") return /^([0-9][0-9][0-9][0-9][/\.-][0-9][0-9]?)$/.test(val.toString())
+        return /^([0-9][0-9]?[/\.-][0-9][0-9][0-9][0-9])$/.test(val.toString())
+    }
+
+    static isDateYear(val : string|undefined|null, dateFormat="yyyy-mm-dd") {
+        if (!val) return false;
+        return /^([0-9][0-9][0-9][0-9])$/.test(val.toString())
+    }
+
+    static isPartialDate(val : string|undefined|null, dateFormat="yyyy-mm-dd") {
+        if (!val) return false;
+        return this.isDate(val, dateFormat) || this.isDateMonth(val, dateFormat) || this.isDateYear(val, dateFormat)
     }
 
     static isEmpty(val : string|undefined|null|boolean|number) {

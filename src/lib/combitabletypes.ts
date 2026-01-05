@@ -1,5 +1,10 @@
 // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
 
+/**
+ * Supported types for columns
+ */
+export type ColumnType = "string"|"boolean"|"integer"|"float"|"partialdate"|"date"|"datetime"|"select:string"|"select:integer"|"array:string";
+
 export type PrismaWhereFunction = (value : string) => {[key:string]:any};
 
 /**
@@ -23,7 +28,7 @@ export interface CombiTableColumn {
      * 
      * For `select:string` or `select:date`, pass `names`, `values` or both
      */
-    type: "string"|"boolean"|"integer"|"float"|"date"|"datetime"|"select:string"|"select:integer"|"array:string",
+    type: ColumnType,
 
     /**
      * For use with `select:integer` and `select:string` column types.
