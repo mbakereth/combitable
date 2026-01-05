@@ -1,4 +1,4 @@
-const colors = require('tailwindcss/colors');
+import colors from 'tailwindcss/colors';
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -11,21 +11,5 @@ export default {
       }
     },
   },
-    daisyui: {
-      themes: [
-      {
-        light: {
-          ...require("daisyui/src/theming/themes")["light"],
-          //...require("daisyui/src/theming/themes")["corporate"],
-            "--required": "#a5a8c4",
-          },
-        dark: {
-            ...require("daisyui/src/theming/themes")["dark"],
-            "--required": "#282c42",
-        },
-      },
-    ],
-  },
-  plugins: [require('daisyui')],
 }
 
