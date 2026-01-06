@@ -1,2 +1,15 @@
 @import "tailwindcss";
 @plugin "daisyui";
+
+@theme{
+   --color-required: #282c42;
+ }
+
+  @plugin "daisyui/theme" {
+   name: "light";
+   --color-required: #a5a8c4;
+ }
+ @plugin "daisyui/theme" {
+   name: "dark";
+   --color-required: #282c42;
+ }

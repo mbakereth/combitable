@@ -9,7 +9,7 @@
 
     let columns : CombiTableColumn[] = [
         {name: "Name", col: "name", type: "string"},
-        {name: "Gender", col: "gender", type: "select:string", values: ["m", "f"], names: ["m", "f"], minWidth: "[4rem]"},
+        {name: "Gender", col: "gender", type: "select:string", values: ["m", "f"], names: ["m", "f"], minWidth: "4rem", editMaxWidth: "4rem"},
         {name: "Died", col: "died", type: "boolean"},
         {name: "Type", col: "type", type: "select:integer", values: [0,1,2], names: ["God", "Titan", "Personification"]},
         {name: "Father", col: "father.name", type: "string", nullable: true, maxWidth: "16", editMaxWidth: "16", autoCompleteLink:"/autocomplete/god/name"},
@@ -51,7 +51,7 @@
 {#if isAdd}
     <h2 class="ml-4">New god</h2>
 {:else}
-    <h2 class="ml-4">{data.rec?.name}</h2>
+    <h2 class="ml-4">{fieldData[0]}</h2>
 {/if}
 
 {#if data.error}
@@ -71,7 +71,7 @@
     >
     
         <div class="m-4 overflow-y-auto">
-            <table class="table overflow-y-visible table-sm">
+            <table class="table overflow-y-visible table-sm [&_tr>*]:border-none">
                 <tbody>
                     <tr class="border-none">
                         <td class="w-32">Name</td>

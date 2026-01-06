@@ -541,12 +541,13 @@
 
 {#if true}
     {@const editminwStyle = col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""}
+    {@const boolEditminwStyle = col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"}
     {@const editmaxwStyle = col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}
     {@const editHeightStyle = col.editHeight ? "height:" + col.editHeight + ";" : ""}
     {@const dropdownwidthStyle = col.dropdownWidth ? "width:" + col.dropdownWidth + ";" : ""}
     {@const cmaxwStyle = maxWidthStyle}
     {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
-    {#if col.type == "date"}
+    {#if col.type == "date" || col.type == "partialdate"}
         <input type="text" class="input bg-base-200 w-40 {bg}" disabled={updateDisabled} on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue} style="{editminwStyle} {editmaxwStyle}"  tabindex="0"/>
     {:else if col.autoCompleteLink && col.type != "array:string"}    
         <div class="acdropdown overflow:visible" bind:this={autoCompleteDiv}>
@@ -556,7 +557,7 @@
                 bind:value={displayValue}/>
             <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
             {#if autoCompleteOpen}
-                <ul bind:this={autoCompleteList} class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box z-10 p-2 mt-2 shadow border border-base-100" style="{dropdownwidthStyle}" tabindex="0">
+                <ul bind:this={autoCompleteList} class="menu dropdown-content max-h-0.3 overflow-auto bg-base-200 rounded-box z-10 p-2 mt-2 shadow border border-base-100" style="{dropdownwidthStyle}" tabindex="-1">
                     {#each autoCompleteData as name}
                         <!-- svelte-ignore a11y-click-events-have-key-events -->
                         <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -603,8 +604,8 @@
                                         on:blur={(evt) => handleACBlur(evt)}
                                         bind:value={extraValue}/>
                                     <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                    {#if autoCompleteOpen}
-                                        <ul bind:this={autoCompleteList} class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box z-10 p-2 mt-2 shadow border border-base-100" style="{dropdownwidthStyle}" tabindex="0">
+                                    {#if autoCompleteOpen} 
+                                        <ul tabindex="-1" bind:this={autoCompleteList} class="menu dropdown-content max-h-0.3 overflow-auto bg-base-200 rounded-box z-5 p-2 mt-4 shadow" style="{dropdownwidthStyle}">
                                             {#each autoCompleteData as name}
                                                 <!-- svelte-ignore a11y-click-events-have-key-events -->
                                                 <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -626,59 +627,37 @@
         </div>
     {:else if col.type == "boolean"}
         {@const disabled = updateDisabled ? "disabled" : ""}
-        <details class="dropdown overflow:visible {disabled}" bind:open={editMenuOpen}  on:toggle={e => editDetailsClicked(e)}>
-            <summary class="btn m-0 -mb-1 w-full {bg}" style="{editminwStyle} {editmaxwStyle}"  tabindex="0"
-                on:blur={(evt) => handleEditBlur(evt)}
-            >{displayValue}</summary>
-            <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-            <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box z-10  p-2 mt-2 shadow border border-base-100" style="{dropdownwidthStyle}" tabindex="0">
-                {#if col.nullable}
-                    <!-- svelte-ignore a11y-missing-attribute -->
-                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                    <!-- svelte-ignore a11y-no-static-element-interactions -->
-                    <li><a on:click={() => editRowUpdate("")}>Unset</a></li>
-                {/if}
-                <!-- svelte-ignore a11y-missing-attribute -->
-                <!-- svelte-ignore a11y-click-events-have-key-events -->
-                <!-- svelte-ignore a11y-no-static-element-interactions -->
-                <li><a on:click={() => editRowUpdate("No")}>No</a></li>
-                <!-- svelte-ignore a11y-missing-attribute -->
-                <!-- svelte-ignore a11y-click-events-have-key-events -->
-                <!-- svelte-ignore a11y-no-static-element-interactions -->
-                <li><a on:click={() => editRowUpdate("Yes")}>Yes</a></li>
-            </ul>
-        </details>  
+        <select class="select" bind:value={displayValue} style="{boolEditminwStyle} {editmaxwStyle}">
+            <option class="hidden" on:click={() => editRowUpdate("")} value=""></option>
+            {#if col.nullable == true}
+                <option on:click={() => editRowUpdate("")} value="">Unset</option>
+            {/if}
+            <option on:click={() => editRowUpdate("No")}>No</option>
+            <option on:click={() => editRowUpdate("Yes")}>Yes</option>
+
+        </select>
+    {:else if col.names}
+        {@const disabled = updateDisabled ? "disabled" : ""}
+        <select class="select" bind:value={displayValue} style="{editminwStyle} {editmaxwStyle}">
+            <option class="hidden" on:click={() => editRowUpdate("")} value=""></option>
+            {#if col.nullable == true}
+                <option on:click={() => editRowUpdate("")} value="">Unset</option>
+            {/if}
+            {#each col.names as val, i}
+                <option on:click={() => editRowUpdate(val+"")}>{val}</option>
+            {/each}                        
+        </select>
     {:else if col.values}
         {@const disabled = updateDisabled ? "disabled" : ""}
-        <details class="dropdown overflow:visible {disabled}" bind:open={editMenuOpen}  on:toggle={e => editDetailsClicked(e)}>
-            <summary class="btn m-0 -mb-1 w-full {bg}" style="{editminwStyle} {editmaxwStyle}"  tabindex="0"
-                on:blur={(evt) => handleEditBlur(evt)}
-            >{displayValue}</summary>
-            <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-            <ul class="menu dropdown-content max-h-1/3 overflow-auto bg-base-200 rounded-box z-10  p-2 mt-2 shadow border border-base-100" style="{dropdownwidthStyle}" tabindex="0">
-                {#if col.nullable}
-                    <!-- svelte-ignore a11y-missing-attribute -->
-                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                    <!-- svelte-ignore a11y-no-static-element-interactions -->
-                    <li><a on:click={() => editRowUpdate("")}>Unset</a></li>
-                {/if}
-                {#if col.names}
-                    {#each col.names as val, i}
-                    <!-- svelte-ignore a11y-missing-attribute -->
-                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                    <!-- svelte-ignore a11y-no-static-element-interactions -->
-                    <li><a on:click={() => editRowUpdate(val+"")}>{val}</a></li>
-                    {/each}
-                {:else}
-                    {#each col.values as val, i}
-                    <!-- svelte-ignore a11y-missing-attribute -->
-                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                    <!-- svelte-ignore a11y-no-static-element-interactions -->
-                    <li><a on:click={() => editRowUpdate(val+"")}>{val}</a></li>
-                    {/each}
-                {/if}
-            </ul>
-        </details>  
+        <select class="select" bind:value={displayValue} style="{editminwStyle} {editmaxwStyle}">
+            <option class="hidden" on:click={() => editRowUpdate("")} value=""></option>
+            {#if col.nullable == true}
+                <option on:click={() => editRowUpdate("")} value="">Unset</option>
+            {/if}
+            {#each col.values as val, i}
+                <option on:click={() => editRowUpdate(val+"")}>{val}</option>
+            {/each}                        
+        </select>
     {/if}
 {/if}
 <div class="hidden bg-required bg-base-200"></div>

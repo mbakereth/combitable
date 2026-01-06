@@ -485,17 +485,22 @@
             <div class="m-4 mt-8 mb-0">
                 {#if addUrl || editUrl }
                     <button class="btn btn-success mt-0 mb-0" disabled={updateDisabled || !internalDirty} on:click={() => saveEdit()}>Save</button>
-                    <button class="btn btn-neutral mt-0 mb-0" disabled={updateDisabled || (!internalDirty && !isAdd)} on:click={() => cancelEdit()}>Cancel</button>
-                {/if}                 
+
+                    <button class="btn btn-neutral mt-0 mb-0 ml-2" disabled={updateDisabled || (!internalDirty && !isAdd)} on:click={() => cancelEdit()}>Cancel</button>
+                {/if}               
+
                 {#if addUrl && newUrl }
-                <button class="btn btn-primary mt-0 mb-0" disabled={updateDisabled || internalDirty || isAdd} on:click={async () => {await newEntry(newUrl);}}>New</button>
-                {/if}                 
+                <button class="btn btn-primary mt-0 mb-0 ml-2" disabled={updateDisabled || internalDirty || isAdd} on:click={async () => {await newEntry(newUrl);}}>New</button>
+                {/if}   
+
                 {#if deleteUrl }
-                <button class="btn btn-error mt-0 mb-0" disabled={updateDisabled || internalDirty} on:click={() => deleteRow()}>Delete</button>
+                <button class="btn btn-error mt-0 mb-0 ml-2" disabled={updateDisabled || internalDirty} on:click={() => deleteRow()}>Delete</button>
                 {/if}    
+
                 {#each extraButtons as button}
-                <button class="btn mt-0 mb-0" on:click={button.action()}>{button.label}</button>
-                {/each}             
+                <button class="btn mt-0 mb-0 ml-2" on:click={button.action()}>{button.label}</button>
+                {/each}          
+
             </div>    
         {/if}                 
     </div>
