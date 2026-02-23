@@ -894,7 +894,6 @@
 
             // call link
             const url = col.autoCompleteLink + "?t="+encodeURIComponent(value);
-            console.log("calling", url)
             const resp = await fetch(url, {
                 method: "GET",
                 headers: {"content-type": "application/json"},
@@ -904,7 +903,7 @@
                 return;
             } else {
                 const body = await resp.json() as string[];
-                console.log(body)
+                //console.log("Autocomplete", body)
                 autoCompleteData = [...body];
             }
 
@@ -1035,7 +1034,10 @@
                     if (col.type == "partialdate" && typeof(val) == "object" && "type" in val) {
                         dateType = val.type
                     }
-                    editRowText[colName] = asString(printPartialDate(val.date, dateType), col.type, dateType);
+                    if (col.type == "date" || col.type == "partialdate")
+                        editRowText[colName] = asString(printPartialDate(val.date, dateType), col.type, dateType);
+                    else
+                        editRowText[colName] = asString(val);
                 }
                 editRowText = {...editRowText}
             }
@@ -1524,7 +1526,7 @@
                         </p>
                     </td>
                 </tr>
-                <tr class="0 mt-0">
+                <tr class="mt-0">
                     {#if select}
                         <!-- checkbox column -->
                         <td></td>
@@ -1537,7 +1539,7 @@
                         {@const dropdownwidthStyle = col.dropdownWidth ? "width:" + col.dropdownWidth : ";"}
                         <td class="align-bottom" style="{cmaxwStyle}">
                             {#if col.type == "boolean"}
-                                <select class="select" bind:value={filterText[col.col]} style="{boolEditminwStyle} {editmaxwStyle}">
+                                <select class="select" bind:value={filterText[col.col]} style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}">
                                     <option class="hidden" on:click={() => filter(col, undefined)} value=""></option>
                                     <option on:click={() => filter(col, undefined)} value="">Unset</option>
                                     <option on:click={() => filter(col, false)}>No</option>
@@ -1545,7 +1547,7 @@
                     
                                 </select>
                             {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
-                                <select class="select" bind:value={filterText[col.col]} style="{editminwStyle} {editmaxwStyle}">
+                                <select class="select" bind:value={filterText[col.col]} style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}">
                                     <option class="hidden" on:click={() => filter(col, "")} value=""></option>
                                     <option on:click={() => filter(col, "")} value="">Unset</option>
                                     {#each col.names as name, i}
@@ -1555,13 +1557,13 @@
                                 </select>
 
                             {:else if col.autoCompleteLink}    
-                                <div class="acdropdown overflow:visible">
-                                    <input tabindex="0" role="button" class="input m-0 -mb-1 w-full bg-base-200" style="{editminwStyle} {editmaxwStyle}"
+                                <div class="dropdown overflow:visible dropdown-open">
+                                    <input class="input m-0 w-full bg-base-200" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
                                         on:keyup={(evt) => autoCompleteKeyPress(evt, col, filterText[col.col], true)}
                                         bind:value={filterText[col.col]}/>
                                     <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                    {#if autoCompleteOpen[col.col]}
-                                    <ul tabindex="-1" bind:this={autoCompleteDivs[col.col]} class="menu dropdown-content max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-4 shadow" style="{dropdownwidthStyle}">
+                                    {#if autoCompleteOpen[col.col] && editRow == undefined}
+                                    <ul tabindex="-1" bind:this={autoCompleteDivs[col.col]} class="menu dropdown-content border-1 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-4 shadow" style="{dropdownwidthStyle}">
                                         {#each autoCompleteData as name}
                                             <!-- svelte-ignore a11y-click-events-have-key-events -->
                                             <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -1569,10 +1571,10 @@
                                             <li><a on:click={() => autoCompleteUpdate_filter(col, name)}>{name}</a></li>
                                         {/each}
                                     </ul>
-                                    {/if}
+                                    {/if}                                                                            
                                 </div>
                             {:else}
-                                <input type="text" class="input bg-base-200 w-full" style="{editminwStyle} {editmaxwStyle}" 
+                                <input type="text" class="input bg-base-200 w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
                                     bind:value={filterText[col.col]} 
                                     on:blur={() => filter(col, filterText[col.col])} 
                                     on:keypress={(evt) => filterKeyPress(evt, col, filterText[col.col])}/>
@@ -1595,15 +1597,15 @@
 
             <!-- add row -->
             {#if !updateDisabled && ((addUrl && editable) || linkUrl)}
-                <tr class="0">
+                <tr class="">
                     {#if editRow == -1 || editRow == -2}
                         {#if select}
                             <!-- checkbox column -->
                             <td></td>
                         {/if}
                         {#each columns as col, colidx}
+                            {@const boolEditMinWidthStyle = col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"}
                             {@const editminwStyle = col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""}
-                            {@const boolditminwStyle = col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"}
                             {@const editmaxwStyle = col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}
                             {@const dropdownwidthStyle = col.dropdownWidth ? "width:" + col.dropdownWidth + ";" : ""}
                             {@const cmaxwStyle = maxWidthStyle[col.col]}
@@ -1615,7 +1617,7 @@
                                     {/if}
                                     {#if !col.readOnly}
                                         {#if col.type == "boolean"}
-                                            <select class="select" bind:value={filterText[col.col]} style="{boolditminwStyle} {editmaxwStyle}">
+                                            <select class="select" bind:value={filterText[col.col]} style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}">
                                                 <option class="hidden" on:click={() => filter(col, undefined)} value=""></option>
                                                 {#if col.nullable == true}
                                                     <option on:click={() => editRowUpdate(col, null)} value="">Unset</option>
@@ -1625,7 +1627,7 @@
                                 
                                             </select>
                                         {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
-                                        <select class="select" bind:value={filterText[col.col]} style="{editminwStyle} {editmaxwStyle}">
+                                        <select class="select" bind:value={filterText[col.col]} style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}">
                                             <option class="hidden" on:click={() => editRowUpdate(col, null)} value=""></option>
                                             {#if col.nullable == true}
                                                 <option on:click={() => editRowUpdate(col, null)} value="">Unset</option>
@@ -1635,14 +1637,14 @@
                                             {/each}                        
                                         </select>
                                         {:else if col.autoCompleteLink}    
-                                            <div class="acdropdown overflow:visible">
-                                                <input tabindex="0" role="button" class="input m-0 -mb-1 w-full {bg} cursor-text" style="{editminwStyle} {editmaxwStyle}"
+                                            <div class="dropdown overflow:visible dropdown-open">
+                                                <input class="input m-0 -mb-1 w-full {bg} cursor-text" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
                                                     on:keyup={(evt) => autoCompleteKeyPress(evt, col, editRowText[col.col], false)}
                                                     on:focusout={(event) => {handleACBlur(event, col)}}
                                                     bind:value={editRowText[col.col]}/>
                                                 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                                 {#if autoCompleteOpen[col.col]}
-                                                    <ul tabindex="-1" bind:this={autoCompleteDivs[col.col]} class="menu dropdown-content max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-4 shadow" style="{dropdownwidthStyle}">
+                                                 {#if autoCompleteOpen[col.col] && editRow == -1}
+                                                    <ul tabindex="-1" bind:this={autoCompleteDivs[col.col]} class="menu dropdown-content border-1 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-4 shadow" style="{dropdownwidthStyle}">
                                                     {#each autoCompleteData as name}
                                                         <!-- svelte-ignore a11y-click-events-have-key-events -->
                                                         <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -1653,7 +1655,7 @@
                                                 {/if}
                                             </div>
                                         {:else}
-                                            <input type="text" class="input w-full {bg}" style="{editminwStyle} {editmaxwStyle}" 
+                                            <input type="text" class="input w-full {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
                                                 bind:value={editRowText[col.col]} 
                                                 on:keyup={(evt) => editInputUpdate(evt, col)}
                                             />
@@ -1715,6 +1717,7 @@
                             <div class="form-control">
                                 <label class="label cursor-pointer">
                                   <input type="checkbox" bind:checked={rowChecked[rowidx]} class="checkbox rounded-field" />
+                                </label>
                               </div>
                             {/if}                            
                         </td>
@@ -1772,7 +1775,7 @@
                                     {/if}
                                 {:else}
                                     {#if col.type == "boolean"}
-                                        <select class="select" bind:value={filterText[col.col]} style="{boolEditminwStyle} {editmaxwStyle}">
+                                        <select class="select" bind:value={filterText[col.col]} style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}">
                                             <option class="hidden" on:click={() => filter(col, undefined)} value=""></option>
                                             {#if col.nullable == true}
                                                 <option on:click={() => editRowUpdate(col, null)} value="">Unset</option>
@@ -1782,7 +1785,7 @@
                             
                                         </select>
                                     {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
-                                        <select class="select" bind:value={filterText[col.col]} style="{editminwStyle} {editmaxwStyle}">
+                                        <select class="select" bind:value={filterText[col.col]} style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}">
                                             <option class="hidden" on:click={() => editRowUpdate(col, null)} value=""></option>
                                             {#if col.nullable == true}
                                                 <option on:click={() => editRowUpdate(col, null)} value="">Unset</option>
@@ -1792,13 +1795,13 @@
                                             {/each}                        
                                         </select>
                                     {:else if col.autoCompleteLink}    
-                                        <div class="acdropdown overflow:visible">
-                                            <input tabindex="0" role="button" class="input m-0 -mb-1 w-full {bg} cursor-text" style="{editminwStyle} {editmaxwStyle}"
+                                        <div class="dropdown overflow:visible dropdown-open">
+                                            <input class="input m-0 -mb-1 w-full {bg} cursor-text" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
                                                 on:keyup={(evt) => autoCompleteKeyPress(evt, col, editRowText[col.col], false)}
                                                 on:focusout={(event) => {handleACBlur(event, col)}}
                                                 bind:value={editRowText[col.col]}/>
                                             <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                                                {#if autoCompleteOpen[col.col]}
+                                                {#if autoCompleteOpen[col.col] && editRow >= 0}
                                                 <ul tabindex="-1" bind:this={autoCompleteDivs[col.col]} class="menu dropdown-content max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-4 shadow" style="{dropdownwidthStyle}">
                                                 {#each autoCompleteData as name}
                                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -1810,7 +1813,7 @@
                                             {/if}
                                         </div>
                                     {:else}
-                                        <input type="text" class="input {bg} w-full" style="{editminwStyle} {editmaxwStyle}" 
+                                        <input type="text" class="input {bg} w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
                                             bind:value={editRowText[col.col]} 
                                             on:keyup={(evt) => editInputUpdate(evt, col)}
                                             />

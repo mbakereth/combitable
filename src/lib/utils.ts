@@ -31,7 +31,7 @@ import { PartialDateType } from '$lib/types'
  * @param cols tables and columns to allow (see description)
  * @returns a JSON array of results
  */
-export async function autocomplete(client : any, event : RequestEvent, cols? : {[key:string]: string[]}) : Promise<Response> {
+export async function autocomplete(client : any, event : RequestEvent, cols? : {[key:string]: string[]}, insensitive=false) : Promise<Response> {
     const table = event.params.table;
     const col = event.params.col;
 
@@ -67,7 +67,7 @@ export async function autocomplete(client : any, event : RequestEvent, cols? : {
     const parts = (col??"").split(".")
     let include : {[key:string]:any}|undefined = undefined;
     let select : {[key:string]:any}|undefined = undefined;
-    let where : {[key:string]:any} = {[parts[parts.length-1]]: {startsWith: text}};
+    let where : {[key:string]:any} = {[parts[parts.length-1]]: {startsWith: text, mode: insensitive ? "insensitive" : "sensitive"}};
     
     if (parts.length == 1) {
         select = {[parts[parts.length-1]]: true};
