@@ -1,6 +1,6 @@
 {
 	"name": "@mbakereth/combitable",
-	"version": "1.6.3",
+	"version": "1.6.4",
 	"private": false,
 	"license": "Apache-2.0",
 	"description": "SvelteKit table component using TailwindCSS and Daisy UI",
