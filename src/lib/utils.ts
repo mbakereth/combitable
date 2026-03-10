@@ -67,7 +67,9 @@ export async function autocomplete(client : any, event : RequestEvent, cols? : {
     const parts = (col??"").split(".")
     let include : {[key:string]:any}|undefined = undefined;
     let select : {[key:string]:any}|undefined = undefined;
-    let where : {[key:string]:any} = {[parts[parts.length-1]]: {startsWith: text, mode: insensitive ? "insensitive" : "sensitive"}};
+    const isPostgres = process.env["DATABASE_URL"]?.startsWith("postgres");
+    const mode = isPostgres ? {mode: insensitive ? "insensitive" : "sensitive"} : {}
+    let where : {[key:string]:any} = {[parts[parts.length-1]]: {startsWith: text, ...mode}};
     
     if (parts.length == 1) {
         select = {[parts[parts.length-1]]: true};

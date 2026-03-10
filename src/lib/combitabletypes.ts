@@ -136,7 +136,6 @@ export interface CombiTableColumn {
     editHeight? : string,
     prismaWhereIgnore? : boolean,
     prismaOrderByIgnore? : boolean,
-
 }
 
 /**

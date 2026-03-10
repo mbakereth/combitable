@@ -6,6 +6,7 @@
     and filtering as URL parameters
  -->
 <script lang="ts">
+    // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
 
     type Props = {
 
@@ -165,11 +166,19 @@
        /**
         * Bind to this to find out when the table has unsaved data
         */
-       dirty? : false
+       dirty? : boolean
 
+       /**
+        * When a value is empty, display this
+        */
+       emptyValue? : string
+
+       addExtra? : CombiTableExtraButton[]
+
+       navExtra? : CombiTableExtraButton[]
+
+       emptySearch? : string,
     }
-    // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
-    import { tick } from 'svelte';
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
     import { goto, invalidateAll } from '$app/navigation'
@@ -192,66 +201,85 @@
 
     let table : Element;
 
-    export let rows : {[key:string]:any|undefined}[];
-    $: rrows = rows;
-    export let columns : CombiTableColumn[];
-    export let enableSort = false;
-    export let enableFilter = false;
-    export let defaultSort : string;
-    export let dateFormat = "yyyy-mm-dd"; // or "yyyy-mm-dd" or "mm-dd-yyyy"
-    export let paginate = 0;
-    export let havePrevious = false;
-    export let haveNext = false;
-    export let addUrl : string|undefined = undefined;
-    export let linkUrl : string|undefined = undefined;
-    export let unlinkUrl : string|undefined = undefined;
-    export let editUrl : string|undefined = undefined;
-    export let deleteUrl : string|undefined = undefined;
-    export let presets : CombiTablePresets|undefined = undefined;
-    export let linkFormat : string = "";
-    export let urlSuffix : string = "";
-    export let widthType : "auto"|"fixed" = "auto";
-    export let primaryKey : string = "";
-    export let select : boolean = false;
-    export let restOfScreenHeight : number|undefined = undefined;
-    export let stickyHeadRow = false;
-    export let ops : CombiTableOp[] = [];
-    export let preview : boolean = false;
-    export let link: ((row:{[key:string]:any}, i? : number) => string)|undefined = undefined;
-    export let onUpdate : (()=>Promise<void>) | undefined = undefined;
-    export let updateDisabled = false;
-    export let dirty = false;
+    let {
+        rows,
+        columns,
+        enableSort,
+        enableFilter = false,
+        defaultSort = "",
+        dateFormat = "yyyy-mm-dd",
+        paginate = 0,
+        havePrevious = false,
+        haveNext = false,
+        addUrl = undefined,
+        linkUrl = undefined,
+        unlinkUrl = undefined,
+        editUrl = undefined,
+        deleteUrl = undefined,
+        presets = undefined,
+        linkFormat = "",
+        urlSuffix = "",
+        widthType = "auto",
+        primaryKey = "",
+        select = false,
+        restOfScreenHeight = undefined,
+        stickyHeadRow = false,
+        ops = [],
+        preview = false,
+        link = undefined,
+        onUpdate = undefined,
+        updateDisabled = undefined,
+        dirty = $bindable(false),
+        emptyValue = "-",
+        addExtra = [],
+        navExtra = [],
+        primaryKeysChecked = $bindable([]),
+        emptySearch = "-",
+    } : Props = $props();
+
+    const objectMap = (obj : {[key:string]:any}, fn : (value: any) => any) =>
+        Object.fromEntries(
+            Object.entries(obj).map(
+            ([k, v]) => [k, fn(v)]
+            )
+        );
+
+    const columnMap = (cols : CombiTableColumn[], fn : (v: CombiTableColumn) => any) =>
+        Object.fromEntries(
+            cols.map((c) => [c.col, fn(c)])
+            );
+    
+
+    let rrows = $derived(rows);
 
     let uuid = crypto.randomUUID();
 
     let haveOps = ops.length > 0;
     if (haveOps) select = true;
-    export let addExtra : CombiTableExtraButton[] = [];
     let haveAddExtra = addExtra.length > 0;
-    export let navExtra : CombiTableExtraButton[] = [];
     let haveNavExtra = navExtra.length > 0;
 
     let stickyHeadRowClass = stickyHeadRow ? "sticky top-0" : "";
 
-    $: rowChecked = rows.map((row) => false);
-    $: rowsAreChecked = rowChecked.reduce(
+    let rowChecked = $state(rows.map((row) => false));
+    let rowsAreChecked = $derived(rowChecked.reduce(
         (accumulator, currentValue) => accumulator || currentValue,
         false,
-    );
-    export let primaryKeysChecked : (string|number)[] = [];
-    $: {
+    ));
+    $effect(() => {
         if (primaryKey) {
             primaryKeysChecked = [];
             rowChecked.forEach((checked, i) => {
                 if (checked) primaryKeysChecked.push(rrows[i][primaryKey]);
             });
         }
-    }
+    });
 
-    let innerWidth = 0
-    let innerHeight = 0
-    $: maxHeight = restOfScreenHeight ? innerHeight - restOfScreenHeight : undefined;
-    $: tableHeightStyle = maxHeight && innerWidth > 0 ? "display: block; max-height:" + maxHeight + "px; min-height: " + maxHeight + "px" : "";
+    let innerWidth = $state(0)
+    let innerHeight = $state(0)
+    let maxHeight = $derived(restOfScreenHeight ? innerHeight - restOfScreenHeight : undefined);
+    let tableHeightStyle = $derived(maxHeight && innerWidth > 0 ? "display: block; max-height:" + maxHeight + "px; min-height: " + maxHeight + "px" : "");
+
     function resize() {
         maxHeight = restOfScreenHeight ? innerHeight - restOfScreenHeight : undefined;
         tableHeightStyle = maxHeight ? "display: block; max-height:" + maxHeight + "px; min-height: " + maxHeight + "px;" : "";
@@ -267,8 +295,8 @@
 		}
     });
 
-    export function printDate(date : Date|undefined|null) : string {
-        if (!date) return "-";
+    export function printDate(date : Date|undefined|null, edit=false) : string {
+        if (!date) return edit ? "" : emptyValue;
         if (dateFormat == "yyyy-mm-dd") {
             return String(date.getFullYear()) + "-" + String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getDate()).padStart(2, '0')
         }
@@ -278,8 +306,8 @@
         return String(date.getDate()).padStart(2, '0') + "-" + String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getFullYear())
     }
 
-    export function printPartialDate(date : Date|undefined|null, dateType: PartialDateType) : string {
-        if (!date) return "-";
+    export function printPartialDate(date : Date|undefined|null, dateType: PartialDateType, edit=false) : string {
+        if (!date) return edit ? "" : emptyValue;
         if (dateType == PartialDateType.year) {
             return String(date.getFullYear());
         } else if (dateType == PartialDateType.month) {
@@ -374,29 +402,42 @@
 
     // put the name of the primary key in pk
     // also save select maps
-    let pk  = primaryKey;
-    let selectMap : {[key:string] : {[key:string|number]:string}} = {}
-    let selectReverseMap : {[key:string] : {[key:string]:string|number}} = {}
-    let editable = true;
-    for (let column of columns) {
-        if ((column.type == "select:string" || column.type == "select:integer") && column.names && column.values) {
-            selectMap[column.col] = {};
-            selectReverseMap[column.col] = {};
-            for (let i=0; i<column.values.length; ++i) {
-                selectMap[column.col][column.values[i]] = column.names[i];
-                selectReverseMap[column.col][column.names[i]] = column.values[i];
+    let pk  = $derived(primaryKey);
+    let selectMap : {[key:string] : {[key:string|number]:string}} = $derived.by(() => {
+        let ret : {[key:string] : {[key:string|number]:string}} = {}
+        for (let column of columns) {
+            if ((column.type == "select:string" || column.type == "select:integer") && column.names && column.values) {
+                ret[column.col] = {};
+                for (let i=0; i<column.values.length; ++i) {
+                    ret[column.col][column.values[i]] = column.names[i];
+                }
             }
-        } else if (column.type == "array:string") {
-            editable = false;
         }
-    }
-    if (!editable && (addUrl || editUrl)) {
-        console.log("Warning: Add and edit disabled as array:string is not supported when editing table data");
-    }
-    if (pk == "" && (editUrl)) {
-        console.log("Warning: edit enabled but no primary key column - disabling edit");
-        editUrl = undefined;
-    }
+        return ret;
+    });
+    let selectReverseMap : {[key:string] : {[key:string]:string|number}} = $derived.by(() => {
+        let ret :  {[key:string] : {[key:string]:string|number}} = {};
+        for (let column of columns) {
+            if ((column.type == "select:string" || column.type == "select:integer") && column.names && column.values) {
+                selectReverseMap[column.col] = {};
+                for (let i=0; i<column.values.length; ++i) {
+                    selectReverseMap[column.col][column.names[i]] = column.values[i];
+                }
+            }
+        }
+        return ret
+    });
+
+    let editable = $derived(columns.reduce((acc, cur) => acc && cur.type != "array:string", true));
+    $effect(() => {
+        if (!editable && (addUrl || editUrl)) {
+            console.log("Warning: Add and edit disabled as array:string is not supported when editing table data");
+        }
+        if (pk == "" && (editUrl)) {
+            console.log("Warning: edit enabled but no primary key column - disabling edit");
+            editUrl = undefined;
+        }
+    })
 
     function parseISODate(s : String) {
         let b = s.split(/\D+/);
@@ -439,14 +480,14 @@
         return val == undefined ? undefined : asNumber(val);
     }
 
-    function asString(val : string|number|boolean|undefined|Date, type : string|undefined=undefined, dateType: PartialDateType=PartialDateType.date) : string {
+    function asString(val : string|number|boolean|undefined|Date, type : string|undefined=undefined, dateType: PartialDateType=PartialDateType.date, edit = false) : string {
         if (val == undefined) return "";
         if (typeof(val) == "boolean") return val ? "Yes" : "No";
         if (typeof(val) == "number") return val+"";
         if (typeof(val) == "string") return val;
-        if (val instanceof Date && type=="date") printDate(val)
-        if (val instanceof Date && type=="partialdate") printPartialDate(val, dateType)
-        if (val instanceof Date) return printDate(val);
+        if (val instanceof Date && type=="date") printDate(val, edit)
+        if (val instanceof Date && type=="partialdate") printPartialDate(val, dateType, edit)
+        if (val instanceof Date) return printDate(val, edit);
         if (typeof(val) == "object" && "name" in val) return val["name"];
         return ""+val;
     }
@@ -507,8 +548,8 @@
     
     // format a value of arbitrary type for displaying in the table
     // according to the column type
-    function formatColumn(val : any, col: CombiTableColumn) {
-        if (val == undefined) return "-";
+    function formatColumn(val : any, col: CombiTableColumn, editing=false) {
+        if (val == undefined) return editing ? "" : emptyValue;
         if (typeof(val) == "boolean") {
             return val ? "Yes" : "No";
         }
@@ -663,7 +704,7 @@
                 delete filters[col.col];
                 filters = {...filters};
             } else {
-                filters[col.col] = value ? "Yes" : "No";
+                filters[col.col] = value ? "t" : "f";
                 filters = {...filters};
             }
         } else if (col.type == "select:string" || col.type == "select:integer") {
@@ -770,82 +811,104 @@
 
     }
 
-    $: sortCol = defaultSort;
-    $: sortDirection = "ascending";
-    $: searchParams = "";
-    $: filters = {} as {[key:string]:string};
-    $: haveFilters = false;
-    $: internalDirty = false;
-    dirty = internalDirty;
-    $: ids = [] as number[];
-    $: {
-        const url = new SearchUrl($page.url, paginate);
+
+    let filterText : {[key:string]:string} = $state(columnMap(columns, v => ""))
+    let filterValues : {[key:string]:string} = $state(columnMap(columns, v => ""))
+    let filterMenusOpen : {[key:string]:boolean} = $state(columnMap(columns, v => false))
+
+    const url = $derived(new SearchUrl($page.url, paginate));
+    let urlfilters = url.getFilters();
+    let sortCol = "";
+    let sortDirection = "ascending";
+    let searchParams = "";
+    let filters : {[key:string]:string}= {};
+    let haveFilters = $state(false);
+    $effect(() => {
         url.setSuffix(urlSuffix);
         url.setDefaultSortCol(defaultSort);
+        url.setSuffix(urlSuffix);
+        urlfilters = url.getFilters();
+
         const resp = url.getSort();
         sortCol = resp.sortCol;
         sortDirection = resp.sortDirection;
         searchParams = `?${url.searchParamsAsString()}`;
         filters = url.getFilters();
         haveFilters = Object.keys(filters).length > 0
-        ids = url.getIds();
-    }
-    let filterText : {[key:string]:string} = {}
-    let filterValues : {[key:string]:string} = {}
-    let filterMenusOpen : {[key:string]:boolean} = {}
-    columns.forEach((val: CombiTableColumn, i: number) => {filterMenusOpen[val.col] = false})
-    const url = new SearchUrl($page.url, paginate);
-    url.setSuffix(urlSuffix);
-    let urlfilters = url.getFilters();
-    for (let col in urlfilters) {
-        if (col in filterText || true) {
-            for (let i=0; i<columns.length; ++i) {
-                if (col == columns[i].col) {
-                    if (columns[i].type == "boolean") {
-                        filterText[col] = urlfilters[col] == "t" ? "Yes" : "No"
-                        filterValues[col] = urlfilters[col];
-                    } else if (columns[i].type == "date" || columns[i].type == "partialdate") {
-                        let parts = urlfilters[col].split("_")
-                        if (parts.length > 1) {
-                            if (parts[1] == PartialDateType.datetime+"" || parts[1] == PartialDateType.date+"") {
-                                filterText[col] = parts[0]
-                            } else if (parts[1] == PartialDateType.month+"") {
-                                let date = parseDate(parts[0], "yyyy-mm-dd")
-                                filterText[col] = filterDateText(date, PartialDateType.month);
-                            } else if (parts[1] == PartialDateType.year+"") {
-                                let date = parseDate(parts[0], "yyyy-mm-dd")
-                                filterText[col] = filterDateText(date, PartialDateType.year);
-                            } 
-                        }
 
-                    } else if (columns[i].type == "select:string" || columns[i].type == "select:integer") {
-                            let values = columns[i].values ?? [];
-                            let names = columns[i].names ?? values;
-                            for (let j=0; j<values.length; ++j) {
-                                if (urlfilters[col] == values[j]) {
-                                    filterValues[col] = values[j]+"";
-                                    filterText[col] = names[j]+"";
-                                }
+        for (let col of columns) {
+            if (!(col.col in urlfilters)) {
+                filterText[col.col] = "";
+            }
+        }
+        for (let col in urlfilters) {
+            if (col in filterText || true) {
+                for (let i=0; i<columns.length; ++i) {
+                    if (col == columns[i].col) {
+                        if (columns[i].type == "boolean") {
+                            filterText[col] = urlfilters[col] == "t" ? "Yes" : "No"
+                            filterValues[col] = urlfilters[col];
+                        } else if (columns[i].type == "date" || columns[i].type == "partialdate") {
+                            let parts = urlfilters[col].split("_")
+                            if (parts.length > 1) {
+                                if (parts[1] == PartialDateType.datetime+"" || parts[1] == PartialDateType.date+"") {
+                                    filterText[col] = parts[0]
+                                } else if (parts[1] == PartialDateType.month+"") {
+                                    let date = parseDate(parts[0], "yyyy-mm-dd")
+                                    filterText[col] = filterDateText(date, PartialDateType.month);
+                                } else if (parts[1] == PartialDateType.year+"") {
+                                    let date = parseDate(parts[0], "yyyy-mm-dd")
+                                    filterText[col] = filterDateText(date, PartialDateType.year);
+                                } 
                             }
 
-                    } else {
-                        filterValues[col] = urlfilters[col];
-                        filterText[col] = urlfilters[col];
+                        } else if (columns[i].type == "select:string" || columns[i].type == "select:integer") {
+                                let values = columns[i].values ?? [];
+                                let names = columns[i].names ?? values;
+                                for (let j=0; j<values.length; ++j) {
+                                    if (urlfilters[col] == values[j]) {
+                                        filterValues[col] = values[j]+"";
+                                        filterText[col] = names[j]+"";
+                                    }
+                                }
+
+                        } else {
+                            filterValues[col] = urlfilters[col];
+                            filterText[col] = urlfilters[col];
+                        }
                     }
                 }
             }
+        }    
+    })
+    let internalDirty = $state(false);
+    let ids = $derived(url.getIds());
+
+    function closeFilter(evt : FocusEvent, col: CombiTableColumn) {
+        let id = (evt.relatedTarget as any)?.id as string;
+        if (!id || !(id.startsWith("filter_select_"+col.col+"-"))) {
+            for (let col of columns) {
+                filterMenusOpen[col.col] = false;
+            }
         }
-    }    
+    }
+    function closeEdit(evt : FocusEvent, col: CombiTableColumn) {
+        let id = (evt.relatedTarget as any)?.id as string;
+        if (!id || !(id.startsWith("edit_select_"+col.col+"-"))) {
+            for (let col of columns) {
+                editRowMenusOpen[col.col] = false;
+            }
+        }
+    }
+    //$effect(() => {
+
+    //})
 
     //////
     // Auto complete
 
-    let autoCompleteDivs : {[key:string]:Element|null} = {};
-    columns.forEach((val: CombiTableColumn, i: number) => {autoCompleteDivs[val.col] = null})
-    let autoCompleteData : string[];
-    $: autoCompleteData = [];
-    let autoCompleteOpen : {[key:string]:boolean} = {};
-    columns.forEach((val: CombiTableColumn, i: number) => {autoCompleteOpen[val.col] = false})
+    let autoCompleteData : string[] = $state([]);
+    let autoCompleteOpen : {[key:string]:boolean} = $state(columnMap(columns, v => false));
 
     function autoCompleteUpdate_filter(col : CombiTableColumn, value : string|undefined|null) {
         if (value) {
@@ -908,7 +971,7 @@
             }
 
             if (autoCompleteData.length > 0) {
-                let target = autoCompleteDivs[col.col];
+                let target = isFilter ? document.getElementById("filter_ac_"+col.col) : document.getElementById("edit_ac_"+col.col);
                 if (target instanceof Element) {
                     if (target.getBoundingClientRect().bottom > table.getBoundingClientRect().bottom) {
                         setTimeout(() => {target.scrollIntoView({behavior: "smooth", block: "nearest"})}, 100); 
@@ -923,8 +986,10 @@
             autoCompleteData = []
         }
         
-        internalDirty = true;
-        dirty = internalDirty;
+        if (!isFilter) {
+            internalDirty = true;
+            dirty = internalDirty;
+        }
     }
 
     /////
@@ -959,27 +1024,10 @@
         return presets[colName];
     }
 
-    $: editRow = undefined as number|undefined;
-    $: editRowSelectValue = {} as {[key:string]:string|number|boolean|undefined};
-    let editRowText : {[key:string]:string} = {}
-    columns.forEach((val: CombiTableColumn, i: number) => {editRowText[val.col] = ""})
-    let editRowMenusOpen : {[key:string]:boolean} = {}
-    columns.forEach((val: CombiTableColumn, i: number) => {editRowMenusOpen[val.col] = false})
-
-    function filterDetailsClicked(col : CombiTableColumn) {
-        //console.log(filterMenusOpen[col.col])
-    }
-
-    function editDetailsClicked(e : Event, col : CombiTableColumn) {
-        if (editRowMenusOpen[col.col]) {
-            let target = e.currentTarget;
-            if (target instanceof Element) {
-                //if (target.getBoundingClientRect().bottom > table.getBoundingClientRect().bottom) {
-                    target.scrollIntoView({behavior: "smooth", block: "start"}); 
-                //}
-            }
-        }
-    }
+    let editRow = $state(undefined as number|undefined);
+    let editRowSelectValue : {[key:string]:string|number|boolean|undefined} = $state(columnMap(columns, v => undefined));
+    let editRowText : {[key:string]:string} = $state(columnMap(columns, v => ""));
+    let editRowMenusOpen : {[key:string]:boolean} = $state(columnMap(columns, v => false))
 
     function edit(rowidx : number) {
         // make sure all dropdowns are closed
@@ -1035,9 +1083,9 @@
                         dateType = val.type
                     }
                     if (col.type == "date" || col.type == "partialdate")
-                        editRowText[colName] = asString(printPartialDate(val.date, dateType), col.type, dateType);
+                        editRowText[colName] = asString(printPartialDate(val.date, dateType, true), col.type, dateType);
                     else
-                        editRowText[colName] = asString(val);
+                        editRowText[colName] = asString(val, undefined, PartialDateType.date, true);
                 }
                 editRowText = {...editRowText}
             }
@@ -1084,7 +1132,7 @@
                     //let val = presets && col.col in presets ? presets[col.col] : undefined;
                     const val = getPreset(col);
                     let dateType : PartialDateType = PartialDateType.date;
-                    if (col.type == "partialdate" && col.col + "_type" in rrows[rowidx]) {
+                    if (col.type == "partialdate" && rrows[rowidx] && col.col + "_type" in rrows[rowidx]) {
                         dateType = rrows[rowidx][col.col + "_type"] as PartialDateType
                     }
                     /*if (col.type == "partialdate" && typeof(val) == "object" && "type" in val) {
@@ -1178,8 +1226,8 @@
         }
     }
 
-    $: validationErrors = undefined as string[]|string|undefined;
-    $: opInfo = "";
+    let validationErrors = $state(undefined as string[]|string|undefined);
+    let opInfo = $state("");
 
     async function saveEdit() {
         if (preview) {
@@ -1455,7 +1503,9 @@
         // currentTarget is the parent element, relatedTarget is the clicked element
         //setTimeout(() => {autoCompleteUpdate(col, null)}, 100);
         if (event.relatedTarget == null || !event.relatedTarget && event.currentTarget.parentNode.contains(event.relatedTarget)) {
-            autoCompleteUpdate(col, null);
+            //autoCompleteUpdate(col, null);
+            autoCompleteOpen[col.col] = false;
+            autoCompleteData = [];
         }
 
 }
@@ -1481,7 +1531,7 @@
                     <th class="z-10" style="{minwStyle} {maxwStyle}">
                         {#if enableSort && (col.sortable === undefined || col.sortable == true)}
                             <!-- svelte-ignore a11y-invalid-attribute -->
-                            <a href="#" on:click={() => sort(col.col)}>
+                            <a href="#" onclick={() => sort(col.col)}>
                                 {col.name}</a>&nbsp;{#if col.col == sortCol}
                                 <span class="tail-icon align-text-top">
                                     {#if sortDirection == "ascending"}
@@ -1521,7 +1571,7 @@
                                     <!-- svelte-ignore a11y-missing-attribute -->
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                    &nbsp;&nbsp;<a class="cursor-pointer" on:click={() => clearIds()}>[Clear ID filter]</a>
+                                    &nbsp;&nbsp;<a class="cursor-pointer" onclick={() => clearIds()}>[Clear ID filter]</a>
                             {/if}
                         </p>
                     </td>
@@ -1539,56 +1589,53 @@
                         {@const dropdownwidthStyle = col.dropdownWidth ? "width:" + col.dropdownWidth : ";"}
                         <td class="align-bottom" style="{cmaxwStyle}">
                             {#if col.type == "boolean"}
-                                <select class="select" bind:value={filterText[col.col]} style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}">
-                                    <option class="hidden" on:click={() => filter(col, undefined)} value=""></option>
-                                    <option on:click={() => filter(col, undefined)} value="">Unset</option>
-                                    <option on:click={() => filter(col, false)}>No</option>
-                                    <option on:click={() => filter(col, true)}>Yes</option>
-                    
-                                </select>
-                            {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
-                                <select class="select" bind:value={filterText[col.col]} style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}">
-                                    <option class="hidden" on:click={() => filter(col, "")} value=""></option>
-                                    <option on:click={() => filter(col, "")} value="">Unset</option>
+                                <details class="dropdown" bind:open={filterMenusOpen[col.col]}>
+                                <summary class="input bg-base-200" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
+                                onblur={(evt) => closeFilter(evt, col)}>{filterText[col.col]}</summary>
+                                <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
+                                    <li><a tabindex="0" id={"filter_select_"+col.col+"-"} onclick={() => filter(col, undefined)}>Unset</a></li>
+                                    <li><a tabindex="0" id={"filter_select_"+col.col+"-f"} onclick={() => filter(col, false)}>No</a></li>
+                                    <li><a tabindex="0" id={"filter_select_"+col.col+"-t"} onclick={() => filter(col, true)}>Yes</a></li>
+                                </ul>
+                                </details>
+                           {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
+                                <details class="dropdown" bind:open={filterMenusOpen[col.col]}>
+                                <summary class="input bg-base-200" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
+                                onblur={(evt) => closeFilter(evt, col)}>{filterText[col.col]}</summary>
+                                <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
+                                    <li><a tabindex="0" id={"filter_select_"+col.col+"-"} onclick={() => filter(col, "")}>Unset</a></li>
                                     {#each col.names as name, i}
-                                        <option on:click={() => filter(col, col.values ? col.values[i]+"" : name)}>{name}</option>
+                                        <li><a tabindex="0" id={"filter_select_"+col.col+"-"} onclick={() => filter(col, col.values ? col.values[i]+"" : name)}>{name}</a></li>
                                     {/each}
-                    
-                                </select>
+                                </ul>
+                                </details>
 
                             {:else if col.autoCompleteLink}    
-                                <div class="dropdown overflow:visible dropdown-open">
+                                <div class="dropdown overflow:visible dropdown-open" id={"filter_ac_"+col.col} >
                                     <input class="input m-0 w-full bg-base-200" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
-                                        on:keyup={(evt) => autoCompleteKeyPress(evt, col, filterText[col.col], true)}
+                                        onkeyup={(evt) => autoCompleteKeyPress(evt, col, filterText[col.col], true)}
                                         bind:value={filterText[col.col]}/>
-                                    <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                     {#if autoCompleteOpen[col.col] && editRow == undefined}
-                                    <ul tabindex="-1" bind:this={autoCompleteDivs[col.col]} class="menu dropdown-content border-1 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-4 shadow" style="{dropdownwidthStyle}">
+                                    <ul class="menu dropdown-content border-1 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-4 shadow" style="{dropdownwidthStyle}">
                                         {#each autoCompleteData as name}
-                                            <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                            <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                            <!-- svelte-ignore a11y-missing-attribute -->
-                                            <li><a on:click={() => autoCompleteUpdate_filter(col, name)}>{name}</a></li>
+                                            <li><a onclick={() => autoCompleteUpdate_filter(col, name)}>{name}</a></li>
                                         {/each}
                                     </ul>
                                     {/if}                                                                            
                                 </div>
                             {:else}
                                 <input type="text" class="input bg-base-200 w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
-                                    bind:value={filterText[col.col]} 
-                                    on:blur={() => filter(col, filterText[col.col])} 
-                                    on:keypress={(evt) => filterKeyPress(evt, col, filterText[col.col])}/>
+                                    value={filterText[col.col]} 
+                                    onblur={() => filter(col, filterText[col.col])} 
+                                    onkeypress={(evt) => filterKeyPress(evt, col, filterText[col.col])}/>
                             {/if}
                         </td>
                     {/each}
                     {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl}
                         <td class="last:sticky last:right-0 z-10 bg-base-100">
-                            <!-- svelte-ignore a11y-click-events-have-key-events -->
-                            <!-- svelte-ignore a11y-no-static-element-interactions -->
                             {#if haveFilters}
-                            <!-- svelte-ignore a11y-click-events-have-key-events -->
                             <span 
-                            class=" mt-[16px] ml-[-22px] flex cursor-pointer" on:click={() => clearFilters()}>{@html crossIcon}</span>
+                            class=" mt-[6px] ml-[-22px] flex cursor-pointer" onclick={() => clearFilters()}>{@html crossIcon}</span>
                             {/if}
                         </td>
                     {/if}
@@ -1604,9 +1651,6 @@
                             <td></td>
                         {/if}
                         {#each columns as col, colidx}
-                            {@const boolEditMinWidthStyle = col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"}
-                            {@const editminwStyle = col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""}
-                            {@const editmaxwStyle = col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}
                             {@const dropdownwidthStyle = col.dropdownWidth ? "width:" + col.dropdownWidth + ";" : ""}
                             {@const cmaxwStyle = maxWidthStyle[col.col]}
                             {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
@@ -1617,39 +1661,39 @@
                                     {/if}
                                     {#if !col.readOnly}
                                         {#if col.type == "boolean"}
-                                            <select class="select" bind:value={filterText[col.col]} style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}">
-                                                <option class="hidden" on:click={() => filter(col, undefined)} value=""></option>
-                                                {#if col.nullable == true}
-                                                    <option on:click={() => editRowUpdate(col, null)} value="">Unset</option>
-                                                {/if}
-                                                <option on:click={() => editRowUpdate(col, false)}>No</option>
-                                                <option on:click={() => editRowUpdate(col, true)}>Yes</option>
-                                
-                                            </select>
+                                            <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
+                                            <summary class="input {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
+                                            onblur={(evt) => closeEdit(evt, col)}>{editRowText[col.col]}</summary>
+                                            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
+                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-"} onclick={() => editRowUpdate(col, null)}>Unset</a></li>
+                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} onclick={() => editRowUpdate(col, false)}>No</a></li>
+                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-t"} onclick={() => editRowUpdate(col, true)}>Yes</a></li>
+                                            </ul>
+                                            </details>
+
                                         {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
-                                        <select class="select" bind:value={filterText[col.col]} style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}">
-                                            <option class="hidden" on:click={() => editRowUpdate(col, null)} value=""></option>
-                                            {#if col.nullable == true}
-                                                <option on:click={() => editRowUpdate(col, null)} value="">Unset</option>
-                                            {/if}
-                                                {#each col.names as name, i}
-                                                <option on:click={() => editRowUpdate(col, col.values ? col.values[i]+"" : name)}>{name}</option>
-                                            {/each}                        
-                                        </select>
+
+                                            <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
+                                            <summary class="input {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
+                                            onblur={(evt) => closeEdit(evt, col)}>{editRowText[col.col]}</summary>
+                                            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
+                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-"} onclick={() => editRowUpdate(col, null)}>Unset</a></li>
+                                                 {#each col.names as name, i}
+                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} onclick={() => editRowUpdate(col, col.values ? col.values[i]+"" : name)}>{name}</a></li>
+                                                {/each}
+                                            </ul>
+                                            </details>
+
                                         {:else if col.autoCompleteLink}    
-                                            <div class="dropdown overflow:visible dropdown-open">
+                                            <div class="dropdown overflow:visible dropdown-open" id={"edit_ac_"+col.col}>
                                                 <input class="input m-0 -mb-1 w-full {bg} cursor-text" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
-                                                    on:keyup={(evt) => autoCompleteKeyPress(evt, col, editRowText[col.col], false)}
-                                                    on:focusout={(event) => {handleACBlur(event, col)}}
+                                                    onkeyup={(evt) => autoCompleteKeyPress(evt, col, editRowText[col.col], false)}
+                                                    onfocusout={(event) => {handleACBlur(event, col)}}
                                                     bind:value={editRowText[col.col]}/>
-                                                <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                                  {#if autoCompleteOpen[col.col] && editRow == -1}
-                                                    <ul tabindex="-1" bind:this={autoCompleteDivs[col.col]} class="menu dropdown-content border-1 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-4 shadow" style="{dropdownwidthStyle}">
+                                                    <ul class="menu dropdown-content border-1 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-4 shadow" style="{dropdownwidthStyle}">
                                                     {#each autoCompleteData as name}
-                                                        <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                                        <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                                        <!-- svelte-ignore a11y-missing-attribute -->
-                                                        <li><a on:click={() => autoCompleteUpdate(col, name)}>{name}</a></li>
+                                                        <li><a onclick={() => autoCompleteUpdate(col, name)}>{name}</a></li>
                                                     {/each}
                                                 </ul>
                                                 {/if}
@@ -1657,7 +1701,7 @@
                                         {:else}
                                             <input type="text" class="input w-full {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
                                                 bind:value={editRowText[col.col]} 
-                                                on:keyup={(evt) => editInputUpdate(evt, col)}
+                                                onkeyup={(evt) => editInputUpdate(evt, col)}
                                             />
                                         {/if}
                                     {:else}
@@ -1673,7 +1717,7 @@
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
                                     <span 
-                                    class="{saveColorClass} flex pt-6 -ml-[20px] cursor-pointer" on:click={() => saveEdit()}>{@html checkIcon}</span>
+                                    class="{saveColorClass} flex pt-6 -ml-[20px] cursor-pointer" onclick={() => saveEdit()}>{@html checkIcon}</span>
                                 {:else}
                                     <span 
                                     class="text-neutral-500 flex pt-6 -ml-[20px]">{@html checkIcon}</span>
@@ -1682,7 +1726,7 @@
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <span 
-                                    class="{cancelColorClass} -mt-[22px] ml-[6px] flex cursor-pointer" on:click={() => cancelEdit()}>{@html crossIcon}</span>
+                                    class="{cancelColorClass} -mt-[22px] ml-[6px] flex cursor-pointer" onclick={() => cancelEdit()}>{@html crossIcon}</span>
                             </td>
                         {/if}
                     {:else}
@@ -1691,14 +1735,14 @@
                         {/if}
                         <td colspan="{columns.length+1}">
                         {#if addUrl && editable}
-                            <button class="btn btn-sm mr-2" on:click={() => edit(-1)}>Add</button>
+                            <button class="btn btn-sm mr-2" onclick={() => edit(-1)}>Add</button>
                         {/if}
                         {#if linkUrl}
-                            <button class="btn btn-sm" on:click={() => edit(-2)}>Link</button>
+                            <button class="btn btn-sm" onclick={() => edit(-2)}>Link</button>
                         {/if}
                         {#if haveAddExtra} 
                             {#each addExtra as row}
-                                <button class="btn btn-sm" on:click={() => callExtra(row)}>{row.label}</button>
+                                <button class="btn btn-sm" onclick={() => callExtra(row)}>{row.label}</button>
                             {/each}
                         {/if}
                         </td>
@@ -1709,7 +1753,7 @@
             <!-- data rows -->
             {#each rrows as row, rowidx}
                 {@const rowLinkClass = link ? "cursor-pointer hover:bg-base-200" : ""}
-                <tr class="{rowLinkClass}"  on:click={() => {if (link) goto(link(row))}}>
+                <tr class="{rowLinkClass}"  onclick={() => {if (link) goto(link(row))}}>
                     {#if select}
                         <!-- checkbox column -->
                         <td>
@@ -1723,20 +1767,11 @@
                         </td>
                     {/if}
                     {#each columns as col, colidx}
-                        {@const dropdownwidth = col.dropdownWidth ? "w-" + col.dropdownWidth : ""}
-
-                        {@const minwStyle = col.minWidth ? "min-width:" + col.minWidth + ";" : ""}
-                        {@const editminwStyle = col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""}
-                        {@const boolEditminwStyle = col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"}
-                        {@const maxwStyle = col.maxWidth ? "max-width:" + col.maxWidth + ";" : ""}
-                        {@const cmaxwStyle = maxWidthStyle[col.col]}
-                        {@const editmaxwStyle = col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}
-                        {@const dropdownwidthStyle = col.dropdownWidth ? "width:" + col.dropdownWidth + ";" : ""}
 
                         {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
                         {#if editRow == undefined || editRow != rowidx}
-                            {@const value = formatColumn(getColumn(row, col), col)}
-                            <td class="align-top" style="{cmaxwStyle}">
+                            {@const value = formatColumn(getColumn(row, col), col, false)}
+                            <td class="align-top" style="{maxWidthStyle[col.col]}">
                                 {#if (col.type == "date" || col.type == "datetime" || col.nowrap)}
                                     {#if col.link}
                                         <span class="text-nowrap text-base-content"><a class="text-base-content {linkFormat}" href={col.link(row)}>{value}</a></span>
@@ -1745,11 +1780,11 @@
                                     {/if}
                                 {:else if col.type == "array:string"}
                                     {#if col.link}
-                                        {#each formatColumn(getColumn(row, col), col) as el, i} 
+                                        {#each formatColumn(getColumn(row, col), col, false) as el, i} 
                                             <a class="text-base-content {linkFormat}" href={col.link(row, i)}>{el}</a><br>
                                         {/each}
                                     {:else}
-                                        {#each formatColumn(getColumn(row, col), col) as el} 
+                                        {#each formatColumn(getColumn(row, col), col, false) as el} 
                                             {el}<br>
                                         {/each}
                                     {/if}
@@ -1762,12 +1797,12 @@
                                 {/if}
                             </td>
                         {:else}
-                            <td class="align-bottom" style="{cmaxwStyle}">
+                            <td class="align-bottom" style="{maxWidthStyle[col.col]}">
                                 {#if colidx == 0}
-                                <p class="small m-0 p-0 pb-1 text-primary ml-1">Edit</p>
+                                    <p class="small m-0 p-0 pb-1 text-primary ml-1">Edit</p>
                                 {/if}
                                 {#if col.readOnly}
-                                    {@const value = formatColumn(getColumn(row, col), col)}
+                                    {@const value = formatColumn(getColumn(row, col), col, false)}
                                     {#if (col.type == "date" || col.type == "datetime" || col.nowrap)}
                                         <span class="text-nowrap text-base-content align-middle">{value}</span>
                                     {:else}
@@ -1775,47 +1810,52 @@
                                     {/if}
                                 {:else}
                                     {#if col.type == "boolean"}
-                                        <select class="select" bind:value={filterText[col.col]} style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}">
-                                            <option class="hidden" on:click={() => filter(col, undefined)} value=""></option>
-                                            {#if col.nullable == true}
-                                                <option on:click={() => editRowUpdate(col, null)} value="">Unset</option>
-                                            {/if}
-                                            <option on:click={() => editRowUpdate(col, false)}>No</option>
-                                            <option on:click={() => editRowUpdate(col, true)}>Yes</option>
-                            
-                                        </select>
+
+                                            <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
+                                            <summary class="input {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
+                                            onblur={(evt) => closeEdit(evt, col)}>{editRowText[col.col]}</summary>
+                                            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
+                                                {#if col.nullable == true}
+                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-"} onclick={() => editRowUpdate(col, null)}>Unset</a></li>
+                                                {/if}
+                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} onclick={() => editRowUpdate(col, false)}>No</a></li>
+                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-t"} onclick={() => editRowUpdate(col, true)}>Yes</a></li>
+                                            </ul>
+                                            </details>
+
                                     {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
-                                        <select class="select" bind:value={filterText[col.col]} style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}">
-                                            <option class="hidden" on:click={() => editRowUpdate(col, null)} value=""></option>
-                                            {#if col.nullable == true}
-                                                <option on:click={() => editRowUpdate(col, null)} value="">Unset</option>
-                                            {/if}
+
+                                            <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
+                                            <summary class="input {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
+                                            onblur={(evt) => closeEdit(evt, col)}>{editRowText[col.col]}</summary>
+                                            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
+                                                {#if col.nullable == true}
+                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-"} onclick={() => editRowUpdate(col, null)}>Unset</a></li>
+                                                {/if}
                                                 {#each col.names as name, i}
-                                                <option on:click={() => editRowUpdate(col, col.values ? col.values[i]+"" : name)}>{name}</option>
-                                            {/each}                        
-                                        </select>
+                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} onclick={() => editRowUpdate(col, col.values ? col.values[i]+"" : name)}>{name}</a></li>
+                                                {/each}
+                                            </ul>
+                                            </details>
+
                                     {:else if col.autoCompleteLink}    
-                                        <div class="dropdown overflow:visible dropdown-open">
+                                        <div class="dropdown overflow:visible dropdown-open" id={"edit_ac_"+col.col}>
                                             <input class="input m-0 -mb-1 w-full {bg} cursor-text" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
-                                                on:keyup={(evt) => autoCompleteKeyPress(evt, col, editRowText[col.col], false)}
-                                                on:focusout={(event) => {handleACBlur(event, col)}}
+                                                onkeyup={(evt) => autoCompleteKeyPress(evt, col, editRowText[col.col], false)}
+                                                onfocusout={(event) => {handleACBlur(event, col)}}
                                                 bind:value={editRowText[col.col]}/>
-                                            <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                                                 {#if autoCompleteOpen[col.col] && editRow >= 0}
-                                                <ul tabindex="-1" bind:this={autoCompleteDivs[col.col]} class="menu dropdown-content max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-4 shadow" style="{dropdownwidthStyle}">
+                                                <ul class="menu dropdown-content max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-4 shadow" style="{col.dropdownWidth ? "width:" + col.dropdownWidth + ";" : ""}">
                                                 {#each autoCompleteData as name}
-                                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                                    <!-- svelte-ignore a11y-missing-attribute -->
-                                                    <li><a on:click={() => autoCompleteUpdate(col, name)}>{name}</a></li>
+                                                        <li><a onclick={() => autoCompleteUpdate(col, name)}>{name}</a></li>
                                                 {/each}
                                             </ul>
                                             {/if}
                                         </div>
                                     {:else}
                                         <input type="text" class="input {bg} w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
-                                            bind:value={editRowText[col.col]} 
-                                            on:keyup={(evt) => editInputUpdate(evt, col)}
+                                            value={editRowText[col.col]} 
+                                            onkeyup={(evt) => editInputUpdate(evt, col)}
                                             />
                                     {/if}
                                 {/if}
@@ -1832,21 +1872,21 @@
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <span 
-                                        class="text-primary -ml-4 flex cursor-pointer" on:click={() => edit(rowidx)}>{@html editIcon}</span>
+                                        class="text-primary -ml-4 flex cursor-pointer" onclick={() => edit(rowidx)}>{@html editIcon}</span>
                                 {/if}
                                 <!-- svelte-ignore a11y-click-events-have-key-events -->
                                 <!-- svelte-ignore a11y-no-static-element-interactions -->
                                 {#if unlinkUrl !== undefined}
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <span 
-                                    class="ml-1 text-error {exitWidthClass} flex {exitHeightClass} cursor-pointer" on:click={() => unlinkRow(rowidx)}>{@html exitIcon}</span>
+                                    class="ml-1 text-error {exitWidthClass} flex {exitHeightClass} cursor-pointer" onclick={() => unlinkRow(rowidx)}>{@html exitIcon}</span>
                                 {/if}
                                 <!-- svelte-ignore a11y_no_static_element_interactions -->
                                 {#if deleteUrl !== undefined}
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <!-- svelte-ignore a11y_no_static_element_interactions -->
                                     <span 
-                                    class="ml-1 {trashColorClass} {trashWidthClass} flex {trashHeightClass} cursor-pointer" on:click={() => {if (!updateDisabled) deleteRow(rowidx)}}>{@html trashIcon}</span>
+                                    class="ml-1 {trashColorClass} {trashWidthClass} flex {trashHeightClass} cursor-pointer" onclick={() => {if (!updateDisabled) deleteRow(rowidx)}}>{@html trashIcon}</span>
                                 {/if}
                             </td>
                         {/if}
@@ -1858,7 +1898,7 @@
                                 <!-- svelte-ignore a11y-click-events-have-key-events -->
                                 <!-- svelte-ignore a11y-no-static-element-interactions -->
                                 <span 
-                                class="text-success flex pt-6 -ml-[20px] cursor-pointer" on:click={() => {if (!updateDisabled) saveEdit()}}>{@html checkIcon}</span>
+                                class="text-success flex pt-6 -ml-[20px] cursor-pointer" onclick={() => {if (!updateDisabled) saveEdit()}}>{@html checkIcon}</span>
                             {:else}
                                 <span 
                                 class="text-neutral-500 flex pt-6 -ml-[20px]">{@html checkIcon}</span>
@@ -1867,7 +1907,7 @@
                                 <!-- svelte-ignore a11y-no-static-element-interactions -->
                                 <!-- svelte-ignore a11y-click-events-have-key-events -->
                                 <span 
-                                class="text-error -mt-[22px] ml-[6px] flex cursor-pointer" on:click={() => {if (!updateDisabled) cancelEdit()}}>{@html crossIcon}</span>
+                                class="text-error -mt-[22px] ml-[6px] flex cursor-pointer" onclick={() => {if (!updateDisabled) cancelEdit()}}>{@html crossIcon}</span>
                         </td>
                     {/if}
                 </tr>
@@ -1882,12 +1922,12 @@
 <div class="ml-3 mt-2">
     {#if paginate > 0}
         {#if havePrevious}
-            <button class="btn btn-primary" on:click={() => previous()}>Previous</button>
+            <button class="btn btn-primary" onclick={() => previous()}>Previous</button>
         {:else}
             <button class="btn btn-disabled">Previous</button>
         {/if}
         {#if haveNext}
-            <button class="btn btn-primary ml-2" on:click={() => next()}>Next</button>
+            <button class="btn btn-primary ml-2" onclick={() => next()}>Next</button>
         {:else}
             <button class="btn btn-disabled ml-2">Next</button>
         {/if}
@@ -1895,15 +1935,15 @@
         {#if haveOps}
             {@const disabled = !updateDisabled && rowsAreChecked ? "" : "btn-disabled"}
             {#each ops as op}
-                <button class="btn btn-secondary {disabled} ml-2" on:click={() => execOp(op) }>{op.label}</button>
+                <button class="btn btn-secondary {disabled} ml-2" onclick={() => execOp(op) }>{op.label}</button>
             {/each}
-            <button class="btn btn-neutral {disabled} ml-2" on:click={() => clearSelection() }>Clear Selection</button>
+            <button class="btn btn-neutral {disabled} ml-2" onclick={() => clearSelection() }>Clear Selection</button>
         {/if}
 
         {#if haveNavExtra}
             {@const disabled = !updateDisabled ? "" : "btn-disabled"}
             {#each navExtra as op}
-                <button class="btn {disabled} btn-secondary ml-2" on:click={() => callExtra(op) }>{op.label}</button>
+                <button class="btn {disabled} btn-secondary ml-2" onclick={() => callExtra(op) }>{op.label}</button>
             {/each}
         {/if}
         {/if}
