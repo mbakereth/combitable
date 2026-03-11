@@ -179,7 +179,7 @@
 
        emptySearch? : string,
     }
-    import { onMount } from 'svelte';
+    import { onMount, untrack } from 'svelte';
     import { page } from '$app/stores';
     import { goto, invalidateAll } from '$app/navigation'
     import type { CombiTableColumn, CombiTableOp, CombiTableExtraButton , CombiTablePresets } from '$lib/combitabletypes';
@@ -266,6 +266,7 @@
         (accumulator, currentValue) => accumulator || currentValue,
         false,
     ));
+
     $effect(() => {
         if (primaryKey) {
             primaryKeysChecked = [];
@@ -698,6 +699,8 @@
     }
 
     async function filter(col : CombiTableColumn, value : string|boolean|undefined) {
+        if (!value && !(col.col in urlfilters) && !urlfilters[col.col]) return;
+        if (col.col in urlfilters && urlfilters[col.col] == value) return;
         if (col.col in filterMenusOpen) filterMenusOpen[col.col] = false;
         if (col.type == "boolean") {
             if (value == undefined) {
@@ -812,22 +815,23 @@
     }
 
 
-    let filterText : {[key:string]:string} = $state(columnMap(columns, v => ""))
-    let filterValues : {[key:string]:string} = $state(columnMap(columns, v => ""))
-    let filterMenusOpen : {[key:string]:boolean} = $state(columnMap(columns, v => false))
 
     const url = $derived(new SearchUrl($page.url, paginate));
-    let urlfilters = url.getFilters();
+    let urlfilters = {...url.getFilters()};
     let sortCol = "";
     let sortDirection = "ascending";
     let searchParams = "";
     let filters : {[key:string]:string}= {};
     let haveFilters = $state(false);
+    let filterText : {[key:string]:string} = $state(columnMap(columns, v => ""))
+    let filterValues : {[key:string]:string} = $state(columnMap(columns, v => ""))
+    let filterMenusOpen : {[key:string]:boolean} = $state(columnMap(columns, v => false))
+    let lastUrl = $state.snapshot($page.url.search);
     $effect(() => {
         url.setSuffix(urlSuffix);
         url.setDefaultSortCol(defaultSort);
         url.setSuffix(urlSuffix);
-        urlfilters = url.getFilters();
+        urlfilters = {...url.getFilters()};
 
         const resp = url.getSort();
         sortCol = resp.sortCol;
@@ -836,57 +840,61 @@
         filters = url.getFilters();
         haveFilters = Object.keys(filters).length > 0
 
-        for (let col of columns) {
-            if (!(col.col in urlfilters)) {
-                filterText[col.col] = "";
+        untrack(() => {
+            for (let col of columns) {
+                if (!(col.col in urlfilters)) {
+                    filterText[col.col] = "";
+                }
             }
-        }
-        for (let col in urlfilters) {
-            if (col in filterText || true) {
-                for (let i=0; i<columns.length; ++i) {
-                    if (col == columns[i].col) {
-                        if (columns[i].type == "boolean") {
-                            filterText[col] = urlfilters[col] == "t" ? "Yes" : "No"
-                            filterValues[col] = urlfilters[col];
-                        } else if (columns[i].type == "date" || columns[i].type == "partialdate") {
-                            let parts = urlfilters[col].split("_")
-                            if (parts.length > 1) {
-                                if (parts[1] == PartialDateType.datetime+"" || parts[1] == PartialDateType.date+"") {
-                                    filterText[col] = parts[0]
-                                } else if (parts[1] == PartialDateType.month+"") {
-                                    let date = parseDate(parts[0], "yyyy-mm-dd")
-                                    filterText[col] = filterDateText(date, PartialDateType.month);
-                                } else if (parts[1] == PartialDateType.year+"") {
-                                    let date = parseDate(parts[0], "yyyy-mm-dd")
-                                    filterText[col] = filterDateText(date, PartialDateType.year);
-                                } 
-                            }
-
-                        } else if (columns[i].type == "select:string" || columns[i].type == "select:integer") {
-                                let values = columns[i].values ?? [];
-                                let names = columns[i].names ?? values;
-                                for (let j=0; j<values.length; ++j) {
-                                    if (urlfilters[col] == values[j]) {
-                                        filterValues[col] = values[j]+"";
-                                        filterText[col] = names[j]+"";
-                                    }
+            for (let col in urlfilters) {
+                if (col in filterText || true) {
+                    for (let i=0; i<columns.length; ++i) {
+                        if (col == columns[i].col) {
+                            if (columns[i].type == "boolean") {
+                                filterText[col] = urlfilters[col] == "t" ? "Yes" : "No"
+                                filterValues[col] = urlfilters[col];
+                            } else if (columns[i].type == "date" || columns[i].type == "partialdate") {
+                                let parts = urlfilters[col].split("_")
+                                if (parts.length > 1) {
+                                    if (parts[1] == PartialDateType.datetime+"" || parts[1] == PartialDateType.date+"") {
+                                        filterText[col] = parts[0]
+                                    } else if (parts[1] == PartialDateType.month+"") {
+                                        let date = parseDate(parts[0], "yyyy-mm-dd")
+                                        filterText[col] = filterDateText(date, PartialDateType.month);
+                                    } else if (parts[1] == PartialDateType.year+"") {
+                                        let date = parseDate(parts[0], "yyyy-mm-dd")
+                                        filterText[col] = filterDateText(date, PartialDateType.year);
+                                    } 
                                 }
 
-                        } else {
-                            filterValues[col] = urlfilters[col];
-                            filterText[col] = urlfilters[col];
+                            } else if (columns[i].type == "select:string" || columns[i].type == "select:integer") {
+                                    let values = columns[i].values ?? [];
+                                    let names = columns[i].names ?? values;
+                                    for (let j=0; j<values.length; ++j) {
+                                        if (urlfilters[col] == values[j]) {
+                                            filterValues[col] = values[j]+"";
+                                            filterText[col] = names[j]+"";
+                                        }
+                                    }
+
+                            } else {
+                                filterValues[col] = urlfilters[col];
+                                filterText[col] = urlfilters[col];
+                            }
                         }
                     }
                 }
-            }
-        }    
+            }   
+
+        })
+
     })
     let internalDirty = $state(false);
     let ids = $derived(url.getIds());
 
     function closeFilter(evt : FocusEvent, col: CombiTableColumn) {
         let id = (evt.relatedTarget as any)?.id as string;
-        if (!id || !(id.startsWith("filter_select_"+col.col+"-"))) {
+        if (!id || ( !(id.startsWith("filter_select_"+col.col+"-")) && !(id.startsWith("xfilter_select_summary_"+col.col+"-")) ) ){
             for (let col of columns) {
                 filterMenusOpen[col.col] = false;
             }
@@ -894,7 +902,7 @@
     }
     function closeEdit(evt : FocusEvent, col: CombiTableColumn) {
         let id = (evt.relatedTarget as any)?.id as string;
-        if (!id || !(id.startsWith("edit_select_"+col.col+"-"))) {
+        if (!id || (!(id.startsWith("edit_select_"+col.col+"-")) && !(id.startsWith("xedit_select_summary_"+col.col+"-"))) ) {
             for (let col of columns) {
                 editRowMenusOpen[col.col] = false;
             }
@@ -1582,41 +1590,46 @@
                         <td></td>
                     {/if}
                     {#each columns as col, colidx}
-                        {@const editminwStyle = col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""}
-                        {@const boolEditminwStyle = col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"}
-                        {@const editmaxwStyle = col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}
                         {@const cmaxwStyle = maxWidthStyle[col.col]}
                         {@const dropdownwidthStyle = col.dropdownWidth ? "width:" + col.dropdownWidth : ";"}
                         <td class="align-bottom" style="{cmaxwStyle}">
                             {#if col.type == "boolean"}
-                                <details class="dropdown" bind:open={filterMenusOpen[col.col]}>
-                                <summary class="input bg-base-200" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
-                                onblur={(evt) => closeFilter(evt, col)}>{filterText[col.col]}</summary>
-                                <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
-                                    <li><a tabindex="0" id={"filter_select_"+col.col+"-"} onclick={() => filter(col, undefined)}>Unset</a></li>
-                                    <li><a tabindex="0" id={"filter_select_"+col.col+"-f"} onclick={() => filter(col, false)}>No</a></li>
-                                    <li><a tabindex="0" id={"filter_select_"+col.col+"-t"} onclick={() => filter(col, true)}>Yes</a></li>
-                                </ul>
-                                </details>
+                                <div tabindex="-1" class="join bg-base-200">
+                                    <input tabindex="-1" bind:value={filterText[col.col]} class="input join-item bg-base-200" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"/>
+                                    <details class="dropdown dropdown-end" bind:open={filterMenusOpen[col.col]}>
+                                    <summary id={"filter_select_summary_"+col.col} class="btn join-item btn-outline border-gray-600" onblur={(evt) => closeFilter(evt, col)}>&#x25bc</summary>
+                                    <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 w-52 p-2 border mt-2 border-gray-600">
+                                        <li><a tabindex="0" id={"filter_select_"+col.col+"-"} onclick={() => filter(col, undefined)}>Unset</a></li>
+                                        <li><a tabindex="0" id={"filter_select_"+col.col+"-f"} onclick={() => filter(col, false)}>No</a></li>
+                                        <li><a tabindex="0" id={"filter_select_"+col.col+"-t"} onclick={() => filter(col, true)}>Yes</a></li>
+                                    </ul>
+                                    </details>
+                                </div>
                            {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
-                                <details class="dropdown" bind:open={filterMenusOpen[col.col]}>
-                                <summary class="input bg-base-200" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
-                                onblur={(evt) => closeFilter(evt, col)}>{filterText[col.col]}</summary>
-                                <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
-                                    <li><a tabindex="0" id={"filter_select_"+col.col+"-"} onclick={() => filter(col, "")}>Unset</a></li>
-                                    {#each col.names as name, i}
-                                        <li><a tabindex="0" id={"filter_select_"+col.col+"-"} onclick={() => filter(col, col.values ? col.values[i]+"" : name)}>{name}</a></li>
-                                    {/each}
-                                </ul>
-                                </details>
+                                <div tabindex="-1" class="join bg-base-200">
+                                    <input tabindex="-1" class="input bg-base-200 join-item" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
+                                    onblur={(evt) => closeFilter(evt, col)} bind:value={filterText[col.col]}/>
+                                    <details class="dropdown dropdown-end join-item" bind:open={filterMenusOpen[col.col]}>
+                                        <summary id={"filter_select_summary_"+col.col} class="btn join-item btn-outline border-gray-600" 
+                                        onblur={(evt) => closeFilter(evt, col)}>&#x25bc</summary>
+                                        <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded   z-1 w-52 p-2 mt-2 border border-gray-600">
+                                            <li><a tabindex="0" id={"filter_select_"+col.col+"-"} onclick={() => filter(col, "")}>Unset</a></li>
+                                            {#each col.names as name, i}
+                                                <li><a tabindex="0" id={"filter_select_"+col.col+"-"} onclick={() => filter(col, col.values ? col.values[i]+"" : name)}>{name}</a></li>
+                                            {/each}
+                                        </ul>
+                                    </details>
+                                </div>
 
                             {:else if col.autoCompleteLink}    
                                 <div class="dropdown overflow:visible dropdown-open" id={"filter_ac_"+col.col} >
                                     <input class="input m-0 w-full bg-base-200" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
                                         onkeyup={(evt) => autoCompleteKeyPress(evt, col, filterText[col.col], true)}
-                                        bind:value={filterText[col.col]}/>
+                                        bind:value={filterText[col.col]}
+                                        onfocusout={(event) => {handleACBlur(event, col)}}
+                                        />
                                     {#if autoCompleteOpen[col.col] && editRow == undefined}
-                                    <ul class="menu dropdown-content border-1 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-4 shadow" style="{dropdownwidthStyle}">
+                                    <ul class="menu dropdown-content border rounded border-gray-600 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-2 shadow" style="{dropdownwidthStyle}">
                                         {#each autoCompleteData as name}
                                             <li><a onclick={() => autoCompleteUpdate_filter(col, name)}>{name}</a></li>
                                         {/each}
@@ -1625,7 +1638,7 @@
                                 </div>
                             {:else}
                                 <input type="text" class="input bg-base-200 w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
-                                    value={filterText[col.col]} 
+                                    bind:value={filterText[col.col]} 
                                     onblur={() => filter(col, filterText[col.col])} 
                                     onkeypress={(evt) => filterKeyPress(evt, col, filterText[col.col])}/>
                             {/if}
@@ -1661,15 +1674,20 @@
                                     {/if}
                                     {#if !col.readOnly}
                                         {#if col.type == "boolean"}
-                                            <details class="dropdown" bind:open={editRowMenusOpen[col.col]}>
-                                            <summary class="input {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
-                                            onblur={(evt) => closeEdit(evt, col)}>{editRowText[col.col]}</summary>
-                                            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
-                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-"} onclick={() => editRowUpdate(col, null)}>Unset</a></li>
-                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} onclick={() => editRowUpdate(col, false)}>No</a></li>
-                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-t"} onclick={() => editRowUpdate(col, true)}>Yes</a></li>
-                                            </ul>
-                                            </details>
+
+                                            <div tabindex="-1" class="join bg-base-200">
+                                                <input tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"/>
+
+                                                <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
+                                                <summary class="btn btn-outline border-gray-600 {bg} join-item" 
+                                                onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
+                                                <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 w-52 p-2 border mt-2 border-gray-600">
+                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-"} onclick={() => editRowUpdate(col, null)}>Unset</a></li>
+                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} onclick={() => editRowUpdate(col, false)}>No</a></li>
+                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-t"} onclick={() => editRowUpdate(col, true)}>Yes</a></li>
+                                                </ul>
+                                                </details>
+                                            </div>
 
                                         {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
 
@@ -1854,7 +1872,7 @@
                                         </div>
                                     {:else}
                                         <input type="text" class="input {bg} w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
-                                            value={editRowText[col.col]} 
+                                            bind:value={editRowText[col.col]} 
                                             onkeyup={(evt) => editInputUpdate(evt, col)}
                                             />
                                     {/if}
