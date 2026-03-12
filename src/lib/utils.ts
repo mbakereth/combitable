@@ -206,15 +206,25 @@ export function asStringOrUndefined(val : string|number|boolean|undefined, type 
     return val == undefined ? undefined : asString(val, type);
 }
 
-export function printDate(date : Date|undefined|null, dateFormat="yyyy-mm-dd") : string {
-    if (!date) return "-";
+export function printDate(date : Date|undefined|null|string, dateFormat: string, nullValue="-") : string {
+    if (!date) return nullValue;
+    if (typeof(date) == "string") return date;
+    let d = 0;
+    let m = 1;
+    let y = 2;
     if (dateFormat == "yyyy-mm-dd") {
-        return String(date.getFullYear()) + "-" + String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getDate()).padStart(2, '0')
+        d = 2;
+        m = 1;
+        y = 0;
+    } else if (dateFormat == "mm-dd-yyyy") {
+        d = 1;
+        m = 0;
+        y = 2;
     }
-    if (dateFormat == "mm-dd-yyyy") {
-        return String(date.getMonth()).padStart(2, '0') + "-" + String((date.getDate())+1).padStart(2, '0') + "-" + String(date.getFullYear())
-    }
-    return String(date.getDate()).padStart(2, '0') + "-" + String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getFullYear())
+    const parts = [String(date.getDate()).padStart(2, '0'), String((date.getMonth())+1).padStart(2, '0'), String(date.getFullYear())]
+    let s = parts[d] + "-" + parts[m] + "-" + parts[y];
+    //let s = String(date.getDate()).padStart(2, '0') + "-" + String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getFullYear())
+    return s;
 }
 
 export function printPartialDate(date : Date|undefined|null, type: PartialDateType, dateFormat="yyyy-mm-dd") : string {
@@ -237,18 +247,116 @@ function parseISODate(s : String) {
     return new Date(Date.UTC(parseInt(b[0]), parseInt(b[1])-1, parseInt(b[2]), 0, 0, 0));
 }
 
-export function parseDate(val : string, dateFormat : string) : Date {
+export function parseDate(val : string, dateFormat="yyyy-mm-dd") : Date {
     val = val.trim();
     if (val.indexOf("T") > 0) {
         val = val.split("T")[0];
         return parseISODate(val);
     }
     const parts = val.trim().split("-");
-    if (parts.length != 3) throw Error("Date " + val + " should be " + dateFormat);
+    if (parts.length != 3) throw Error("Date " + val + " should be dd-mm-yyyy");
     let dateStr = parts[2] + "-" + parts[1] + "-" + parts[0];
-    if (dateFormat == "yyyy-mm-dd") dateStr = val;
-    if (dateFormat == "mm-dd-yyyy") dateStr = parts[2] + "-" + parts[0] + "-" + parts[1];
-    return parseISODate(dateStr);
+    if (dateFormat == "yyyy-mm-dd") {
+        dateStr = parts[0] + "-" + parts[1] + "-" + parts[2];
+    } else if (dateFormat == "mm-dd-yyyy") {
+        dateStr = parts[1] + "-" + parts[0] + "-" + parts[2];
+    }
+    return parseISODate(dateStr );
+}
+
+export function splitPartialDate(val : string, dateFormat="yyyy-mm-dd") : {year: number, month: number|null, day: number|null} {
+    if (dateFormat == "yyyy-mm-dd") {
+        const parts = val.split("-");
+        const year = parseInt(parts[0]);
+        const month = parts.length < 2 ? null : parseInt(parts[1])-1;
+        const day = parts.length < 3 ? null : parseInt(parts[2]);
+        return {year, month, day}
+    } else if (dateFormat == "dd-mm-yyyy") {
+        const parts = val.split("-");
+        if (parts.length == 1) {
+            return {year: parseInt(parts[0]), month: null, day: null}
+        } else if (parts.length == 2) {
+            return {year: parseInt(parts[1]), month: parseInt(parts[0])-1, day: null}
+        } else {
+            return {year: parseInt(parts[2]), month: parseInt(parts[1])-1, day: parseInt(parts[0])}
+        }
+    } else { // mm-dd-yyyy
+        const parts = val.split("-");
+        if (parts.length == 1) {
+            return {year: parseInt(parts[0]), month: null, day: null}
+        } else if (parts.length == 2) {
+            return {year: parseInt(parts[1]), month: parseInt(parts[0])-1, day: null}
+        } else {
+            return {year: parseInt(parts[2]), month: parseInt(parts[0])-1, day: parseInt(parts[1])}
+        }
+    }
+}
+
+export function yearFromPartialDate(val : string, dateFormat="yyyy-mm-dd") : number {
+    return splitPartialDate(val, dateFormat).year;
+}
+
+export function monthFromPartialDate(val : string, dateFormat="yyyy-mm-dd") : number|null {
+    return splitPartialDate(val, dateFormat).month;
+}
+
+export function dayFromPartialDate(val : string, dateFormat="yyyy-mm-dd") : number|null {
+    return splitPartialDate(val, dateFormat).day;
+}
+
+export function getToday() {
+    const now = new Date();
+    var utcDate = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds(), now.getUTCMilliseconds());
+    utcDate.setUTCHours(0);
+    utcDate.setUTCMinutes(0);
+    utcDate.setUTCSeconds(0);
+    utcDate.setUTCMilliseconds(0);
+    return utcDate;
+    //return new Date(utcDate.getFullYear()+'-'+(utcDate.getMonth()+1)+'-'+utcDate.getDate()) ;
+}
+
+export function firstOfMonth(year: number, month: number|null, day: number|null) {
+    const now = new Date();
+    var utcDate = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds(), now.getUTCMilliseconds());
+    utcDate.setUTCFullYear(year);
+    utcDate.setUTCMonth(month ?? 0);
+    utcDate.setUTCDate(1);
+    utcDate.setUTCHours(0);
+    utcDate.setUTCMinutes(0);
+    utcDate.setUTCSeconds(0);
+    utcDate.setUTCMilliseconds(0);
+    return utcDate;
+}
+
+export function addDays(date : Date, days : number) : Date {
+    return new Date(date.getTime() + days * 3600 * 24 * 1000)
+}
+
+export function lastOfMonth(year: number, month: number|null, day: number|null) {
+    if (month == null) month = 0;
+    month++;
+    if (month == 12) {
+        month = 0;
+        year++;
+    }
+    return addDays(firstOfMonth(year, month, day), -1);
+}
+
+export function numDaysBetween(date1 : Date, date2: Date) {
+    // Convert dates to UTC timestamps
+    let utc1 = 
+        Date.UTC(date1.getFullYear(), date1.getMonth(), date1.getDate());
+    let utc2 = 
+        Date.UTC(date2.getFullYear(), date2.getMonth(), date2.getDate());
+
+    // Calculate the time difference in milliseconds
+    let timeDiff = Math.abs(utc2 - utc1);
+
+    // Convert milliseconds to days
+    let daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)-0.2);
+
+    // Display the result
+    return daysDiff;
 }
 
 export const PartialDateYear_Month = 7;

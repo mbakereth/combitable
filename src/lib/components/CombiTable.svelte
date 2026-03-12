@@ -191,6 +191,7 @@
     import trashIcon from "$lib/assets/bitcoin-icons--trash-outline.svg?raw"
     import editIcon from "$lib/assets/bitcoin-icons--edit-outline.svg?raw"
     import exitIcon from "$lib/assets/bitcoin-icons--exit-outline.svg?raw"
+    import calendarIcon from "$lib/assets/bitcoin-icons--calendar-outline.svg?raw"
     import CombiTableDiscardChanges from '$lib/components/CombiTableDiscardChanges.svelte';
     import CombiTableValidateDialog from '$lib/components/CombiTableErrorDialog.svelte';
     import CombiTableInfoDialog from '$lib/components/CombiTableInfoDialog.svelte';
@@ -198,6 +199,8 @@
     import { updated } from '$app/state';
     import { PartialDateType } from '$lib/types';
     import { PartialDateYear_Month, PartialDateYear_Day, PartialDateMonth_Day } from '$lib/utils';
+
+    import DateSelector from './DateSelector.svelte';
 
     let table : Element;
 
@@ -818,8 +821,8 @@
 
     const url = $derived(new SearchUrl($page.url, paginate));
     let urlfilters = {...url.getFilters()};
-    let sortCol = "";
-    let sortDirection = "ascending";
+    let sortCol = $state("");
+    let sortDirection = $state("ascending");
     let searchParams = "";
     let filters : {[key:string]:string}= {};
     let haveFilters = $state(false);
@@ -1516,7 +1519,12 @@
             autoCompleteData = [];
         }
 
-}
+    }
+
+    ///// Date Selector
+    let dateSelectorYear : number|undefined = 2026;
+    let dateSelectorMonth: number|undefined = 3;
+    let dateSelectorDay : number|undefined = 1;
 
 </script>
 
@@ -1525,6 +1533,7 @@
 <div class="overflow-x-auto overflow-y-visible">
     <table class="table table-{widthType} overflow-y-visible" style="{tableHeightStyle} bg-base-100" bind:this={table}>
         <thead class="{stickyHeadRowClass} z-10">
+
             <!-- header row -->
             <tr class="bg-base-100 z-10">
                 {#if select}
@@ -1538,8 +1547,8 @@
                     {@const maxwStyle = col.maxWidth ? "max-width:" + col.maxWidth + ";" : ""}
                     <th class="z-10" style="{minwStyle} {maxwStyle}">
                         {#if enableSort && (col.sortable === undefined || col.sortable == true)}
-                            <!-- svelte-ignore a11y-invalid-attribute -->
-                            <a href="#" onclick={() => sort(col.col)}>
+                            <!-- svelte-ignore a11y_missing_attribute -->
+                            <a tabindex="0" class="cursor-pointer" onclick={() => sort(col.col)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") sort(col.col)}}>
                                 {col.name}</a>&nbsp;{#if col.col == sortCol}
                                 <span class="tail-icon align-text-top">
                                     {#if sortDirection == "ascending"}
@@ -1550,7 +1559,7 @@
                                 </span>
                             {/if}
                         {:else}
-                            <span class="text-primary">{col.name}</span>
+                            <span class="text-primary">{col.name}W</span>
                         {/if}
                     </th>
                 {/each}
@@ -1576,10 +1585,8 @@
                         <p class="small m-0 p-0 text-primary ml-1 mb-0">
                             Filter
                             {#if ids.length > 0}
-                                    <!-- svelte-ignore a11y-missing-attribute -->
-                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                    &nbsp;&nbsp;<a class="cursor-pointer" onclick={() => clearIds()}>[Clear ID filter]</a>
+                                    <!-- svelte-ignore a11y_missing_attribute -->
+                                    &nbsp;&nbsp;<a tabindex="0" class="cursor-pointer" onclick={() => clearIds()} role="button" onkeyup={() => clearIds()}>[Clear ID filter]</a>
                             {/if}
                         </p>
                     </td>
@@ -1595,9 +1602,9 @@
                         <td class="align-bottom" style="{cmaxwStyle}">
                             {#if col.type == "boolean"}
                                 <div tabindex="-1" class="join bg-base-200">
-                                    <input tabindex="-1" bind:value={filterText[col.col]} class="input join-item bg-base-200" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"/>
+                                    <input readonly tabindex="-1" bind:value={filterText[col.col]} class="input join-item bg-base-200" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"/>
                                     <details class="dropdown dropdown-end" bind:open={filterMenusOpen[col.col]}>
-                                    <summary id={"filter_select_summary_"+col.col} class="btn join-item btn-outline border-gray-600" onblur={(evt) => closeFilter(evt, col)}>&#x25bc</summary>
+                                    <summary id={"filter_select_summary_"+col.col} class="btn join-item btn-outline btn-square border-gray-600" onblur={(evt) => closeFilter(evt, col)}>&#x25bc</summary>
                                     <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 w-52 p-2 border mt-2 border-gray-600">
                                         <!-- svelte-ignore a11y_missing_attribute -->
                                         <li><a tabindex="0" id={"filter_select_"+col.col+"-"} onclick={() => filter(col, undefined)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") filter(col, undefined)}}>Unset</a></li>
@@ -1610,7 +1617,7 @@
                                 </div>
                            {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
                                 <div tabindex="-1" class="join bg-base-200">
-                                    <input tabindex="-1" class="input bg-base-200 join-item" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
+                                    <input readonly tabindex="-1" class="input bg-base-200 join-item" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
                                     onblur={(evt) => closeFilter(evt, col)} bind:value={filterText[col.col]}/>
                                     <details class="dropdown dropdown-end join-item" bind:open={filterMenusOpen[col.col]}>
                                         <summary id={"filter_select_summary_"+col.col} class="btn join-item btn-outline border-gray-600" 
@@ -1641,6 +1648,15 @@
                                         {/each}
                                     </ul>
                                     {/if}                                                                            
+                                </div>
+                            {:else if col.type == "date" || col.type == "partialdate"}    
+                                <div class="join">
+                                    <input type="text join-item" class="input bg-base-200 w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
+                                        bind:value={filterText[col.col]} 
+                                        onblur={() => filter(col, filterText[col.col])} 
+                                        onkeypress={(evt) => filterKeyPress(evt, col, filterText[col.col])}/>
+                                    <button class="btn btn-outline btn-square border-gray-600 join-item bg-base-200">{@html calendarIcon}</button>
+
                                 </div>
                             {:else}
                                 <input type="text" class="input bg-base-200 w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
@@ -1682,10 +1698,10 @@
                                         {#if col.type == "boolean"}
 
                                             <div tabindex="-1" class="join bg-base-200">
-                                                <input tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"/>
+                                                <input readonly tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"/>
 
                                                 <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
-                                                <summary class="btn btn-outline border-gray-600 {bg} join-item" 
+                                                <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
                                                 onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
                                                 <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 w-52 p-2 border mt-2 border-gray-600">
                                                     {#if col.nullable}
@@ -1703,10 +1719,10 @@
                                         {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
 
                                         <div tabindex="-1" class="join bg-base-200">
-                                            <input tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"/>
+                                            <input readonly tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"/>
 
                                             <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
-                                            <summary class="btn btn-outline border-gray-600 {bg} join-item" 
+                                            <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
                                             onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
                                             <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 w-52 p-2 border mt-2 border-gray-600">
                                             {#if col.nullable}
@@ -1850,10 +1866,10 @@
                                     {#if col.type == "boolean"}
 
                                         <div tabindex="-1" class="join bg-base-200">
-                                            <input tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"/>
+                                            <input readonly tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"/>
 
                                             <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
-                                            <summary class="btn btn-outline border-gray-600 {bg} join-item" 
+                                            <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
                                             onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
                                             <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 w-52 p-2 border mt-2 border-gray-600">
                                                 {#if col.nullable}
@@ -1871,10 +1887,10 @@
                                     {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
 
                                         <div tabindex="-1" class="join bg-base-200">
-                                            <input tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"/>
+                                            <input readonly tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"/>
 
                                             <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
-                                            <summary class="btn btn-outline border-gray-600 {bg} join-item" 
+                                            <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
                                             onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
                                             <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 w-52 p-2 border mt-2 border-gray-600">
                                                 {#if col.nullable}
@@ -2001,6 +2017,8 @@
         {/if}
 </div>
 {/if}
+
+<DateSelector classes="mt-4 ml-4" year={dateSelectorYear} month={dateSelectorMonth} day={dateSelectorDay} allowPartial={false}></DateSelector>
 
 <!-- Modal to confirm discarding edit -->
 <CombiTableDiscardChanges id={"confirmEditDiscard_"+uuid} okFn={confirmCancelEdit}/>

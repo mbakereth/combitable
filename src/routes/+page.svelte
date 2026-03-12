@@ -16,7 +16,7 @@
         {name: "Type", col: "type", type: "select:integer", values: [0,1,2], names: ["God", "Titan", "Personification"], editMaxWidth: "12rem"},
         {name: "Father", col: "father.name", type: "string", nullable: true, maxWidth: "16", editMaxWidth: "16", autoCompleteLink:"/autocomplete/god/name"},
         {name: "Mother", col: "mother.name", type: "string", nullable: true, autoCompleteLink:"/autocomplete/god/name"},
-        {name: "Birth Date", col: "birth_date", type: "partialdate", nullable: true},
+        {name: "Birth Date", col: "birth_date", type: "partialdate", nullable: true, minWidth: "11rem", editMaxWidth: "11rem"},
     ]
 
     $: rows = data.gods;
