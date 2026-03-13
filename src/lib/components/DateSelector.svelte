@@ -22,6 +22,11 @@
         months? : string[],
 
         /**
+         * If your language is not suported, you can pass ok/cancel names manually
+        */
+        buttonText? : {ok: string, cancel: string},
+
+        /**
          * If your language is not suported, you can pass day names manually
         */
         dayAbbrebiations? : string[],
@@ -48,7 +53,15 @@
 
         classes? : string,
 
+        styles? : string,
+
+        id? : string,
+
+        zIndex? : number,
+
         onOk? (year: number, month: number|null, day: number|null) : void;
+        onCancel? () : void;
+
     };
 
     const Months : {[key:string]:string[]} = {
@@ -94,6 +107,12 @@
             "Νοέμβριος",
             "Δεκέμβριος"
         ]
+    }
+
+    const ButtonText = {
+        en: {ok: "OK", cancel: "Cancel"},
+        de: {ok: "OK", cancel: "Abbrechen"},
+        el: {ok: "OK", cancel: "Ακύρωση"},
     }
 
     const DayAbbreviations : {[key:string]:string[]} = {
@@ -147,12 +166,17 @@
         lang = "en",
         allowPartial = false,
         classes="",
+        styles="",
         year = $bindable(getToday().getUTCFullYear()),
         month = $bindable(getToday().getUTCMonth()),
         day = $bindable(getToday().getUTCDate()),
         months = undefined,
+        buttonText = undefined,
         dayAbbrebiations = undefined,
         onOk = undefined,
+        onCancel = undefined,
+        id = undefined,
+        zIndex = undefined,
     } : Props = $props();
 
     let currentMonth = $state(month ?? getToday().getUTCMonth());
@@ -166,6 +190,10 @@
             if (lang in DayAbbreviations) dayAbbrebiations = DayAbbreviations[lang];
             else dayAbbrebiations = DayAbbreviations.en;
         }
+        if (!buttonText) {
+            if (lang in ButtonText) buttonText = (ButtonText as {[key:string]:any})[lang] as {ok: string, cancel: string};
+            else buttonText = ButtonText.en;
+        }
 
         if (year === undefined) year = getToday().getUTCFullYear();
         if (month === undefined) month = getToday().getUTCMonth();
@@ -173,8 +201,6 @@
         if (!allowPartial && month === null) month = 0;
         if (!allowPartial && !day === null) day = 1;
         if (month === undefined) currentMonth = getToday().getUTCMonth();
-
-        console.log("DateSelector finished effect")
     });
 
     function getNumberOfWeeks() {
@@ -280,51 +306,100 @@
 
     let yearColor = $derived((allowPartial) ? "text-primary" : "text-base-content");
     let monthColor = $derived((allowPartial && month!==null) ? "text-primary" : "text-base-content");
+
+    let zIndexStyle = $derived(zIndex === undefined ? "" : "z-index: "+zIndex+"; ");
+
+    function keyEvent(e: KeyboardEvent, fn: () => void) {
+        if (e.key == "Enter") {
+            fn();
+        } else if (e.key == "Escape") {
+            if (onCancel) onCancel();
+        }
+    }
 </script>
 
-<div class="flex flex-col w-fit gap-1 bg-base-200  p-2 {classes}">
+<div id={id ?? crypto.randomUUID()} 
+    class="flex flex-col min-w-[250px] min-h-[415px] gap-1 bg-base-200  p-4 {classes}" 
+    style="{zIndexStyle} {styles}"
+    >
 
     <!-- year -->
     <div class="flex flex-row w-full items-center">
         <div class="join ">
-            <button class="btn btn-square btn-sm join-item" onclick={() => yearForward(-10)}><FastReverseIcon></FastReverseIcon></button>
-            <button class="btn btn-square btn-sm join-item" onclick={() => yearForward(-1)}><ReverseIcon></ReverseIcon></button>            
+            <span tabindex="0" style="{zIndexStyle}" class="join-item cursor-pointer p-1" 
+            onclick={() => yearForward(-10)} 
+            role="button" onkeyup={(e) => {keyEvent(e, () => yearForward(-10))}}><FastReverseIcon></FastReverseIcon></span>
+            <span tabindex="0" style="{zIndexStyle}" class="join-item cursor-pointer p-1" 
+            onclick={() => yearForward(-1)} 
+            role="button" onkeyup={(e) => {keyEvent(e, () => yearForward(-1))}}><ReverseIcon></ReverseIcon></span>
         </div>
-        <span class="grow flex-1 text-center {yearColor}">{year}</span>
-        <div class="join ">
-            <button class="btn btn-square  btn-sm join-item" onclick={() => yearForward(1)}><ForwardIcon></ForwardIcon></button>
-            <button class="btn btn-square  btn-sm join-item" onclick={() => yearForward(10)}><FastForwardIcon></FastForwardIcon></button>
+        <span style="{zIndexStyle}" class="grow flex-1 text-center {yearColor} text-base">{year}</span>
+        <div style="{zIndexStyle}" class="join ">
+            <span tabindex="0" style="{zIndexStyle}" class="join-item cursor-pointer p-1" 
+            onclick={() => yearForward(1)} 
+            role="button" onkeyup={(e) => {keyEvent(e, () => yearForward(1))}}><ForwardIcon></ForwardIcon></span>
+            <span tabindex="0" style="{zIndexStyle}" class="join-item cursor-pointer p-1" 
+            onclick={() => yearForward(1)} role="button" 
+            onkeyup={(e) => {keyEvent(e, () => yearForward(10))}}><FastForwardIcon></FastForwardIcon></span>
         </div>
     </div>
 
     <!-- month -->
-    <div class="flex flex-row mt-0 w-full items-center">
-         <button class="btn btn-square btn-sm align-middle" onclick={() => monthReverse()}><ReverseIcon></ReverseIcon></button>          
+    <div class="flex flex-row mt-0 w-full items-center pt-1 ">
+        <span tabindex="0" style="{zIndexStyle}" class="join-item cursor-pointer p-1" 
+        onclick={() => monthReverse()} role="button" 
+        onkeyup={(e) => {keyEvent(e, () => monthReverse())}}><ReverseIcon></ReverseIcon></span>
          {#if allowPartial}
-            <button onclick={() => monthClicked()} class="btn btn-sm btn-ghost text-base grow flex-1 text-center {monthColor}">{months == undefined ? Months.en[currentMonth] : months[currentMonth]}</button>
+            <span tabindex="0" style="{zIndexStyle}" 
+            onclick={() => monthClicked()} 
+            class="text-base font-normal grow flex-1 text-center cursor-pointer {monthColor}" 
+            role="button" onkeyup={(e) => {keyEvent(e, () => monthClicked())}}>{months == undefined ? Months.en[currentMonth] : months[currentMonth]}</span>
          {:else}  
-            <span class="grow flex-1 text-center {monthColor}">{months == undefined ? Months.en[currentMonth] : months[currentMonth]}</span>
+            <span tabindex="0" style="{zIndexStyle}" class="grow flex-1 text-center text-base font-formal {monthColor} " 
+            role="button">{months == undefined ? Months.en[currentMonth] : months[currentMonth]}</span>
         {/if}
-        <button class="btn btn-square btn-sm" onclick={() => monthForward()}><ForwardIcon></ForwardIcon></button>
+        <span tabindex="0" style="{zIndexStyle}" class="join-item cursor-pointer p-1" 
+        onclick={() => monthForward()} 
+        role="button" onkeyup={(e) => {keyEvent(e, () => monthForward())}}><ForwardIcon></ForwardIcon></span>
     </div>
 
     <!-- days -->
-    <div class="grid grid-flow-row grid-cols-7 gap-0">
+    <div class="grid grid-flow-row grid-cols-7 gap-x-8 gap-y-4 text-base pr-4 pt-1">
         {#each dayAbbrebiations as dayAbbrev, dayIdx}
-            <div>{dayAbbrev}</div>
+            <div style="{zIndexStyle}" class="" >{dayAbbrev}</div>
         {/each}
         {#each { length: numberOfWeeks }, rowIdx}
             {#each dayAbbrebiations as dayAbbrev, dayIdx}
-                <button class="btn btn-ghost btn-sm px-1 py-0 m-0 {getDateForCalendar(rowIdx, dayIdx) == day ? 'text-primary' : 'text-content-base'}"
-                    onclick={() => dayClicked(rowIdx, dayIdx)}><span class="text-base">{getDateForCalendar(rowIdx, dayIdx)}</span></button>
+                <span tabindex="{getDateForCalendar(rowIdx, dayIdx)===null ? -1 : 0}" style="{zIndexStyle}" class="cursor-pointer px-0 py-0 m-0 font-normal {getDateForCalendar(rowIdx, dayIdx) == day ? 'text-primary' : 'text-content-base'}"
+                    onclick={() => dayClicked(rowIdx, dayIdx)}
+                    role="button" onkeyup={(e) => {keyEvent(e, () => dayClicked(rowIdx, dayIdx))}}
+                    ><span class="text-base">{getDateForCalendar(rowIdx, dayIdx)}</span></span>
             {/each}
         {/each}
+        {#if numberOfWeeks < 5}
+            {#each dayAbbrebiations as dayAbbrev, dayIdx}
+             <span>&nbsp;</span>
+            {/each}
+        {/if}
+        {#if numberOfWeeks < 6}
+            {#each dayAbbrebiations as dayAbbrev, dayIdx}
+             <span>&nbsp;</span>
+            {/each}
+        {/if}
     </div>
 
-    <!-- buttons-->
-    <div class="flex flex-row w-full items-center justify-around mt-1">
-        <button class="btn btn-sm btn-primary" onclick={() => {if (onOk) onOk(year, month, day)}}>OK</button>
-        <button class="btn btn-sm btn-default">Cancel</button>
+    <!-- buttons -->
+    <div class="flex flex-row w-full items-center justify-around mt-2">
+        <div style="{zIndexStyle}" class="join ">
+        <span tabindex="0" style="{zIndexStyle}" class="bg-primary px-4 py-2 rounded cursor-pointer" 
+            onclick={(e) => {if (onOk) onOk(year, month, day)}}
+            role="button" onkeyup={(evt) => {if (onOk && evt.key == "Enter") {onOk(year, month, day)} else if (onCancel && evt.key == "Escape") {onCancel()}}}
+        >{buttonText?.ok ?? "OK"}</span>
+        </div>
+        <span tabindex="0" style="{zIndexStyle}" class="bg-base-100 px-4 py-2 rounded cursor-pointer" 
+            onclick={() => {if (onCancel) onCancel()}}
+            role="button" onkeyup={(evt) => {if (onCancel && evt.key == "Enter" || onCancel && evt.key == "Escape") onCancel()}}
+        >{buttonText?.cancel ?? "Cancel"}</span>
     </div>
 </div>
 

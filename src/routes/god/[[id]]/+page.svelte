@@ -14,6 +14,7 @@
         {name: "Type", col: "type", type: "select:integer", values: [0,1,2], names: ["God", "Titan", "Personification"]},
         {name: "Father", col: "father.name", type: "string", nullable: true, maxWidth: "16", editMaxWidth: "16", autoCompleteLink:"/autocomplete/god/name"},
         {name: "Mother", col: "mother.name", type: "string", nullable: true, maxWidth: "16", editMaxWidth: "16", autoCompleteLink:"/autocomplete/god/name"},
+        {name: "Birth Date", col: "birth_date", type: "partialdate", nullable: true, minWidth: "11rem", editMaxWidth: "11rem"},
         {name: "Children", col: "children", type: "array:string", nullable: true, maxWidth: "16", editMaxWidth: "16", autoCompleteLink:"/autocomplete/god/name"},
     ]
    //let columns = data.columns;
@@ -23,7 +24,7 @@
 
     // Elements in array fields must be primative values, not objects
     $: children = data.rec?.children ?? []
-    $: fieldData = [rec?.name, rec?.gender, rec?.died, rec?.type, rec?.father?.name, rec?.mother?.name, rec?.children];
+    $: fieldData = [rec?.name, rec?.gender, rec?.died, rec?.type, rec?.father?.name, rec?.mother?.name, rec?.birth_date, rec?.children];
 
     // back link using SearchUrl
     $: searchUrl = new SearchUrl($page.url);
@@ -125,8 +126,18 @@
                     </tr>
 
                     <tr class="border-none">
-                        <td class="w-32">Mother</td>
+                        <td class="w-32">Birth Date</td>
                         <td>
+                            <DetailsField
+                                col={columns[6]}
+                                bind:value={fieldData[6]}
+                            />
+                        </td>
+                    </tr>
+
+                    <tr class="border-none">
+                        <td class="w-32">Mother</td>
+                        <td class="z-0">
                             <DetailsField
                                 col={columns[5]}
                                 bind:value={fieldData[5]}
@@ -134,11 +145,12 @@
                         </td>
                     </tr>
 
+
                     <tr class="border-none">
                         <td class="w-32">Children</td>
                         <td>
                             <DetailsField
-                                col={columns[6]}
+                                col={columns[7]}
                                 bind:value={children}
                             />
                         </td>

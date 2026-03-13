@@ -12,24 +12,41 @@
         value : any,
 
         /** For date fields.  `yyyy-mm-dd`, `dd-mm-yyyy`, `mm-dd-yyyy`*/
-        dateFormat : string,
+        dateFormat? : string,
 
         editMenuOpen? : boolean,
+
+        extraValue? : string,
+
+        lang? : string,
     }
 
     import type { CombiTableColumn } from '$lib/combitabletypes';
     import { tick } from 'svelte';
-    import { readonly } from 'svelte/store';
     import { getContext } from 'svelte';
     import DetailsFieldSet from './DetailsFieldSet.svelte';
-    import { invalidateAll } from '$app/navigation';
-    import { page, updated } from '$app/state';
+    import calendarIcon from "$lib/assets/bitcoin-icons--calendar-outline.svg?raw"
+    import { PartialDateYear_Month, 
+        PartialDateYear_Day, 
+        PartialDateMonth_Day, getToday, 
+        splitPartialDate, 
+        joinPartialDate } from '$lib/utils';
 
-    export let col : CombiTableColumn;
-    export let value : any;
-    export let extraValue : string = "";
+    import DateSelector from './DateSelector.svelte';
+
+    let {
+        col,
+        value = $bindable(),
+        extraValue = "",
+        dateFormat = "yyyy-mm-dd",
+        lang = "en",
+        editMenuOpen = $bindable(false),
+    } : Props = $props();
     let origValue = (Array.isArray(value)) ? [...value] : value;
-    export let dateFormat = "yyyy-mm-dd"; // or "yyyy-mm-dd" or "mm-dd-yyyy"
+
+    let No = $derived(lang == "de" ? "Nein" : (lang == "el" ? "Όχι" : "No"));
+    let Yes = $derived(lang == "de" ? "Ja" : (lang == "el" ? "Ναι" : "Yes"));
+    let Unset = $derived(lang == "de" ? "Ungefasst" : (lang == "el" ? "Άδιο" : "Unset"));
 
     /*if (col.type == "select:string" || col.type == "select:integer") {
         if (col.names && col.values) {
@@ -50,6 +67,8 @@
     getContext<DetailsFieldSet>("detailsfieldset").registerIsDirty(isDirty);
     getContext<DetailsFieldSet>("detailsfieldset").registerPersist(persist);
     getContext<DetailsFieldSet>("detailsfieldset").registerSetUpdateDisabled(setUpdateDisabled);
+
+    const detailsfieldset = getContext<DetailsFieldSet>("detailsfieldset");
 
     function isEmpty(field : any) {
         if ((col.type == "integer" || col.type == "select:integer" || col.type == "boolean")) {
@@ -167,8 +186,8 @@
             }
         }
     }
-    $: displayValue = value;
-    $: {
+    let displayValue = $state(value);
+    $effect(() => {
         extraValue = "";
         if (value === undefined || value === null ||  value === "") { 
             displayValue = "";
@@ -189,65 +208,67 @@
         } else if (col.type == "date" && typeof(value) != "string") {
             displayValue = printDate(value, "")
         } else if (col.type == "boolean") {
-            displayValue = value ? "Yes" : "No"
+            displayValue = value ? Yes : No
         } else if (col.type == "array:string") {
             displayValue = value ? [...value] : [];
         } else {
             displayValue = defaultValue(value);
         }
-    } 
+    });
 
-    $: dirty = false;
-    $: {
-        dirty = false;
+    let dirty = $state(false);
+    $effect(() => {
+        let newDirty = false;
         const recField = origValue;
-        if (col.type == "array:string" && extraValue) dirty = true;
-        else if (!isEmpty(value) && isEmpty(recField)) dirty = true;
-        else if (isEmpty(value) && !isEmpty(recField)) dirty = true;
-        else if (isEmpty(value) && isEmpty(recField)) dirty = false;
+        if (col.type == "array:string" && extraValue) newDirty = true;
+        else if (!isEmpty(value) && isEmpty(recField)) newDirty = true;
+        else if (isEmpty(value) && !isEmpty(recField)) newDirty = true;
+        else if (isEmpty(value) && isEmpty(recField)) newDirty = false;
         else {
             if (Array.isArray(value) && recField) {
                 if (value.length != recField.length) {
-                    dirty = true;
+                    newDirty = true;
                 } else {
                     for (let j=0; j<value.length; ++j) {
                         if (value[j] != recField[j]) {
-                            dirty =  true;
+                            newDirty =  true;
                         }
                     }
                 }
             } else if (col.type.startsWith("select:")) {               
                  if (col.names && col.values) {
                     let matches = col.values.filter((val, idx) => (col.values??[])[idx] == origValue)
-                    if (matches && matches.length > 0 && matches[0] != value) dirty = true;
+                    if (matches && matches.length > 0 && matches[0] != value) newDirty = true;
                 } else if (col.names) {
                     let matches = col.names.filter((val, idx) => (col.names??[])[idx] == origValue)
-                    if (matches && matches.length > 0 && matches[0] != value) dirty = true;
+                    if (matches && matches.length > 0 && matches[0] != value) newDirty = true;
                 } else if (col.values) {
                     let matches = col.values.filter((val, idx) => (col.values??[])[idx] == origValue)
-                    if (matches && matches.length > 0 && matches[0] != value) dirty = true;
+                    if (matches && matches.length > 0 && matches[0] != value) newDirty = true;
                 }
             } else {
                 if (value != recField) {
-                    dirty = true;
+                    newDirty = true;
                 }
             }
         }
-        getContext<DetailsFieldSet>("detailsfieldset").updateDirty();
+        if (newDirty != dirty) {
+            dirty = newDirty;
+            detailsfieldset.updateDirty();
+        }
 
-    }
+    });
 
     function isDirty() {
         return dirty;
     }
 
-    $: updateDisabled = false;
+    let updateDisabled = $state(false);
     function setUpdateDisabled(val : boolean) {
         updateDisabled = val;
     }
 
     //export let dirty = false;
-    export let editMenuOpen = false;
 
     export function printDate(date : Date|undefined|null|string, defaultValue="") : string {
         if (!date) return defaultValue;
@@ -312,8 +333,7 @@
         }
         return "";
     }
-    let maxWidthStyle : string = ""
-    maxWidthStyle = colMaxWidthStyle(col);
+    let maxWidthStyle = $derived(colMaxWidthStyle(col));
 
     /*$: {
         dirty = !(!value && !origValue) && value != origValue;
@@ -331,7 +351,7 @@
                 saveValue = col.nullable ? null : false;
             } else {
                 const l = newValue.toLowerCase();
-                if (["yes", "true", "t", "y", "1"].includes(l)) {
+                if (["yes", Yes.toLocaleLowerCase(), "true", "t", "y", "1"].includes(l)) {
                     saveValue = true;
                 } else {
                     saveValue = false;
@@ -383,7 +403,10 @@
         changed = value !== saveValue;
         value = saveValue;
 
-        dirty = changed;
+        if (dirty != changed) {
+            dirty = changed;
+            detailsfieldset.updateDirty();
+        }
         editMenuOpen = false;
     }
 
@@ -404,35 +427,38 @@
     }
 
     function fieldKeyPress(evt: KeyboardEvent) {
+        let newDirty = dirty;
         if (col.type == "string" || (typeof(value) == "string")) {
-            dirty = displayValue !== value;
-            if (dirty) value = displayValue;
+            newDirty = displayValue !== value;
+            if (newDirty) value = displayValue;
         } else if (col.type == "integer") {
             try {
-                dirty = parseInt(displayValue) !== value;
-                if (dirty) value = displayValue;
+                newDirty = parseInt(displayValue) !== value;
+                if (newDirty) value = displayValue;
             } catch (e) {}
         } else if (col.type == "float") {
             try {
-                dirty = parseFloat(displayValue) !== value;
-                if (dirty) value = displayValue;
+                newDirty = parseFloat(displayValue) !== value;
+                if (newDirty) value = displayValue;
             } catch (e) {}
         } else if (col.type == "date") {
             try {
-                dirty = printDate(value, dateFormat) == displayValue;
-                if (dirty) value = displayValue;
+                newDirty = printDate(value, dateFormat) == displayValue;
+                if (newDirty) value = displayValue;
             } catch (e) {}
+        }
+        if (newDirty != dirty) {
+            dirty = newDirty;
+            detailsfieldset.updateDirty();
         }
     }
 
     //////
     // Auto complete
 
-    let autoCompleteDiv : Element;
     let autoCompleteList : Element;
-    let autoCompleteData : string[];
-    $: autoCompleteData = [];
-    let autoCompleteOpen : boolean = false;
+    let autoCompleteData = $state([] as string[]);
+    let autoCompleteOpen : boolean = $state(false);
 
     function autoCompleteUpdate(col : CombiTableColumn, newValue : string|undefined|null) {
         if (newValue === null) {
@@ -442,7 +468,7 @@
             return;
         }
 
-        dirty = newValue != value;
+        let newDirty = newValue != value;
         if (newValue == undefined || newValue == null || newValue == "") {
             if (col.nullable) value = null;
 
@@ -451,7 +477,7 @@
                 extraValue = defaultValue(value)
             } else {
                 value = newValue;
-               displayValue = defaultValue(value)
+                displayValue = defaultValue(value)
             }
 
         }
@@ -466,12 +492,19 @@
         editMenuOpen = false;
         autoCompleteOpen = false;
         autoCompleteData = [];
+
+        if (dirty != newDirty) {
+            dirty = newDirty
+            detailsfieldset.updateDirty();
+        }
+
     }
 
-    async function autoCompleteKeyPress(evt: KeyboardEvent, newValue : string|undefined) {
+    async function autoCompleteKeyPress(evt: KeyboardEvent) {
         if (!col.autoCompleteLink) return;
+        let newValue = col.type == "array:string" ? extraValue : displayValue;
         await tick();
-        newValue = (evt.currentTarget as HTMLInputElement).value;
+        //newValue = (evt.currentTarget as HTMLInputElement).value;
         if (newValue && newValue.length > 0) {
             autoCompleteOpen = true;
 
@@ -505,9 +538,13 @@
             autoCompleteData = []
         }
         
-        dirty = true;
-        if (col.type != "array:string")
+        if (!dirty) {
+            dirty = true;
+            detailsfieldset.updateDirty();
+        }
+        if (col.type != "array:string") {
             value = displayValue;
+        }
     }
 
     async function handleACBlur(event : any) {
@@ -537,7 +574,66 @@
         extraValue = "";
     }
 
+    function closeEdit(evt : FocusEvent) {
+        let id = (evt.relatedTarget as any)?.id as string;
+        if (!id || (!(id.startsWith("edit_select_"+col.col+"-")) && !(id.startsWith("xedit_select_summary_"+col.col+"-"))) ) {
+            //for (let col of columns) {
+                editMenuOpen = false;
+            //}
+        }
+    }
+
+    // dateFiler
+
+    let dateSelectorYear : number|undefined = $state();
+    let dateSelectorMonth: number|undefined|null = $state();
+    let dateSelectorDay : number|undefined|null = $state();
+    
+    function toggleDateDialog(col: string) {
+        const dateStr = displayValue;
+        if (!dateStr) {
+            dateSelectorYear = getToday().getUTCFullYear();
+            dateSelectorMonth = getToday().getUTCMonth();
+            dateSelectorDay = getToday().getUTCDate();
+        } else {
+            try {
+                let {year, month, day} = splitPartialDate(dateStr, dateFormat);
+                dateSelectorYear = year;
+                dateSelectorMonth = month;
+                dateSelectorDay = day;
+            } catch (e) {
+                console.log(e);
+                displayValue = "";
+                dateSelectorYear = getToday().getUTCFullYear();
+                dateSelectorMonth = getToday().getUTCMonth();
+                dateSelectorDay = getToday().getUTCDate();
+            }
+        }
+        if (editMenuOpen) {
+            editMenuOpen = false;
+        } else {
+            editMenuOpen = true;
+        }
+        
+    }
+
+    function dateSelectorOk(col: CombiTableColumn, year: number, month: number|null, day: number|null) {
+        const newValue = joinPartialDate(year, month, day, dateFormat);
+        let newDirty = displayValue != newValue;
+        displayValue = newValue;
+        if (newDirty != dirty) {
+            dirty = newDirty
+            detailsfieldset.updateDirty();
+        }
+        editMenuOpen = false;
+    }
+
+    function dateSelectorCancel(col: CombiTableColumn) {
+        editMenuOpen = false;
+    }
+
 </script>
+
 
 {#if true}
     {@const editminwStyle = col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""}
@@ -548,21 +644,46 @@
     {@const cmaxwStyle = maxWidthStyle}
     {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
     {#if col.type == "date" || col.type == "partialdate"}
-        <input type="text" class="input bg-base-200 w-40 {bg}" disabled={updateDisabled} on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue} style="{editminwStyle} {editmaxwStyle}"  tabindex="0"/>
+
+        <div class="join">
+            <input type="text join-item" class="input bg-base-200 {bg}" disabled={updateDisabled} style="{editminwStyle} {editmaxwStyle}" 
+                bind:value={displayValue} 
+                onkeyup={(evt) => fieldKeyPress(evt)}
+            />
+            <button class="btn join-item btn-outline btn-square border-gray-600" 
+                onclick={() => toggleDateDialog(col.col)} 
+                onkeyup={(e) => {if (e.key == "Escape") editMenuOpen = false;}}
+                >{@html calendarIcon}</button>
+            <details class="dropdown dropdown-end " bind:open={editMenuOpen} 
+                id={"edit_date_"+col.col} 
+            >
+                <summary class="hidden" ></summary>
+                    <DateSelector 
+                        id={"edit_dateselector_"+col.col}
+                        dateFormat={dateFormat as "yyyy-mm-dd"|"mm-dd-yyyy"|"dd-mm-yyyy"}
+                        classes="dropdown-content border rounded border-gray-600 max-h-0.3 bg-base-200 rounded-box z-1 p-2 shadow mt-12 ml-4"
+                        year={dateSelectorYear} 
+                        month={dateSelectorMonth} 
+                        day={dateSelectorDay} 
+                        allowPartial={true}
+                        onOk={(year, month, day) => dateSelectorOk(col, year, month, day)}
+                        onCancel={() => dateSelectorCancel(col)}
+                    ></DateSelector>
+            </details>
+
+        </div>
+
     {:else if col.autoCompleteLink && col.type != "array:string"}    
-        <div class="acdropdown overflow:visible" bind:this={autoCompleteDiv}>
+        <div class="acdropdown overflow:visible">
             <input role="button" class="input m-0 -mb-1 w-full cursor-text {bg}" disabled={updateDisabled} style="{editminwStyle} {editmaxwStyle}"  tabindex="0"
-                on:keyup={(evt) => autoCompleteKeyPress(evt, value)}
-                on:blur={(evt) => handleACBlur(evt)}
+                onkeyup={(evt) => {if (evt.key == "Escape") {autoCompleteOpen = false} else {autoCompleteKeyPress(evt)}}}
+                onblur={(evt) => handleACBlur(evt)}
                 bind:value={displayValue}/>
-            <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
             {#if autoCompleteOpen}
-                <ul bind:this={autoCompleteList} class="menu dropdown-content max-h-0.3 overflow-auto bg-base-200 rounded-box z-10 p-2 mt-2 shadow border border-base-100" style="{dropdownwidthStyle}" tabindex="-1">
+                <ul bind:this={autoCompleteList} class="menu dropdown-content border border-gray-600 rounded max-h-0.3 overflow-auto bg-base-200 rounded-box z-10 p-2 mt-4 shadow" style="{dropdownwidthStyle}">
                     {#each autoCompleteData as name}
-                        <!-- svelte-ignore a11y-click-events-have-key-events -->
-                        <!-- svelte-ignore a11y-no-static-element-interactions -->
-                        <!-- svelte-ignore a11y-missing-attribute -->
-                        <li><a on:click={() => autoCompleteUpdate(col, name)}>{name}</a></li>
+                        <!-- svelte-ignore a11y_missing_attribute -->
+                        <li><a tabindex="0" onclick={() => autoCompleteUpdate(col, name)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") autoCompleteUpdate(col, name)}}>{name}</a></li>
                     {/each}
                 </ul>
             {/if}
@@ -570,94 +691,114 @@
     {:else if col.type != "select:string" && col.type != "select:integer" && col.type != "boolean" && col.type != "array:string"}
         {#if col.editHeight}
             {#if col.default}
-                <textarea class="textarea bg-base-200 align-top {bg}" disabled={updateDisabled} style="{editminwStyle} {editmaxwStyle} {editHeightStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
+                <textarea class="textarea bg-base-200 align-top {bg}" disabled={updateDisabled} style="{editminwStyle} {editmaxwStyle} {editHeightStyle}" onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
             {:else}
-                <textarea class="textarea bg-base-200 align-top {bg}" style="{editminwStyle} {editmaxwStyle} {editHeightStyle}" disabled={updateDisabled} on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
+                <textarea class="textarea bg-base-200 align-top {bg}" style="{editminwStyle} {editmaxwStyle} {editHeightStyle}" disabled={updateDisabled} onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
             {/if}
         {:else}
             {#if col.default}
-                <input type="text" class="input bg-base-200 {bg}" style="{editminwStyle} {editmaxwStyle}" disabled={updateDisabled} on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"/>
+                <input type="text" class="input bg-base-200 {bg}" style="{editminwStyle} {editmaxwStyle}" disabled={updateDisabled} onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"/>
             {:else}
-                <input type="text" class="input bg-base-200 {bg}" style="{editminwStyle} {editmaxwStyle}" disabled={updateDisabled} on:keyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"/>
+                <input type="text" class="input bg-base-200 {bg}" style="{editminwStyle} {editmaxwStyle}" disabled={updateDisabled} onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"/>
             {/if}
         {/if}
     {:else if col.type == "array:string"}
         <div>
-        <table class="table table-sm border-none border-spacing-0 -ml-1 -p-4" style="border-bottom-width: 0px!important;">
-            <tbody>
                 {#each displayValue as val, i}
-                    <tr style="border-bottom-width: 0px!important;">
+                    <div class="mb-2">
                         {#if !col.readOnly}
-                            <td class="w-16"><button class="btn btn-neutral btn-small h-8" disabled={updateDisabled} on:click={() => removeElement(i)}>-</button></td>
+                            <button class="btn btn-neutral btn-small h-8 text-lg w-8 mr-2" disabled={updateDisabled} onclick={() => removeElement(i)}>-</button>
                         {/if}
-                        <td>{val}</td>
-                    </tr>
+                        {val}
+                    </div>
                 {/each}
-                <tr style="border-bottom-width: 0px!important;">
+                <div>
                     {#if !col.readOnly}
-                        <td class="w-16"><button class="btn btn-neutral btn-small h-8" disabled={extraValue==""} on:click={() => addElement()}>+</button></td>
-                        <td>
+                        <button class="btn btn-neutral btn-small h-8 text-lg w-8 mr-2" disabled={extraValue==""} onclick={() => addElement()}>+</button>
                             {#if col.autoCompleteLink}
-                                <div class="acdropdown overflow:visible" bind:this={autoCompleteDiv}>
+                                <div class="acdropdown overflow:visible">
                                     <input role="button" class="input m-0 -mb-1 w-full cursor-text {bg}" disabled={updateDisabled} style="{editminwStyle} {editmaxwStyle}"  tabindex="0"
-                                        on:keyup={(evt) => autoCompleteKeyPress(evt, value)}
-                                        on:blur={(evt) => handleACBlur(evt)}
-                                        bind:value={extraValue}/>
-                                    <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+                                        onkeyup={(evt) => {if (evt.key == "Escape") {autoCompleteOpen = false} else {autoCompleteKeyPress(evt)}}}
+                                         onblur={(evt) => handleACBlur(evt)}
+                                       bind:value={extraValue}/>
                                     {#if autoCompleteOpen} 
-                                        <ul tabindex="-1" bind:this={autoCompleteList} class="menu dropdown-content max-h-0.3 overflow-auto bg-base-200 rounded-box z-5 p-2 mt-4 shadow" style="{dropdownwidthStyle}">
+                                        <ul bind:this={autoCompleteList} class="menu dropdown-content bg-base-100 rounded   p-1 mt-4 border border-gray-600" style="{dropdownwidthStyle}">
                                             {#each autoCompleteData as name}
-                                                <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                                <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                                <!-- svelte-ignore a11y-missing-attribute -->
-                                                <li><a on:click={() => autoCompleteUpdate(col, name)}>{name}</a></li>
+                                                <!-- svelte-ignore a11y_missing_attribute -->
+                                                <li><a tabindex="0" onclick={() => autoCompleteUpdate(col, name)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") autoCompleteUpdate(col, name)}}>{name}</a></li>
                                             {/each}
                                         </ul>
                                     {/if}
                                 </div>
                             {:else}
-                                <input type="text" class="input bg-base-200" disabled={updateDisabled} style="{editminwStyle} {editmaxwStyle}" on:keyup={(evt) => fieldKeyPress(evt)} bind:value={extraValue}  tabindex="0"/>
+                                <input type="text" class="input bg-base-200" disabled={updateDisabled} style="{editminwStyle} {editmaxwStyle}" onkeyup={(evt) => fieldKeyPress(evt)} bind:value={extraValue}  tabindex="0"/>
                             {/if}
-                        </td>
                     {/if}
-                </tr>
-            </tbody>
-        </table>
+                </div>
 
         </div>
     {:else if col.type == "boolean"}
         {@const disabled = updateDisabled ? "disabled" : ""}
-        <select class="select" bind:value={displayValue} style="{boolEditminwStyle} {editmaxwStyle}">
-            <option class="hidden" on:click={() => editRowUpdate("")} value=""></option>
-            {#if col.nullable == true}
-                <option on:click={() => editRowUpdate("")} value="">Unset</option>
-            {/if}
-            <option on:click={() => editRowUpdate("No")}>No</option>
-            <option on:click={() => editRowUpdate("Yes")}>Yes</option>
+        <div tabindex="-1" class="join bg-base-200">
+            <input readonly tabindex="-1" bind:value={displayValue} class="input join-item bg-base-200 {bg}" style="{boolEditminwStyle} {editmaxwStyle}"/>
 
-        </select>
+            <details class="dropdown dropdown-end" bind:open={editMenuOpen}>
+            <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
+            onkeyup={(e) => {if (e.key == "Escape") {editMenuOpen = false}}}
+            onblur={(evt) => closeEdit(evt)}>&#x25bc</summary>
+            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded   p-1 mt-2 border border-gray-600" style="{dropdownwidthStyle}">
+                {#if col.nullable}
+                    <!-- svelte-ignore a11y_missing_attribute -->
+                    <li><a tabindex="0" id={"edit_select_"+col.col+"-"} onclick={() => editRowUpdate("")} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate("")}}>{Unset}</a></li>
+                {/if}
+                <!-- svelte-ignore a11y_missing_attribute -->
+                <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} onclick={() => editRowUpdate(No)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate("No")}}>{No}</a></li>
+                <!-- svelte-ignore a11y_missing_attribute -->
+                <li><a tabindex="0" id={"edit_select_"+col.col+"-t"} onclick={() => editRowUpdate(Yes)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate("Yes")}}>{Yes}</a></li>
+            </ul>
+            </details>
+        </div>
     {:else if col.names}
         {@const disabled = updateDisabled ? "disabled" : ""}
-        <select class="select" bind:value={displayValue} style="{editminwStyle} {editmaxwStyle}">
-            <option class="hidden" on:click={() => editRowUpdate("")} value=""></option>
-            {#if col.nullable == true}
-                <option on:click={() => editRowUpdate("")} value="">Unset</option>
-            {/if}
-            {#each col.names as val, i}
-                <option on:click={() => editRowUpdate(val+"")}>{val}</option>
-            {/each}                        
-        </select>
+
+        <div tabindex="-1" class="join bg-base-200">
+            <input readonly tabindex="-1" bind:value={displayValue} class="input join-item bg-base-200 {bg}" style="{boolEditminwStyle} {editmaxwStyle}"/>
+
+            <details class="dropdown dropdown-end" bind:open={editMenuOpen}>
+            <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
+            onkeyup={(e) => {if (e.key == "Escape") {editMenuOpen = false}}}
+            onblur={(evt) => closeEdit(evt)}>&#x25bc</summary>
+            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{dropdownwidthStyle}">
+                {#if col.nullable == true}
+                    <!-- svelte-ignore a11y_missing_attribute -->
+                    <li><a tabindex="0" id={"edit_select_"+col.col+"-"} onclick={() => editRowUpdate("")} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate("")}}>{Unset}</a></li>
+                {/if}
+                {#each col.names as val, i}
+                <!-- svelte-ignore a11y_missing_attribute -->
+                <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} onclick={() => editRowUpdate(val+"")} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(val+"")}}>{val}</a></li>
+                {/each}
+            </ul>
+            </details>
+        </div>
+
     {:else if col.values}
         {@const disabled = updateDisabled ? "disabled" : ""}
-        <select class="select" bind:value={displayValue} style="{editminwStyle} {editmaxwStyle}">
-            <option class="hidden" on:click={() => editRowUpdate("")} value=""></option>
-            {#if col.nullable == true}
-                <option on:click={() => editRowUpdate("")} value="">Unset</option>
-            {/if}
-            {#each col.values as val, i}
-                <option on:click={() => editRowUpdate(val+"")}>{val}</option>
-            {/each}                        
-        </select>
+ 
+        <details class="dropdown dropdown-end" bind:open={editMenuOpen}>
+            <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
+            onkeyup={(e) => {if (e.key == "Escape") {editMenuOpen = false}}}
+            onblur={(evt) => closeEdit(evt)}>&#x25bc</summary>
+            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{dropdownwidthStyle}">
+                {#if col.nullable == true}
+                    <!-- svelte-ignore a11y_missing_attribute -->
+                    <li><a tabindex="0" id={"edit_select_"+col.col+"-"} onclick={() => editRowUpdate("")} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate("")}}>{Unset}</a></li>
+                {/if}
+                {#each col.values as val, i}
+                <!-- svelte-ignore a11y_missing_attribute -->
+                <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} onclick={() => editRowUpdate(val+"")} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(val+"")}}>{val}</a></li>
+                {/each}
+            </ul>
+            </details>
     {/if}
 {/if}
 <div class="hidden bg-required bg-base-200"></div>

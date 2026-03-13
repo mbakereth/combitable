@@ -178,6 +178,7 @@
        navExtra? : CombiTableExtraButton[]
 
        emptySearch? : string,
+       lang?:  string,
     }
     import { onMount, untrack } from 'svelte';
     import { page } from '$app/stores';
@@ -198,7 +199,11 @@
     import CombiTableConfirmDeleteDialog from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
     import { updated } from '$app/state';
     import { PartialDateType } from '$lib/types';
-    import { PartialDateYear_Month, PartialDateYear_Day, PartialDateMonth_Day } from '$lib/utils';
+    import { PartialDateYear_Month, 
+        PartialDateYear_Day, 
+        PartialDateMonth_Day, getToday, 
+        splitPartialDate, 
+        joinPartialDate } from '$lib/utils';
 
     import DateSelector from './DateSelector.svelte';
 
@@ -238,7 +243,12 @@
         navExtra = [],
         primaryKeysChecked = $bindable([]),
         emptySearch = "-",
+        lang = "en"
     } : Props = $props();
+
+    let No = $derived(lang == "de" ? "Nein" : (lang == "el" ? "Όχι" : "No"));
+    let Yes = $derived(lang == "de" ? "Ja" : (lang == "el" ? "Ναι" : "Yes"));
+    let Unset = $derived(lang == "de" ? "Ungefasst" : (lang == "el" ? "Άδιο" : "Unset"));
 
     const objectMap = (obj : {[key:string]:any}, fn : (value: any) => any) =>
         Object.fromEntries(
@@ -486,7 +496,7 @@
 
     function asString(val : string|number|boolean|undefined|Date, type : string|undefined=undefined, dateType: PartialDateType=PartialDateType.date, edit = false) : string {
         if (val == undefined) return "";
-        if (typeof(val) == "boolean") return val ? "Yes" : "No";
+        if (typeof(val) == "boolean") return val ? Yes : No;
         if (typeof(val) == "number") return val+"";
         if (typeof(val) == "string") return val;
         if (val instanceof Date && type=="date") printDate(val, edit)
@@ -555,7 +565,7 @@
     function formatColumn(val : any, col: CombiTableColumn, editing=false) {
         if (val == undefined) return editing ? "" : emptyValue;
         if (typeof(val) == "boolean") {
-            return val ? "Yes" : "No";
+            return val ? Yes : No;
         }
         if (typeof(val) == "object" && col.type == "partialdate") {
             return printPartialDate(val.date as Date, val.type as PartialDateType);
@@ -760,7 +770,7 @@
                     if (typeof(value) == "boolean" || (value && !stringIsPartialDate(value))) {
                         throw new Error("Date format")
                     };
-                    if (typeof(value) == "boolean") filters[col.col] = value ? "Yes" : "No";
+                    if (typeof(value) == "boolean") filters[col.col] = value ? Yes : No;
                     else filters[col.col] = value ?? "";
                     const val = filters[col.col];
                     const partialDate = parsePartialDate(val);
@@ -779,7 +789,7 @@
                 delete filters[col.col];
                 filters = {...filters};
             } else {
-                if (typeof(value) == "boolean") filters[col.col] = value ? "Yes" : "No";
+                if (typeof(value) == "boolean") filters[col.col] = value ? Yes : No;
                 else filters[col.col] = value ?? "";
                 filters = {...filters, [col.col]: filters[col.col]}
             }
@@ -854,7 +864,7 @@
                     for (let i=0; i<columns.length; ++i) {
                         if (col == columns[i].col) {
                             if (columns[i].type == "boolean") {
-                                filterText[col] = urlfilters[col] == "t" ? "Yes" : "No"
+                                filterText[col] = urlfilters[col] == "t" ? Yes : No
                                 filterValues[col] = urlfilters[col];
                             } else if (columns[i].type == "date" || columns[i].type == "partialdate") {
                                 let parts = urlfilters[col].split("_")
@@ -898,17 +908,18 @@
     function closeFilter(evt : FocusEvent, col: CombiTableColumn) {
         let id = (evt.relatedTarget as any)?.id as string;
         if (!id || ( !(id.startsWith("filter_select_"+col.col+"-")) && !(id.startsWith("xfilter_select_summary_"+col.col+"-")) ) ){
-            for (let col of columns) {
+            //for (let col of columns) {
+                //console.log("Close", col.col)
                 filterMenusOpen[col.col] = false;
-            }
+            //}
         }
     }
     function closeEdit(evt : FocusEvent, col: CombiTableColumn) {
         let id = (evt.relatedTarget as any)?.id as string;
         if (!id || (!(id.startsWith("edit_select_"+col.col+"-")) && !(id.startsWith("xedit_select_summary_"+col.col+"-"))) ) {
-            for (let col of columns) {
+            //for (let col of columns) {
                 editRowMenusOpen[col.col] = false;
-            }
+            //}
         }
     }
     //$effect(() => {
@@ -956,11 +967,13 @@
         if (!col.autoCompleteLink) return;
 
         if (evt.key === 'Enter' && value) {
-            filterText[col.col] = value;
-            for (let col in autoCompleteOpen) {
-                autoCompleteOpen[col] = false;
+            if (isFilter) {
+                filterText[col.col] = value;
+                for (let col in autoCompleteOpen) {
+                    autoCompleteOpen[col] = false;
+                }
+                filter(col, value);
             }
-            filter(col, value);
         }
 
         if (value && value.length > 0) {
@@ -1176,7 +1189,7 @@
                 delete editRowSelectValue[col.col];
                 editRowSelectValue = {...editRowSelectValue};
             } else {
-                editRowText[col.col] = value ? "Yes" : "No";
+                editRowText[col.col] = value ? Yes : No;
                 editRowSelectValue[col.col] = value;
                 editRowSelectValue = {...editRowSelectValue};
             }
@@ -1521,10 +1534,111 @@
 
     }
 
-    ///// Date Selector
-    let dateSelectorYear : number|undefined = 2026;
-    let dateSelectorMonth: number|undefined = 3;
-    let dateSelectorDay : number|undefined = 1;
+    ///// Date Selectors
+
+    // filter
+
+    let filterDateSelectorYear : number|undefined = $state();
+    let filterDateSelectorMonth: number|undefined|null = $state();
+    let filterDateSelectorDay : number|undefined|null = $state();
+    
+    function toggleFilterDateDialog(col: string) {
+        const dateStr = filterText[col];
+        if (!dateStr) {
+            filterDateSelectorYear = getToday().getUTCFullYear();
+            filterDateSelectorMonth = getToday().getUTCMonth();
+            filterDateSelectorDay = getToday().getUTCDate();
+        } else {
+            try {
+                let {year, month, day} = splitPartialDate(dateStr, dateFormat);
+                filterDateSelectorYear = year;
+                filterDateSelectorMonth = month;
+                filterDateSelectorDay = day;
+            } catch (e) {
+                console.log(e);
+                filterText[col] = "";
+                filterDateSelectorYear = getToday().getUTCFullYear();
+                filterDateSelectorMonth = getToday().getUTCMonth();
+                filterDateSelectorDay = getToday().getUTCDate();
+            }
+        }
+        if (filterMenusOpen[col]) {
+            filterMenusOpen[col] = false;
+        } else {
+            for (let c in filterMenusOpen) {
+                if (c == col) {
+                    filterMenusOpen[col] = true;
+                } else if (filterMenusOpen[c] == true) {
+                    filterMenusOpen[c] = false;
+                }
+            }
+        }
+        
+    }
+
+    function filterDateSelectorOk(col: CombiTableColumn, year: number, month: number|null, day: number|null) {
+        filterText[col.col] = joinPartialDate(year, month, day, dateFormat);
+        filterMenusOpen[col.col] = false;
+        filter(col, filterText[col.col]);
+    }
+
+    function filterDateSelectorCancel(col: CombiTableColumn) {
+        filterMenusOpen[col.col] = false;
+    }
+
+    // edit/add
+
+    let editRowDateSelectorYear : number|undefined = $state();
+    let editRowDateSelectorMonth: number|undefined|null = $state();
+    let editRowDateSelectorDay : number|undefined|null = $state();
+    
+    function toggleEditRowDateDialog(col: string) {
+        const dateStr = editRowText[col];
+        if (!dateStr) {
+            editRowDateSelectorYear = getToday().getUTCFullYear();
+            editRowDateSelectorMonth = getToday().getUTCMonth();
+            editRowDateSelectorDay = getToday().getUTCDate();
+        } else {
+            try {
+                let {year, month, day} = splitPartialDate(dateStr, dateFormat);
+                editRowDateSelectorYear = year;
+                editRowDateSelectorMonth = month;
+                editRowDateSelectorDay = day;
+            } catch (e) {
+                console.log(e);
+                editRowText[col] = "";
+                editRowDateSelectorYear = getToday().getUTCFullYear();
+                editRowDateSelectorMonth = getToday().getUTCMonth();
+                editRowDateSelectorDay = getToday().getUTCDate();
+            }
+        }
+        if (editRowMenusOpen[col]) {
+            editRowMenusOpen[col] = false;
+        } else {
+            for (let c in editRowMenusOpen) {
+                if (c == col) {
+                    editRowMenusOpen[col] = true;
+                } else if (editRowMenusOpen[c] == true) {
+                    editRowMenusOpen[c] = false;
+                }
+            }
+        }
+        
+    }
+
+    function editRowDateSelectorOk(col: CombiTableColumn, year: number, month: number|null, day: number|null) {
+        const newValue = joinPartialDate(year, month, day, dateFormat);
+        if (!internalDirty && newValue != editRowText[col.col]) {
+            internalDirty = true;
+            dirty = internalDirty;
+        }
+        editRowText[col.col] = newValue;
+        editRowMenusOpen[col.col] = false;
+    }
+
+    function editRowDateSelectorCancel(col: CombiTableColumn) {
+        editRowMenusOpen[col.col] = false;
+    }
 
 </script>
 
@@ -1605,13 +1719,13 @@
                                     <input readonly tabindex="-1" bind:value={filterText[col.col]} class="input join-item bg-base-200" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"/>
                                     <details class="dropdown dropdown-end" bind:open={filterMenusOpen[col.col]}>
                                     <summary id={"filter_select_summary_"+col.col} class="btn join-item btn-outline btn-square border-gray-600" onblur={(evt) => closeFilter(evt, col)}>&#x25bc</summary>
-                                    <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 w-52 p-2 border mt-2 border-gray-600">
+                                    <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{dropdownwidthStyle}">
                                         <!-- svelte-ignore a11y_missing_attribute -->
                                         <li><a tabindex="0" id={"filter_select_"+col.col+"-"} onclick={() => filter(col, undefined)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") filter(col, undefined)}}>Unset</a></li>
                                         <!-- svelte-ignore a11y_missing_attribute -->
-                                        <li><a tabindex="0" id={"filter_select_"+col.col+"-f"} onclick={() => filter(col, false)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") filter(col, false)}}>No</a></li>
+                                        <li><a tabindex="0" id={"filter_select_"+col.col+"-f"} onclick={() => filter(col, false)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") filter(col, false)}}>{No}</a></li>
                                         <!-- svelte-ignore a11y_missing_attribute -->
-                                        <li><a tabindex="0" id={"filter_select_"+col.col+"-t"} onclick={() => filter(col, true)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") filter(col, true)}}>Yes</a></li>
+                                        <li><a tabindex="0" id={"filter_select_"+col.col+"-t"} onclick={() => filter(col, true)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") filter(col, true)}}>{Yes}</a></li>
                                     </ul>
                                     </details>
                                 </div>
@@ -1622,7 +1736,7 @@
                                     <details class="dropdown dropdown-end join-item" bind:open={filterMenusOpen[col.col]}>
                                         <summary id={"filter_select_summary_"+col.col} class="btn join-item btn-outline border-gray-600" 
                                         onblur={(evt) => closeFilter(evt, col)}>&#x25bc</summary>
-                                        <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded   z-1 w-52 p-2 mt-2 border border-gray-600">
+                                        <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded   z-1 p-2 mt-2 border border-gray-600" style={dropdownwidthStyle}>
                                             <!-- svelte-ignore a11y_missing_attribute -->
                                             <li><a tabindex="0" id={"filter_select_"+col.col+"-"} onclick={() => filter(col, "")} role="button" onkeyup={(evt) => {if (evt.key == "Enter") filter(col, "")}}>Unset</a></li>
                                             {#each col.names as name, i}
@@ -1653,9 +1767,25 @@
                                 <div class="join">
                                     <input type="text join-item" class="input bg-base-200 w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
                                         bind:value={filterText[col.col]} 
-                                        onblur={() => filter(col, filterText[col.col])} 
                                         onkeypress={(evt) => filterKeyPress(evt, col, filterText[col.col])}/>
-                                    <button class="btn btn-outline btn-square border-gray-600 join-item bg-base-200">{@html calendarIcon}</button>
+                                    <button class="btn join-item btn-outline btn-square border-gray-600" 
+                                        onclick={() => toggleFilterDateDialog(col.col)} >{@html calendarIcon}</button>
+                                    <details class="dropdown dropdown-end" bind:open={filterMenusOpen[col.col]} 
+                                        id={"filter_date_"+col.col} 
+                                    >
+                                        <summary class="hidden" ></summary>
+                                            <DateSelector 
+                                                id={"filter_dateselector_"+col.col}
+                                                classes="menu dropdown-content border rounded border-gray-600 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-2 shadow mt-12 ml-4" 
+                                                dateFormat={dateFormat as "yyyy-mm-dd"|"mm-dd-yyyy"|"dd-mm-yyyy"}
+                                                year={filterDateSelectorYear} 
+                                                month={filterDateSelectorMonth} 
+                                                day={filterDateSelectorDay} 
+                                                allowPartial={true}
+                                                onOk={(year, month, day) => filterDateSelectorOk(col, year, month, day)}
+                                                onCancel={() => filterDateSelectorCancel(col)}
+                                            ></DateSelector>
+                                    </details>
 
                                 </div>
                             {:else}
@@ -1703,15 +1833,15 @@
                                                 <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
                                                 <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
                                                 onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
-                                                <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 w-52 p-2 border mt-2 border-gray-600">
+                                                <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{dropdownwidthStyle}">
                                                     {#if col.nullable}
                                                         <!-- svelte-ignore a11y_missing_attribute -->
                                                         <li><a tabindex="0" id={"edit_select_"+col.col+"-"} onclick={() => editRowUpdate(col, null)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, null)}}>Unset</a></li>
                                                     {/if}
                                                     <!-- svelte-ignore a11y_missing_attribute -->
-                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} onclick={() => editRowUpdate(col, false)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, false)}}>No</a></li>
+                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} onclick={() => editRowUpdate(col, false)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, false)}}>{No}</a></li>
                                                     <!-- svelte-ignore a11y_missing_attribute -->
-                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-t"} onclick={() => editRowUpdate(col, true)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, true)}}>Yes</a></li>
+                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-t"} onclick={() => editRowUpdate(col, true)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, true)}}>{Yes}</a></li>
                                                 </ul>
                                                 </details>
                                             </div>
@@ -1724,7 +1854,7 @@
                                             <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
                                             <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
                                             onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
-                                            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 w-52 p-2 border mt-2 border-gray-600">
+                                            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style={dropdownwidthStyle}>
                                             {#if col.nullable}
                                                 <!-- svelte-ignore a11y_missing_attribute -->
                                                 <li><a tabindex="0" id={"edit_select_"+col.col+"-"} onclick={() => editRowUpdate(col, null)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, null)}}>Unset</a></li>
@@ -1739,7 +1869,7 @@
 
                                         {:else if col.autoCompleteLink}    
                                             <div class="dropdown overflow:visible dropdown-open" id={"edit_ac_"+col.col}>
-                                                <input class="input m-0 -mb-1 w-full {bg} cursor-text" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
+                                                <input class="input m-0 w-full {bg} cursor-text" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
                                                     onkeyup={(evt) => autoCompleteKeyPress(evt, col, editRowText[col.col], false)}
                                                     onfocusout={(event) => {handleACBlur(event, col)}}
                                                     bind:value={editRowText[col.col]}/>
@@ -1751,6 +1881,32 @@
                                                     {/each}
                                                 </ul>
                                                 {/if}
+                                            </div>
+                                        {:else if col.type == "date" || col.type == "partialdate"}    
+                                            <div class="join">
+                                                <input type="text join-item" class="input bg-base-200 w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
+                                                    onkeyup={(evt) => editInputUpdate(evt, col)}
+                                                    bind:value={editRowText[col.col]} 
+                                                />
+                                                <button class="btn join-item btn-outline btn-square border-gray-600" 
+                                                    onclick={() => toggleEditRowDateDialog(col.col)} >{@html calendarIcon}</button>
+                                                <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]} 
+                                                    id={"editRow_date_"+col.col} 
+                                                >
+                                                    <summary class="hidden" ></summary>
+                                                        <DateSelector 
+                                                            id={"editRow_dateselector_"+col.col}
+                                                            classes="menu dropdown-content border rounded border-gray-600 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-2 shadow mt-12 ml-4" 
+                                                            dateFormat={dateFormat as "yyyy-mm-dd"|"mm-dd-yyyy"|"dd-mm-yyyy"}
+                                                            year={editRowDateSelectorYear} 
+                                                            month={editRowDateSelectorMonth} 
+                                                            day={editRowDateSelectorDay} 
+                                                            allowPartial={col.type == "partialdate"}
+                                                            onOk={(year, month, day) => editRowDateSelectorOk(col, year, month, day)}
+                                                            onCancel={() => editRowDateSelectorCancel(col)}
+                                                        ></DateSelector>
+                                                </details>
+
                                             </div>
                                         {:else}
                                             <input type="text" class="input w-full {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
@@ -1771,10 +1927,10 @@
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
                                     <span 
-                                    class="{saveColorClass} flex pt-6 -ml-[20px] cursor-pointer" onclick={() => saveEdit()}>{@html checkIcon}</span>
+                                    class="{saveColorClass} flex pt-8 -ml-[20px] cursor-pointer" onclick={() => saveEdit()}>{@html checkIcon}</span>
                                 {:else}
                                     <span 
-                                    class="text-neutral-500 flex pt-6 -ml-[20px]">{@html checkIcon}</span>
+                                    class="text-neutral-500 flex pt-8 -ml-[20px]">{@html checkIcon}</span>
                                 {/if}
                                     <!-- svelte-ignore missing-declaration -->
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -1823,6 +1979,7 @@
                     {#each columns as col, colidx}
 
                         {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
+                        {@const dropdownwidthStyle = col.dropdownWidth ? "width:" + col.dropdownWidth : ";"}
                         {#if editRow == undefined || editRow != rowidx}
                             {@const value = formatColumn(getColumn(row, col), col, false)}
                             <td class="align-top" style="{maxWidthStyle[col.col]}">
@@ -1871,15 +2028,15 @@
                                             <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
                                             <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
                                             onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
-                                            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 w-52 p-2 border mt-2 border-gray-600">
+                                            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{dropdownwidthStyle}">
                                                 {#if col.nullable}
                                                 <!-- svelte-ignore a11y_missing_attribute -->
                                                 <li><a tabindex="0" id={"edit_select_"+col.col+"-"} onclick={() => editRowUpdate(col, null)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, null)}}>Unset</a></li>
                                                 {/if}
                                                 <!-- svelte-ignore a11y_missing_attribute -->
-                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} onclick={() => editRowUpdate(col, false)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, false)}}>No</a></li>
+                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} onclick={() => editRowUpdate(col, false)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, false)}}>{No}</a></li>
                                                 <!-- svelte-ignore a11y_missing_attribute -->
-                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-t"} onclick={() => editRowUpdate(col, true)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, true)}}>Yes</a></li>
+                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-t"} onclick={() => editRowUpdate(col, true)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, true)}}>{Yes}</a></li>
                                             </ul>
                                             </details>
                                         </div>
@@ -1892,7 +2049,7 @@
                                             <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
                                             <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
                                             onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
-                                            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 w-52 p-2 border mt-2 border-gray-600">
+                                            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{dropdownwidthStyle}">
                                                 {#if col.nullable}
                                                     <!-- svelte-ignore a11y_missing_attribute -->
                                                     <li><a tabindex="0" id={"edit_select_"+col.col+"-"} onclick={() => editRowUpdate(col, null)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, null)}}>Unset</a></li>
@@ -1919,6 +2076,32 @@
                                                 {/each}
                                             </ul>
                                             {/if}
+                                        </div>
+                                    {:else if col.type == "date" || col.type == "partialdate"}    
+                                        <div class="join">
+                                            <input type="text join-item" class="input bg-base-200 w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
+                                                bind:value={editRowText[col.col]} 
+                                                onkeyup={(evt) => editInputUpdate(evt, col)}
+                                            />
+                                            <button class="btn join-item btn-outline btn-square border-gray-600" 
+                                                onclick={() => toggleEditRowDateDialog(col.col)} >{@html calendarIcon}</button>
+                                            <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]} 
+                                                id={"editRow_date_"+col.col} 
+                                            >
+                                                <summary class="hidden" ></summary>
+                                                    <DateSelector 
+                                                        id={"editRow_dateselector_"+col.col}
+                                                        classes="menu dropdown-content border rounded border-gray-600 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-2 shadow mt-12 ml-4" 
+                                                        dateFormat={dateFormat as "yyyy-mm-dd"|"mm-dd-yyyy"|"dd-mm-yyyy"}
+                                                        year={editRowDateSelectorYear} 
+                                                        month={editRowDateSelectorMonth} 
+                                                        day={editRowDateSelectorDay} 
+                                                        allowPartial={col.type == "partialdate"}
+                                                        onOk={(year, month, day) => editRowDateSelectorOk(col, year, month, day)}
+                                                        onCancel={() => editRowDateSelectorCancel(col)}
+                                                    ></DateSelector>
+                                            </details>
+
                                         </div>
                                     {:else}
                                         <input type="text" class="input {bg} w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
@@ -1966,10 +2149,10 @@
                                 <!-- svelte-ignore a11y-click-events-have-key-events -->
                                 <!-- svelte-ignore a11y-no-static-element-interactions -->
                                 <span 
-                                class="text-success flex pt-6 -ml-[20px] cursor-pointer" onclick={() => {if (!updateDisabled) saveEdit()}}>{@html checkIcon}</span>
+                                class="text-success flex pt-8 -ml-[20px] cursor-pointer" onclick={() => {if (!updateDisabled) saveEdit()}}>{@html checkIcon}</span>
                             {:else}
                                 <span 
-                                class="text-neutral-500 flex pt-6 -ml-[20px]">{@html checkIcon}</span>
+                                class="text-neutral-500 flex pt-8 -ml-[20px]">{@html checkIcon}</span>
                             {/if}
                                 <!-- svelte-ignore missing-declaration -->
                                 <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -2017,8 +2200,6 @@
         {/if}
 </div>
 {/if}
-
-<DateSelector classes="mt-4 ml-4" year={dateSelectorYear} month={dateSelectorMonth} day={dateSelectorDay} allowPartial={false}></DateSelector>
 
 <!-- Modal to confirm discarding edit -->
 <CombiTableDiscardChanges id={"confirmEditDiscard_"+uuid} okFn={confirmCancelEdit}/>
@@ -2082,6 +2263,19 @@
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
   transition-duration: 200ms;
+}
+
+#modalOverlay {
+  position: fixed; /* Sit on top of the page content */
+  width: 100%; /* Full width (cover the whole page) */
+  height: 100%; /* Full height (cover the whole page) */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0,0,0,0.5); /* Black background with opacity */
+  z-index: 2; /* Specify a stack order in case you're using a different order for other elements */
+  /*cursor: pointer;*/ /* Add a pointer on hover */
 }
 
 </style>

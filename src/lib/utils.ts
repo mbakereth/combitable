@@ -292,6 +292,36 @@ export function splitPartialDate(val : string, dateFormat="yyyy-mm-dd") : {year:
     }
 }
 
+export function joinPartialDate(year: number, month: number|null, day: number|null, dateFormat="yyyy-mm-dd") : string {
+    let out = "";
+    if (dateFormat == "yyyy-mm-dd") {
+        out += String(year)
+        if (month !== null) {
+            out += "-" + String(month).padStart(2, "0");
+            if (day !== null) {
+                out += "-" + String(day).padStart(2, "0");
+            }
+        }
+    } else if (dateFormat == "dd-mm-yyyy") {
+        if (day !== null && month !== null) {
+            out += String(day).padStart(2, "0") + "-";
+            out += String(month).padStart(2, "0") + "-";
+        } else if (month !== null) {
+            out += String(month).padStart(2, "0") + "-";
+        }
+        out += String(year)
+    } else { // mm-dd-yyyy
+        if (day !== null && month !== null) {
+            out += String(month).padStart(2, "0") + "-";
+            out += String(day).padStart(2, "0") + "-";
+        } else if (month !== null) {
+            out += String(month).padStart(2, "0") + "-";
+        }
+        out += String(year)
+    }
+    return out;
+}
+
 export function yearFromPartialDate(val : string, dateFormat="yyyy-mm-dd") : number {
     return splitPartialDate(val, dateFormat).year;
 }
