@@ -1718,14 +1718,22 @@
                                 <div tabindex="-1" class="join bg-base-200">
                                     <input readonly tabindex="-1" bind:value={filterText[col.col]} class="input join-item bg-base-200" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"/>
                                     <details class="dropdown dropdown-end" bind:open={filterMenusOpen[col.col]}>
-                                    <summary id={"filter_select_summary_"+col.col} class="btn join-item btn-outline btn-square border-gray-600" onblur={(evt) => closeFilter(evt, col)}>&#x25bc</summary>
+                                    <summary id={"filter_select_summary_"+col.col} class="btn join-item btn-outline btn-square border-gray-600" 
+                                        onkeyup={(evt) => {if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}
+                                        onblur={(evt) => closeFilter(evt, col)}>&#x25bc</summary>
                                     <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{dropdownwidthStyle}">
                                         <!-- svelte-ignore a11y_missing_attribute -->
-                                        <li><a tabindex="0" id={"filter_select_"+col.col+"-"} onclick={() => filter(col, undefined)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") filter(col, undefined)}}>Unset</a></li>
+                                        <li><a tabindex="0" id={"filter_select_"+col.col+"-"} 
+                                            onclick={() => filter(col, undefined)} 
+                                            role="button" onkeyup={(evt) => {if (evt.key == "Enter") {filter(col, undefined)} else if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}>Unset</a></li>
                                         <!-- svelte-ignore a11y_missing_attribute -->
-                                        <li><a tabindex="0" id={"filter_select_"+col.col+"-f"} onclick={() => filter(col, false)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") filter(col, false)}}>{No}</a></li>
+                                        <li><a tabindex="0" id={"filter_select_"+col.col+"-f"} 
+                                            onclick={() => filter(col, false)} 
+                                            role="button" onkeyup={(evt) => {if (evt.key == "Enter") {filter(col, undefined)} else if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}>{No}</a></li>
                                         <!-- svelte-ignore a11y_missing_attribute -->
-                                        <li><a tabindex="0" id={"filter_select_"+col.col+"-t"} onclick={() => filter(col, true)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") filter(col, true)}}>{Yes}</a></li>
+                                        <li><a tabindex="0" id={"filter_select_"+col.col+"-t"} 
+                                            onclick={() => filter(col, true)} 
+                                            role="button" onkeyup={(evt) => {if (evt.key == "Enter") {filter(col, undefined)} else if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}>{Yes}</a></li>
                                     </ul>
                                     </details>
                                 </div>
@@ -1735,13 +1743,18 @@
                                     onblur={(evt) => closeFilter(evt, col)} bind:value={filterText[col.col]}/>
                                     <details class="dropdown dropdown-end join-item" bind:open={filterMenusOpen[col.col]}>
                                         <summary id={"filter_select_summary_"+col.col} class="btn join-item btn-outline border-gray-600" 
-                                        onblur={(evt) => closeFilter(evt, col)}>&#x25bc</summary>
+                                            onkeyup={(evt) => {if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}
+                                            onblur={(evt) => closeFilter(evt, col)}>&#x25bc</summary>
                                         <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded   z-1 p-2 mt-2 border border-gray-600" style={dropdownwidthStyle}>
                                             <!-- svelte-ignore a11y_missing_attribute -->
-                                            <li><a tabindex="0" id={"filter_select_"+col.col+"-"} onclick={() => filter(col, "")} role="button" onkeyup={(evt) => {if (evt.key == "Enter") filter(col, "")}}>Unset</a></li>
+                                            <li><a tabindex="0" id={"filter_select_"+col.col+"-"} 
+                                                onclick={() => filter(col, "")} 
+                                                role="button" onkeyup={(evt) => {if (evt.key == "Enter") {filter(col, "")} else if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}>Unset</a></li>
                                             {#each col.names as name, i}
                                                 <!-- svelte-ignore a11y_missing_attribute -->
-                                                <li><a tabindex="0" id={"filter_select_"+col.col+"-"} onclick={() => filter(col, col.values ? col.values[i]+"" : name)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") filter(col, col.values ? col.values[i]+"" : name)}}>{name}</a></li>
+                                                <li><a tabindex="0" id={"filter_select_"+col.col+"-"} 
+                                                onclick={() => filter(col, col.values ? col.values[i]+"" : name)} 
+                                                role="button" onkeyup={(evt) => {if (evt.key == "Enter") {filter(col, col.values ? col.values[i]+"" : name)} else if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}>{name}</a></li>
                                             {/each}
                                         </ul>
                                     </details>
@@ -1750,7 +1763,7 @@
                             {:else if col.autoCompleteLink}    
                                 <div class="dropdown overflow:visible dropdown-open" id={"filter_ac_"+col.col} >
                                     <input class="input m-0 w-full bg-base-200" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
-                                        onkeyup={(evt) => autoCompleteKeyPress(evt, col, filterText[col.col], true)}
+                                        onkeyup={(evt) => {if (evt.key == "Escape") {autoCompleteOpen[col.col]=false} else {autoCompleteKeyPress(evt, col, filterText[col.col], true)}}}
                                         bind:value={filterText[col.col]}
                                         onfocusout={(event) => {handleACBlur(event, col)}}
                                         />
@@ -1758,7 +1771,9 @@
                                     <ul class="menu dropdown-content border rounded border-gray-600 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-2 shadow" style="{dropdownwidthStyle}">
                                         {#each autoCompleteData as name}
                                             <!-- svelte-ignore a11y_missing_attribute -->
-                                            <li><a tabindex="0" onclick={() => autoCompleteUpdate_filter(col, name)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") autoCompleteUpdate_filter(col, name)}}>{name}</a></li>
+                                            <li><a tabindex="0" 
+                                            onclick={() => autoCompleteUpdate_filter(col, name)} 
+                                            role="button" onkeyup={(evt) => {if (evt.key == "Enter") {autoCompleteUpdate_filter(col, name)} else if (evt.key == "Escape") {autoCompleteOpen[col.col]=false}}}>{name}</a></li>
                                         {/each}
                                     </ul>
                                     {/if}                                                                            
@@ -1767,9 +1782,10 @@
                                 <div class="join">
                                     <input type="text join-item" class="input bg-base-200 w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
                                         bind:value={filterText[col.col]} 
-                                        onkeypress={(evt) => filterKeyPress(evt, col, filterText[col.col])}/>
+                                        onkeypress={(evt) => {if (evt.key == "Escape") {filterMenusOpen[col.col]=false} else {filterKeyPress(evt, col, filterText[col.col])}}}/>
                                     <button class="btn join-item btn-outline btn-square border-gray-600" 
-                                        onclick={() => toggleFilterDateDialog(col.col)} >{@html calendarIcon}</button>
+                                        onclick={() => toggleFilterDateDialog(col.col)} 
+                                        onkeyup={(evt) => {if (evt.key == "Escape") {filterMenusOpen[col.col]=false} }}>{@html calendarIcon}</button>
                                     <details class="dropdown dropdown-end" bind:open={filterMenusOpen[col.col]} 
                                         id={"filter_date_"+col.col} 
                                     >
@@ -1792,7 +1808,7 @@
                                 <input type="text" class="input bg-base-200 w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
                                     bind:value={filterText[col.col]} 
                                     onblur={() => filter(col, filterText[col.col])} 
-                                    onkeypress={(evt) => filterKeyPress(evt, col, filterText[col.col])}/>
+                                    onkeyup={(evt) => filterKeyPress(evt, col, filterText[col.col])}/>
                             {/if}
                         </td>
                     {/each}
@@ -1828,20 +1844,30 @@
                                         {#if col.type == "boolean"}
 
                                             <div tabindex="-1" class="join bg-base-200">
-                                                <input readonly tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"/>
+                                                <input readonly tabindex="-1" bind:value={editRowText[col.col]} 
+                                                    class="input join-item bg-base-200 {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
+                                                    onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}
+                                                />
 
                                                 <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
                                                 <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
-                                                onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
+                                                    onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}
+                                                    onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
                                                 <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{dropdownwidthStyle}">
                                                     {#if col.nullable}
                                                         <!-- svelte-ignore a11y_missing_attribute -->
-                                                        <li><a tabindex="0" id={"edit_select_"+col.col+"-"} onclick={() => editRowUpdate(col, null)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, null)}}>Unset</a></li>
+                                                        <li><a tabindex="0" id={"edit_select_"+col.col+"-"} 
+                                                        onclick={() => editRowUpdate(col, null)} role="button" 
+                                                        onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, null)} else if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}>Unset</a></li>
                                                     {/if}
                                                     <!-- svelte-ignore a11y_missing_attribute -->
-                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} onclick={() => editRowUpdate(col, false)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, false)}}>{No}</a></li>
+                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} 
+                                                    onclick={() => editRowUpdate(col, false)} role="button" 
+                                                    onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, false)} else if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}>{No}</a></li>
                                                     <!-- svelte-ignore a11y_missing_attribute -->
-                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-t"} onclick={() => editRowUpdate(col, true)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, true)}}>{Yes}</a></li>
+                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-t"} 
+                                                    onclick={() => editRowUpdate(col, true)} 
+                                                    role="button" onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, true)} else if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}>{Yes}</a></li>
                                                 </ul>
                                                 </details>
                                             </div>
@@ -1853,15 +1879,20 @@
 
                                             <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
                                             <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
-                                            onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
+                                                onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}
+                                                onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
                                             <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style={dropdownwidthStyle}>
                                             {#if col.nullable}
                                                 <!-- svelte-ignore a11y_missing_attribute -->
-                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-"} onclick={() => editRowUpdate(col, null)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, null)}}>Unset</a></li>
+                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-"} 
+                                                onclick={() => editRowUpdate(col, null)} 
+                                                role="button" onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, null)} else if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}>Unset</a></li>
                                             {/if}
                                                  {#each col.names as name, i}
                                                     <!-- svelte-ignore a11y_missing_attribute -->
-                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} onclick={() => editRowUpdate(col, col.values ? col.values[i]+"" : name)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, col.values ? col.values[i]+"" : name)}}>{name}</a></li>
+                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} 
+                                                    onclick={() => editRowUpdate(col, col.values ? col.values[i]+"" : name)} 
+                                                    role="button" onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, col.values ? col.values[i]+"" : name)} else if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}>{name}</a></li>
                                                 {/each}
                                             </ul>
                                             </details>
@@ -1870,14 +1901,16 @@
                                         {:else if col.autoCompleteLink}    
                                             <div class="dropdown overflow:visible dropdown-open" id={"edit_ac_"+col.col}>
                                                 <input class="input m-0 w-full {bg} cursor-text" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
-                                                    onkeyup={(evt) => autoCompleteKeyPress(evt, col, editRowText[col.col], false)}
+                                                    onkeyup={(evt) => {if (evt.key == "Escape") {autoCompleteOpen[col.col]=false} else {autoCompleteKeyPress(evt, col, editRowText[col.col], false)}}}
                                                     onfocusout={(event) => {handleACBlur(event, col)}}
                                                     bind:value={editRowText[col.col]}/>
                                                  {#if autoCompleteOpen[col.col] && editRow == -1}
                                                     <ul class="menu dropdown-content border-1 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-4 shadow" style="{dropdownwidthStyle}">
                                                     {#each autoCompleteData as name}
                                                         <!-- svelte-ignore a11y_missing_attribute -->
-                                                        <li><a tabindex="0" onclick={() => autoCompleteUpdate(col, name)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") autoCompleteUpdate(col, name)}}>{name}</a></li>
+                                                        <li><a tabindex="0" 
+                                                        onclick={() => autoCompleteUpdate(col, name)} 
+                                                        role="button" onkeyup={(evt) => {if (evt.key == "Enter") {autoCompleteUpdate(col, name)} else if (evt.key == "Escape") {autoCompleteOpen[col.col]=false}}}>{name}</a></li>
                                                     {/each}
                                                 </ul>
                                                 {/if}
@@ -1885,10 +1918,11 @@
                                         {:else if col.type == "date" || col.type == "partialdate"}    
                                             <div class="join">
                                                 <input type="text join-item" class="input bg-base-200 w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
-                                                    onkeyup={(evt) => editInputUpdate(evt, col)}
+                                                    onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col]=false} else {editInputUpdate(evt, col)}}}
                                                     bind:value={editRowText[col.col]} 
                                                 />
                                                 <button class="btn join-item btn-outline btn-square border-gray-600" 
+                                                    onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}
                                                     onclick={() => toggleEditRowDateDialog(col.col)} >{@html calendarIcon}</button>
                                                 <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]} 
                                                     id={"editRow_date_"+col.col} 
@@ -1923,19 +1957,19 @@
                         {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl}
                             <td class="w-4 last:sticky last:right-0 z-10 bg-base-100">
                                 {#if internalDirty}
-                                    <!-- svelte-ignore missing-declaration -->
-                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
                                     <span 
+                                    tabindex="0"
+                                    role="button"
+                                    onkeyup={(evt) => {if (evt.key == "Enter") {saveEdit()}}}
                                     class="{saveColorClass} flex pt-8 -ml-[20px] cursor-pointer" onclick={() => saveEdit()}>{@html checkIcon}</span>
                                 {:else}
                                     <span 
                                     class="text-neutral-500 flex pt-8 -ml-[20px]">{@html checkIcon}</span>
                                 {/if}
-                                    <!-- svelte-ignore missing-declaration -->
-                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <span 
+                                    tabindex="0"
+                                    role="button"
+                                    onkeyup={(evt) => {if (evt.key == "Enter") {cancelEdit()}}}
                                     class="{cancelColorClass} -mt-[22px] ml-[6px] flex cursor-pointer" onclick={() => cancelEdit()}>{@html crossIcon}</span>
                             </td>
                         {/if}
@@ -2023,20 +2057,29 @@
                                     {#if col.type == "boolean"}
 
                                         <div tabindex="-1" class="join bg-base-200">
-                                            <input readonly tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"/>
-
+                                            <input readonly tabindex="-1" 
+                                                bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg}" 
+                                                style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
+                                            />
                                             <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
                                             <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
-                                            onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
+                                                onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col] = false}}}
+                                                onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
                                             <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{dropdownwidthStyle}">
                                                 {#if col.nullable}
                                                 <!-- svelte-ignore a11y_missing_attribute -->
-                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-"} onclick={() => editRowUpdate(col, null)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, null)}}>Unset</a></li>
+                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-"} 
+                                                    onclick={() => editRowUpdate(col, null)} 
+                                                    role="button" onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, null)} else if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}>Unset</a></li>
                                                 {/if}
                                                 <!-- svelte-ignore a11y_missing_attribute -->
-                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} onclick={() => editRowUpdate(col, false)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, false)}}>{No}</a></li>
+                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} 
+                                                    onclick={() => editRowUpdate(col, false)} 
+                                                    role="button" onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, false)} else if (evt.key == "Escape") {editRowMenusOpen[col.col] = false}}}>{No}</a></li>
                                                 <!-- svelte-ignore a11y_missing_attribute -->
-                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-t"} onclick={() => editRowUpdate(col, true)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, true)}}>{Yes}</a></li>
+                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-t"} 
+                                                    onclick={() => editRowUpdate(col, true)} role="button" 
+                                                    onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, true)} else if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}>{Yes}</a></li>
                                             </ul>
                                             </details>
                                         </div>
@@ -2048,15 +2091,20 @@
 
                                             <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
                                             <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
-                                            onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
+                                                onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col] = false}}}
+                                                onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
                                             <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{dropdownwidthStyle}">
                                                 {#if col.nullable}
                                                     <!-- svelte-ignore a11y_missing_attribute -->
-                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-"} onclick={() => editRowUpdate(col, null)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, null)}}>Unset</a></li>
+                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-"} 
+                                                        onclick={() => editRowUpdate(col, null)} 
+                                                        role="button" onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, null)} else if (evt.key == "Escape") {editRowMenusOpen[col.col] = false}}}>Unset</a></li>
                                                 {/if}
                                                  {#each col.names as name, i}
                                                     <!-- svelte-ignore a11y_missing_attribute -->
-                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} onclick={() => editRowUpdate(col, col.values ? col.values[i]+"" : name)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate(col, col.values ? col.values[i]+"" : name)}}>{name}</a></li>
+                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-f"}
+                                                     onclick={() => editRowUpdate(col, col.values ? col.values[i]+"" : name)} 
+                                                     role="button" onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, col.values ? col.values[i]+"" : name)} else if (evt.key == "Escape") {editRowMenusOpen[col.col] = false}}}>{name}</a></li>
                                                 {/each}
                                             </ul>
                                             </details>
@@ -2065,14 +2113,16 @@
                                     {:else if col.autoCompleteLink}    
                                         <div class="dropdown overflow:visible dropdown-open" id={"edit_ac_"+col.col}>
                                             <input class="input m-0 -mb-1 w-full {bg} cursor-text" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
-                                                onkeyup={(evt) => autoCompleteKeyPress(evt, col, editRowText[col.col], false)}
+                                                onkeyup={(evt) => {if (evt.key == "Escape") {autoCompleteOpen[col.col] = false} else {autoCompleteKeyPress(evt, col, editRowText[col.col], false)}}}
                                                 onfocusout={(event) => {handleACBlur(event, col)}}
                                                 bind:value={editRowText[col.col]}/>
                                                 {#if autoCompleteOpen[col.col] && editRow >= 0}
                                                 <ul class="menu dropdown-content max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-4 shadow" style="{col.dropdownWidth ? "width:" + col.dropdownWidth + ";" : ""}">
                                                 {#each autoCompleteData as name}
                                                         <!-- svelte-ignore a11y_missing_attribute -->
-                                                        <li><a tabindex="0" onclick={() => autoCompleteUpdate(col, name)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") autoCompleteUpdate(col, name)}}>{name}</a></li>
+                                                        <li><a tabindex="0"
+                                                         onclick={() => autoCompleteUpdate(col, name)} 
+                                                         role="button" onkeyup={(evt) => {if (evt.key == "Enter") {autoCompleteUpdate(col, name)} else if (evt.key == "Escape") {autoCompleteOpen[col.col] = false}}}>{name}</a></li>
                                                 {/each}
                                             </ul>
                                             {/if}
@@ -2081,9 +2131,10 @@
                                         <div class="join">
                                             <input type="text join-item" class="input bg-base-200 w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
                                                 bind:value={editRowText[col.col]} 
-                                                onkeyup={(evt) => editInputUpdate(evt, col)}
+                                                onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col] = false} else {editInputUpdate(evt, col)}}}
                                             />
                                             <button class="btn join-item btn-outline btn-square border-gray-600" 
+                                                onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col] = false} }}
                                                 onclick={() => toggleEditRowDateDialog(col.col)} >{@html calendarIcon}</button>
                                             <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]} 
                                                 id={"editRow_date_"+col.col} 
@@ -2119,46 +2170,49 @@
                         {#if (editUrl  && editable) || deleteUrl !== undefined}
                             <td class="w-4 last:sticky last:right-0 z-10 bg-base-100">
                                 {#if editUrl && editable}
-                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <span 
+                                        tabindex="0"
+                                        role="button"
+                                        onkeyup={(evt) => {if (evt.key == "Enter") {edit(rowidx)}}}
                                         class="text-primary -ml-4 flex cursor-pointer" onclick={() => edit(rowidx)}>{@html editIcon}</span>
                                 {/if}
-                                <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                <!-- svelte-ignore a11y-no-static-element-interactions -->
                                 {#if unlinkUrl !== undefined}
-                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <span 
-                                    class="ml-1 text-error {exitWidthClass} flex {exitHeightClass} cursor-pointer" onclick={() => unlinkRow(rowidx)}>{@html exitIcon}</span>
+                                        tabindex="0"
+                                        role="button"
+                                        onkeyup={(evt) => {if (evt.key == "Enter") {unlinkRow(rowidx)}}}
+                                        class="ml-1 text-error {exitWidthClass} flex {exitHeightClass} cursor-pointer" 
+                                        onclick={() => unlinkRow(rowidx)}>{@html exitIcon}</span>
                                 {/if}
-                                <!-- svelte-ignore a11y_no_static_element_interactions -->
                                 {#if deleteUrl !== undefined}
-                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                    <!-- svelte-ignore a11y_no_static_element_interactions -->
                                     <span 
-                                    class="ml-1 {trashColorClass} {trashWidthClass} flex {trashHeightClass} cursor-pointer" onclick={() => {if (!updateDisabled) deleteRow(rowidx)}}>{@html trashIcon}</span>
+                                        tabindex="0"
+                                        role="button"
+                                        onkeyup={(evt) => {if (evt.key == "Enter") {deleteRow(rowidx)}}}
+                                        class="ml-1 {trashColorClass} {trashWidthClass} flex {trashHeightClass} cursor-pointer" 
+                                        onclick={() => {if (!updateDisabled) deleteRow(rowidx)}}>{@html trashIcon}</span>
                                 {/if}
                             </td>
                         {/if}
                     {:else if editRow == rowidx}
                         <td class="w-4 last:sticky last:right-0 z-10 bg-base-100">
-                            <!-- svelte-ignore a11y-click-events-have-key-events -->
                             {#if internalDirty}
-                                <!-- svelte-ignore missing-declaration -->
-                                <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                <!-- svelte-ignore a11y-no-static-element-interactions -->
                                 <span 
-                                class="text-success flex pt-8 -ml-[20px] cursor-pointer" onclick={() => {if (!updateDisabled) saveEdit()}}>{@html checkIcon}</span>
+                                    tabindex="0"
+                                    role="button"
+                                    onkeyup={(evt) => {if (evt.key == "Enter") {if (!updateDisabled) saveEdit()}}}
+                                    class="text-success flex pt-8 -ml-[20px] cursor-pointer" 
+                                    onclick={() => {if (!updateDisabled) saveEdit()}}>{@html checkIcon}</span>
                             {:else}
                                 <span 
                                 class="text-neutral-500 flex pt-8 -ml-[20px]">{@html checkIcon}</span>
                             {/if}
-                                <!-- svelte-ignore missing-declaration -->
-                                <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                <!-- svelte-ignore a11y-click-events-have-key-events -->
                                 <span 
-                                class="text-error -mt-[22px] ml-[6px] flex cursor-pointer" onclick={() => {if (!updateDisabled) cancelEdit()}}>{@html crossIcon}</span>
+                                    tabindex="0"
+                                    role="button"
+                                    onkeyup={(evt) => {if (evt.key == "Enter") {if (!updateDisabled) cancelEdit()}}}
+                                    class="text-error -mt-[22px] ml-[6px] flex cursor-pointer" 
+                                    onclick={() => {if (!updateDisabled) cancelEdit()}}>{@html crossIcon}</span>
                         </td>
                     {/if}
                 </tr>

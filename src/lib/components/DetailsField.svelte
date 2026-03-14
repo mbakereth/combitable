@@ -648,7 +648,7 @@
         <div class="join">
             <input type="text join-item" class="input bg-base-200 {bg}" disabled={updateDisabled} style="{editminwStyle} {editmaxwStyle}" 
                 bind:value={displayValue} 
-                onkeyup={(evt) => fieldKeyPress(evt)}
+                onkeyup={(evt) => {if (evt.key == "Escape") {editMenuOpen=false} else {fieldKeyPress(evt)}}}
             />
             <button class="btn join-item btn-outline btn-square border-gray-600" 
                 onclick={() => toggleDateDialog(col.col)} 
