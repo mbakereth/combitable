@@ -1,3 +1,7 @@
+<!-- svelte-ignore unknown_code -->
+<!-- svelte-ignore state_referenced_locally -->
+<!-- svelte-ignore state_referenced_locally -->
+<!-- svelte-ignore state_referenced_locally -->
 <!--
     @component Table component with adding, editing, deleting filtering
         and type conversion from string fields    
@@ -267,20 +271,25 @@
 
     let uuid = crypto.randomUUID();
 
-    let haveOps = ops.length > 0;
-    if (haveOps) select = true;
-    let haveAddExtra = addExtra.length > 0;
-    let haveNavExtra = navExtra.length > 0;
+    let haveOps = $derived(ops.length > 0);
+    let haveAddExtra = $derived(addExtra.length > 0);
+    let haveNavExtra = $derived(navExtra.length > 0);
 
-    let stickyHeadRowClass = stickyHeadRow ? "sticky top-0" : "";
+    let stickyHeadRowClass = $derived(stickyHeadRow ? "sticky top-0" : "");
 
-    let rowChecked = $state(rows.map((row) => false));
+    // svelte-ignore state_referenced_locally
+    let rowChecked = $state(rows.map((row) => false)); // this is set again in the effect below
     let rowsAreChecked = $derived(rowChecked.reduce(
         (accumulator, currentValue) => accumulator || currentValue,
         false,
     ));
 
     $effect(() => {
+        if (haveOps && !select) select = true; // XXX
+        if (rows.length != rowChecked.length) {
+            rowChecked = rows.map((row) => false)
+        }
+
         if (primaryKey) {
             primaryKeysChecked = [];
             rowChecked.forEach((checked, i) => {
@@ -406,13 +415,13 @@
     // SVG wants to display with a new line.  Depending on what icons
     // we are displaying in the actions column set how far to offset
     // the delete icon
-    let exitHeightClass = editUrl ? "-mt-[18px]" : "";
-    let exitWidthClass = editUrl ? "ml-1" : "-ml-6";
-    let trashHeightClass = editUrl && unlinkUrl ? "-mt-[20px]" : (editUrl || unlinkUrl ? "-mt-[21px]" : "");
-    let trashWidthClass = editUrl && unlinkUrl ? "ml-6" :  (editUrl || unlinkUrl ? "-ml-1" : "-ml-6");
-    let trashColorClass = updateDisabled ? "text-neutral-500" : "text-error"
-    let saveColorClass = updateDisabled ? "text-neutral-500" : "text-success"
-    let cancelColorClass = updateDisabled ? "text-neutral-500" : "text-error"
+    let exitHeightClass = $derived(editUrl ? "-mt-4.5" : "");
+    let exitWidthClass = $derived(editUrl ? "ml-1" : "-ml-6");
+    let trashHeightClass = $derived(editUrl && unlinkUrl ? "-mt-5" : (editUrl || unlinkUrl ? "-mt-5.25" : ""));
+    let trashWidthClass = $derived(editUrl && unlinkUrl ? "ml-6" :  (editUrl || unlinkUrl ? "-ml-1" : "-ml-6"));
+    let trashColorClass = $derived(updateDisabled ? "text-neutral-500" : "text-error");
+    let saveColorClass = $derived(updateDisabled ? "text-neutral-500" : "text-success");
+    let cancelColorClass = $derived(updateDisabled ? "text-neutral-500" : "text-error");
 
     // put the name of the primary key in pk
     // also save select maps
@@ -668,10 +677,13 @@
         }
         return "";
     }
-    let maxWidthStyle : {[key:string]: string} = {}
-    for (let col of columns) {
-        maxWidthStyle[col.col] = colMaxWidthStyle(col);
-    }
+    let maxWidthStyle = $derived.by(() => {
+        let val : {[key:string]:string} = {}
+        for (let col of columns) {
+            val[col.col] = colMaxWidthStyle(col);
+        }
+        return val;
+    })
 
     /////
     // sorting and filtering
@@ -830,16 +842,31 @@
 
 
     const url = $derived(new SearchUrl($page.url, paginate));
-    let urlfilters = {...url.getFilters()};
+    // svelte-ignore state_referenced_locally
+    let urlfilters = {...url.getFilters()}; // set in effect below
     let sortCol = $state("");
     let sortDirection = $state("ascending");
     let searchParams = "";
     let filters : {[key:string]:string}= {};
     let haveFilters = $state(false);
-    let filterText : {[key:string]:string} = $state(columnMap(columns, v => ""))
-    let filterValues : {[key:string]:string} = $state(columnMap(columns, v => ""))
-    let filterMenusOpen : {[key:string]:boolean} = $state(columnMap(columns, v => false))
-    let lastUrl = $state.snapshot($page.url.search);
+    // svelte-ignore state_referenced_locally
+    let filterText : {[key:string]:string} = $state(columnMap(columns, v => "")) // set in effect below
+    // svelte-ignore state_referenced_locally
+    let filterValues : {[key:string]:string} = $state(columnMap(columns, v => "")) // set in effect below
+    // svelte-ignore state_referenced_locally
+    let filterMenusOpen : {[key:string]:boolean} = $state(columnMap(columns, v => false)) // set in effect below
+
+    // svelte-ignore state_referenced_locally
+    let autoCompleteOpen : {[key:string]:boolean} = $state(columnMap(columns, v => false));
+
+    let editRow = $state(undefined as number|undefined);
+    // svelte-ignore state_referenced_locally
+    let editRowSelectValue : {[key:string]:string|number|boolean|undefined} = $state(columnMap(columns, v => undefined));
+    // svelte-ignore state_referenced_locally
+    let editRowText : {[key:string]:string} = $state(columnMap(columns, v => ""));
+    // svelte-ignore state_referenced_locally
+    let editRowMenusOpen : {[key:string]:boolean} = $state(columnMap(columns, v => false))
+
     $effect(() => {
         url.setSuffix(urlSuffix);
         url.setDefaultSortCol(defaultSort);
@@ -852,12 +879,28 @@
         searchParams = `?${url.searchParamsAsString()}`;
         filters = url.getFilters();
         haveFilters = Object.keys(filters).length > 0
-
         untrack(() => {
+
+            for (let col in filterText) {
+                if (!(col in columns)) {
+                    delete filterText[col];
+                    if (col in filterValues) delete filterValues[col];
+                    if (col in autoCompleteOpen) delete autoCompleteOpen[col];
+                    if (col in filterMenusOpen) delete filterMenusOpen[col];
+                    if (col in editRowSelectValue) delete editRowSelectValue[col];
+                    if (col in editRowText) delete editRowText[col];
+                    if (col in editRowMenusOpen) delete editRowMenusOpen[col];
+                }
+            }
             for (let col of columns) {
                 if (!(col.col in urlfilters)) {
                     filterText[col.col] = "";
                 }
+                if (!(col.col in filterMenusOpen)) filterMenusOpen[col.col] = false;
+                if (!(col.col in autoCompleteOpen)) autoCompleteOpen[col.col] = false;
+                if (!(col.col in editRowMenusOpen)) editRowMenusOpen[col.col] = false;
+                if (!(col.col in editRowText)) editRowText[col.col] = "";
+                if (!(col.col in editRowSelectValue)) editRowSelectValue[col.col] = "";
             }
             for (let col in urlfilters) {
                 if (col in filterText || true) {
@@ -930,7 +973,6 @@
     // Auto complete
 
     let autoCompleteData : string[] = $state([]);
-    let autoCompleteOpen : {[key:string]:boolean} = $state(columnMap(columns, v => false));
 
     function autoCompleteUpdate_filter(col : CombiTableColumn, value : string|undefined|null) {
         if (value) {
@@ -1047,11 +1089,6 @@
         if (typeof(presets[colName]) == "object") return undefined;
         return presets[colName];
     }
-
-    let editRow = $state(undefined as number|undefined);
-    let editRowSelectValue : {[key:string]:string|number|boolean|undefined} = $state(columnMap(columns, v => undefined));
-    let editRowText : {[key:string]:string} = $state(columnMap(columns, v => ""));
-    let editRowMenusOpen : {[key:string]:boolean} = $state(columnMap(columns, v => false))
 
     function edit(rowidx : number) {
         // make sure all dropdowns are closed
@@ -1519,8 +1556,7 @@
         unlinkIdx = -1;
     }
 
-    let ncolumns = columns.length;
-    if (select) ncolumns += 1;
+    let ncolumns = $derived(columns.length + (select? 1 : 0));
 
     async function handleACBlur(event : any, col: CombiTableColumn) {
         // if the blur was because of outside focus
@@ -1816,7 +1852,7 @@
                         <td class="last:sticky last:right-0 z-10 bg-base-100">
                             {#if haveFilters}
                             <span tabindex="0" role="button" onkeyup={(evt) => {if (evt.key == "Enter") clearFilters()}}
-                            class=" mt-[6px] ml-[-22px] flex cursor-pointer" onclick={() => clearFilters()}>{@html crossIcon}</span>
+                            class=" mt-1.5 -ml-5.5 flex cursor-pointer" onclick={() => clearFilters()}>{@html crossIcon}</span>
                             {/if}
                         </td>
                     {/if}
@@ -1905,7 +1941,7 @@
                                                     onfocusout={(event) => {handleACBlur(event, col)}}
                                                     bind:value={editRowText[col.col]}/>
                                                  {#if autoCompleteOpen[col.col] && editRow == -1}
-                                                    <ul class="menu dropdown-content border-1 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-4 shadow" style="{dropdownwidthStyle}">
+                                                    <ul class="menu dropdown-content border max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-4 shadow" style="{dropdownwidthStyle}">
                                                     {#each autoCompleteData as name}
                                                         <!-- svelte-ignore a11y_missing_attribute -->
                                                         <li><a tabindex="0" 
@@ -1961,16 +1997,16 @@
                                     tabindex="0"
                                     role="button"
                                     onkeyup={(evt) => {if (evt.key == "Enter") {saveEdit()}}}
-                                    class="{saveColorClass} flex pt-8 -ml-[20px] cursor-pointer" onclick={() => saveEdit()}>{@html checkIcon}</span>
+                                    class="{saveColorClass} flex pt-8 -ml-5 cursor-pointer" onclick={() => saveEdit()}>{@html checkIcon}</span>
                                 {:else}
                                     <span 
-                                    class="text-neutral-500 flex pt-8 -ml-[20px]">{@html checkIcon}</span>
+                                    class="text-neutral-500 flex pt-8 -ml-5">{@html checkIcon}</span>
                                 {/if}
                                     <span 
                                     tabindex="0"
                                     role="button"
                                     onkeyup={(evt) => {if (evt.key == "Enter") {cancelEdit()}}}
-                                    class="{cancelColorClass} -mt-[22px] ml-[6px] flex cursor-pointer" onclick={() => cancelEdit()}>{@html crossIcon}</span>
+                                    class="{cancelColorClass} -mt-5.5 ml-1.5 flex cursor-pointer" onclick={() => cancelEdit()}>{@html crossIcon}</span>
                             </td>
                         {/if}
                     {:else}
@@ -2201,17 +2237,17 @@
                                     tabindex="0"
                                     role="button"
                                     onkeyup={(evt) => {if (evt.key == "Enter") {if (!updateDisabled) saveEdit()}}}
-                                    class="text-success flex pt-8 -ml-[20px] cursor-pointer" 
+                                    class="text-success flex pt-8 -ml-5 cursor-pointer" 
                                     onclick={() => {if (!updateDisabled) saveEdit()}}>{@html checkIcon}</span>
                             {:else}
                                 <span 
-                                class="text-neutral-500 flex pt-8 -ml-[20px]">{@html checkIcon}</span>
+                                class="text-neutral-500 flex pt-8 -ml-5">{@html checkIcon}</span>
                             {/if}
                                 <span 
                                     tabindex="0"
                                     role="button"
                                     onkeyup={(evt) => {if (evt.key == "Enter") {if (!updateDisabled) cancelEdit()}}}
-                                    class="text-error -mt-[22px] ml-[6px] flex cursor-pointer" 
+                                    class="text-error -mt-5.5 ml-1.5 flex cursor-pointer" 
                                     onclick={() => {if (!updateDisabled) cancelEdit()}}>{@html crossIcon}</span>
                         </td>
                     {/if}
@@ -2280,8 +2316,33 @@
 <CombiTableConfirmDeleteDialog id={"confirmDelete_"+uuid} okFn={confirmDeleteRow}/>
 
 <!-- To instantiate tailwind classes that are in variables therefore not seen by the preprocessor -->
-<div class="hidden -mt-[21px] ml-1 ml-6 -ml-6 table-fixed table-auto -mt-[21px] -mt-[42px] ml-1 ml-6 ml-12 w-[80px] w-[60px] w-[48px] -mt-[20px] -mt-[18px] ml-6 -ml-6 -ml-1 text-base-content align-middle sticky top-0 bg-required bg-base-200 -mt-[18px] -mt-[20px] -mt-[21px]"></div>
-<div class="hidden cursor-pointer hover:bg-base-200 hover:bg-neutral text-error text-success text-neutral-500"></div>
+<div class="hidden ml-1"></div>
+<div class="hidden ml-6"></div>
+<div class="hidden ml-12"></div>
+<div class="hidden -mt-5.5 "></div>
+<div class="hidden table-fixed"></div>
+<div class="hidden table-auto"></div>
+<div class="hidden -mt-5.25"></div>
+<div class="hidden -mt-10.5"></div>
+<div class="hidden w-20"></div>
+<div class="hidden w-15"></div>
+<div class="hidden w-12 "></div>
+<div class="hidden -mt-5"></div>
+<div class="hidden text-base-content"></div>
+<div class="hidden align-middle"></div>
+<div class="hidden sticky"></div>
+<div class="hidden top-0"></div>
+<div class="hidden bg-required"></div>
+<div class="hidden bg-required"></div>
+<div class="hidden -mt-4.5"></div>
+<div class="hidden bg-base-200"></div>
+<div class="hidden  -mt-5"></div>
+<div class="hidden -mt-5.25"></div>
+<div class="hidden hover:bg-base-200"></div>
+<div class="hidden text-error"></div>
+<div class="hidden text-success"></div>
+<div class="hidden "></div>
+<div class="hidden cursor-pointer  hover:bg-neutral   text-neutral-500"></div>
 <style>
 .tail-icon {
   white-space: nowrap;

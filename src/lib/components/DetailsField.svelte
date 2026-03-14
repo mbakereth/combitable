@@ -1,3 +1,4 @@
+<!-- svelte-ignore unknown_code -->
 <!--
     @component For use with {@link DetailsFieldSet}.  A single field for
     editing a row field, configured the same was as {@link CombiTable}    
@@ -179,15 +180,17 @@
     }
 
     let valueMap : {[key:string|number]:string|number} = {};
-    if (col.type == "select:string" || col.type == "select:integer") {
-        if (col.names && col.values) {
-            for (let i=0; i<col.names.length; ++i) {
-                valueMap[col.values[i]] = col.names[i]
-            }
-        }
-    }
     let displayValue = $state(value);
     $effect(() => {
+
+        if (col.type == "select:string" || col.type == "select:integer") {
+            if (col.names && col.values) {
+                for (let i=0; i<col.names.length; ++i) {
+                    if (valueMap[col.values[i]] != col.names[i]) valueMap[col.values[i]] = col.names[i]
+                }
+            }
+        }
+
         extraValue = "";
         if (value === undefined || value === null ||  value === "") { 
             displayValue = "";
@@ -456,6 +459,7 @@
     //////
     // Auto complete
 
+    // svelte-ignore non_reactive_update
     let autoCompleteList : Element;
     let autoCompleteData = $state([] as string[]);
     let autoCompleteOpen : boolean = $state(false);
@@ -801,7 +805,8 @@
             </details>
     {/if}
 {/if}
-<div class="hidden bg-required bg-base-200"></div>
+<div class="hidden bg-base-200"></div>
+<div class="hidden bg-required"></div>
 
 <style>
 .tail-icon {
@@ -820,10 +825,12 @@
   position: absolute;
 }
 
+/* prevents click events and text selection */
+/*
 details[disabled] summary,
 details.disabled summary {
-pointer-events: none; /* prevents click events */
-user-select: none; /* prevents text selection */
+pointer-events: none; 
+user-select: none; 
 }
-
+*/
 </style>

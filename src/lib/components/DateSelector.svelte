@@ -319,7 +319,7 @@
 </script>
 
 <div id={id ?? crypto.randomUUID()} 
-    class="flex flex-col min-w-[250px] min-h-[415px] gap-1 bg-base-200  p-4 {classes}" 
+    class="flex flex-col min-w-62.5 min-h-103.75 gap-1 bg-base-200  p-4 {classes}" 
     style="{zIndexStyle} {styles}"
     >
 

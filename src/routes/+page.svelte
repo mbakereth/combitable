@@ -10,12 +10,12 @@
     // this is passed to CombiTable and defines the columns in the table, their
     // order, appearance, how to format/parse their value whether to make them clickable
     let columns : CombiTableColumn[] = [
-        {name: "Name", col: "name", type: "string", link: (row) => {return detailsLink("/god/" + row.id)}},
+        {name: "Name", col: "name", type: "string", link: (row) => {return detailsLink("/god/" + row.id)}, editMinWidth: "6rem", },
         {name: "Gender", col: "gender", type: "select:string", values: ["m", "f"], names: ["m", "f"], minWidth: "4rem", editMaxWidth: "4rem"},
         {name: "Died", col: "died", type: "boolean", editMaxWidth: "4rem"},
-        {name: "Type", col: "type", type: "select:integer", values: [0,1,2], names: ["God", "Titan", "Personification"], editMaxWidth: "12rem"},
-        {name: "Father", col: "father.name", type: "string", nullable: true, maxWidth: "16", editMaxWidth: "16", autoCompleteLink:"/autocomplete/god/name"},
-        {name: "Mother", col: "mother.name", type: "string", nullable: true, autoCompleteLink:"/autocomplete/god/name"},
+        {name: "Type", col: "type", type: "select:integer", values: [0,1,2], names: ["God", "Titan", "Personification"], editMinWidth: "7rem"},
+        {name: "Father", col: "father.name", type: "string", nullable: true, editMinWidth: "6rem", autoCompleteLink:"/autocomplete/god/name"},
+        {name: "Mother", col: "mother.name", type: "string", nullable: true, editMinWidth: "6rem", autoCompleteLink:"/autocomplete/god/name"},
         {name: "Birth Date", col: "birth_date", type: "partialdate", nullable: true, minWidth: "11rem", editMaxWidth: "11rem"},
     ]
 
