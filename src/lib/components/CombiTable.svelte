@@ -177,11 +177,28 @@
         */
        emptyValue? : string
 
+       /**
+        * Extra buttons to put next to the Add button
+        */
        addExtra? : CombiTableExtraButton[]
 
+       /**
+        * Extra buttons to put in the navigation area (bottom of the table)
+        */
        navExtra? : CombiTableExtraButton[]
 
+       /**
+        * Typing this character in a filter field will match the empty string.
+        * 
+        * Default "-"
+        */
        emptySearch? : string,
+
+       /**
+        * Language for buttons etc.
+        * 
+        * Default "en".  Other supported values "de" and "el".
+        */
        lang?:  string,
     }
     import { onMount, untrack } from 'svelte';
@@ -1676,30 +1693,63 @@
         editRowMenusOpen[col.col] = false;
     }
 
+    ///// 
+    // Width helpers
+
+    function cwidth(col: CombiTableColumn) {
+        if (widthType == "auto") return "";
+        return (col.width ? "width: " + col.width + ";" : "");
+    }
+    function minw(col: CombiTableColumn) {
+        if (widthType == "fixed") return "width: 100%;";
+        return col.minWidth ? "min-width:" + col.minWidth + ";" : "";
+    }
+    function maxw(col: CombiTableColumn) {
+        if (widthType == "fixed") return "width: 100%;";
+        return col.maxWidth ? "max-width:" + col.maxWidth + ";" : "";
+    }
+    function eminw(col: CombiTableColumn, min="") {
+        if (widthType == "fixed") return "width: 100%;";
+        if (min != "") {
+            return col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: " + min + ";"
+        }
+        return col.minWidth ? "min-width:" + col.editMinWidth + ";" : "";
+    }
+    function emaxw(col: CombiTableColumn) {
+        if (widthType == "fixed") return "width: 100%;";
+        return col.maxWidth ? "max-width:" + col.editMaxWidth + ";" : "";
+    }
+    function drwidth(col : CombiTableColumn) {
+        return col.dropdownWidth ? "width:" + col.dropdownWidth : ";"
+    }
+    function bg(col : CombiTableColumn) {
+        return col.nullable != true ? "bg-required" : "bg-base-200"
+    }
+    console.log(`table table-${widthType} overflow-y-visible ${widthType=="auto" ? "overflow-x-auto": "w-full"}" style="${tableHeightStyle} bg-base-100}"`)
+    console.log(`${cwidth(columns[0])} ${minw(columns[0])} ${maxw(columns[0])}`);
 </script>
 
 <svelte:window bind:innerWidth bind:innerHeight />
 
-<div class="overflow-x-auto overflow-y-visible">
-    <table class="table table-{widthType} overflow-y-visible" style="{tableHeightStyle} bg-base-100" bind:this={table}>
+<div class="{widthType=="auto" ? "overflow-x-auto": "w-full"} overflow-y-visible">
+    <table class="table table-{widthType} overflow-y-visible {widthType=="auto" ? "overflow-x-auto": "w-full"}" style="{tableHeightStyle} bg-base-100" bind:this={table}>
         <thead class="{stickyHeadRowClass} z-10">
 
             <!-- header row -->
             <tr class="bg-base-100 z-10">
                 {#if select}
                     <!-- checkbox column -->
-                    <td class="w-10"></td>
+                    <td style="width: 40px;"></td>
                 {/if}
                 {#each columns as col, colidx}
-                    {@const minw = col.minWidth ? "min-w-" + col.minWidth : ""}
-                    {@const maxw = col.maxWidth ? "max-w-" + col.maxWidth : ""}
-                    {@const minwStyle = col.minWidth ? "min-width:" + col.minWidth + ";" : ""}
-                    {@const maxwStyle = col.maxWidth ? "max-width:" + col.maxWidth + ";" : ""}
-                    <th class="z-10" style="{minwStyle} {maxwStyle}">
+                    <th class="z-10" style="{cwidth(col)} ">
                         {#if enableSort && (col.sortable === undefined || col.sortable == true)}
                             <!-- svelte-ignore a11y_missing_attribute -->
-                            <a tabindex="0" class="cursor-pointer" onclick={() => sort(col.col)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") sort(col.col)}}>
-                                {col.name}</a>&nbsp;{#if col.col == sortCol}
+                            <a tabindex="0" class="cursor-pointer" 
+                                onclick={() => sort(col.col)} 
+                                role="button" onkeyup={(evt) => {if (evt.key == "Enter") sort(col.col)}}
+                                style="{minw(col)} {maxw(col)}"
+                                >{col.name}</a>&nbsp;{#if col.col == sortCol}
                                 <span class="tail-icon align-text-top">
                                     {#if sortDirection == "ascending"}
                                         {@html upIcon}
@@ -1709,7 +1759,9 @@
                                 </span>
                             {/if}
                         {:else}
-                            <span class="text-primary">{col.name}W</span>
+                            <span class="text-primary"
+                                style="{minw(col)} {maxw(col)}"
+                            >{col.name}W</span>
                         {/if}
                     </th>
                 {/each}
@@ -1717,7 +1769,7 @@
                 <!-- actions column-->
                 {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl || unlinkUrl}
                 {@const width = deleteUrl && unlinkUrl ? "80px" : "60px"}
-                    <td class="w-[{width}] last:sticky last:right-0 z-10 bg-base-100 "></td>
+                    <td class="last:sticky last:right-0 z-10 bg-base-100 " style="width: {deleteUrl && unlinkUrl ? "80px" : "60px"};"></td>
                 {/if}
             </tr>
         </thead>
@@ -1747,17 +1799,15 @@
                         <td></td>
                     {/if}
                     {#each columns as col, colidx}
-                        {@const cmaxwStyle = maxWidthStyle[col.col]}
-                        {@const dropdownwidthStyle = col.dropdownWidth ? "width:" + col.dropdownWidth : ";"}
-                        <td class="align-bottom" style="{cmaxwStyle}">
+                        <td class="align-bottom" > <!-- style="{maxWidthStyle[col.col]}"-->
                             {#if col.type == "boolean"}
                                 <div tabindex="-1" class="join bg-base-200">
-                                    <input readonly tabindex="-1" bind:value={filterText[col.col]} class="input join-item bg-base-200" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"/>
+                                    <input readonly tabindex="-1" bind:value={filterText[col.col]} class="input join-item bg-base-200" style="{eminw(col)} {emaxw(col)}"/>
                                     <details class="dropdown dropdown-end" bind:open={filterMenusOpen[col.col]}>
                                     <summary id={"filter_select_summary_"+col.col} class="btn join-item btn-outline btn-square border-gray-600" 
                                         onkeyup={(evt) => {if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}
                                         onblur={(evt) => closeFilter(evt, col)}>&#x25bc</summary>
-                                    <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{dropdownwidthStyle}">
+                                    <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{drwidth(col)}">
                                         <!-- svelte-ignore a11y_missing_attribute -->
                                         <li><a tabindex="0" id={"filter_select_"+col.col+"-"} 
                                             onclick={() => filter(col, undefined)} 
@@ -1775,13 +1825,13 @@
                                 </div>
                            {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
                                 <div tabindex="-1" class="join bg-base-200">
-                                    <input readonly tabindex="-1" class="input bg-base-200 join-item" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
+                                    <input readonly tabindex="-1" class="input bg-base-200 join-item" style="{eminw(col)} {emaxw(col)}"
                                     onblur={(evt) => closeFilter(evt, col)} bind:value={filterText[col.col]}/>
                                     <details class="dropdown dropdown-end join-item" bind:open={filterMenusOpen[col.col]}>
                                         <summary id={"filter_select_summary_"+col.col} class="btn join-item btn-outline border-gray-600" 
                                             onkeyup={(evt) => {if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}
                                             onblur={(evt) => closeFilter(evt, col)}>&#x25bc</summary>
-                                        <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded   z-1 p-2 mt-2 border border-gray-600" style={dropdownwidthStyle}>
+                                        <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded   z-1 p-2 mt-2 border border-gray-600" style={drwidth(col)}>
                                             <!-- svelte-ignore a11y_missing_attribute -->
                                             <li><a tabindex="0" id={"filter_select_"+col.col+"-"} 
                                                 onclick={() => filter(col, "")} 
@@ -1804,7 +1854,7 @@
                                         onfocusout={(event) => {handleACBlur(event, col)}}
                                         />
                                     {#if autoCompleteOpen[col.col] && editRow == undefined}
-                                    <ul class="menu dropdown-content border rounded border-gray-600 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-2 shadow" style="{dropdownwidthStyle}">
+                                    <ul class="menu dropdown-content border rounded border-gray-600 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-2 shadow" style="{drwidth(col)}">
                                         {#each autoCompleteData as name}
                                             <!-- svelte-ignore a11y_missing_attribute -->
                                             <li><a tabindex="0" 
@@ -1816,7 +1866,7 @@
                                 </div>
                             {:else if col.type == "date" || col.type == "partialdate"}    
                                 <div class="join">
-                                    <input type="text join-item" class="input bg-base-200 w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
+                                    <input type="text join-item" class="input bg-base-200 w-full" style="{eminw(col)} {emaxw(col)}" 
                                         bind:value={filterText[col.col]} 
                                         onkeypress={(evt) => {if (evt.key == "Escape") {filterMenusOpen[col.col]=false} else {filterKeyPress(evt, col, filterText[col.col])}}}/>
                                     <button class="btn join-item btn-outline btn-square border-gray-600" 
@@ -1841,7 +1891,7 @@
 
                                 </div>
                             {:else}
-                                <input type="text" class="input bg-base-200 w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
+                                <input type="text" class="input bg-base-200 w-full" style="{eminw(col)} {emaxw(col)}" 
                                     bind:value={filterText[col.col]} 
                                     onblur={() => filter(col, filterText[col.col])} 
                                     onkeyup={(evt) => filterKeyPress(evt, col, filterText[col.col])}/>
@@ -1868,11 +1918,8 @@
                             <td></td>
                         {/if}
                         {#each columns as col, colidx}
-                            {@const dropdownwidthStyle = col.dropdownWidth ? "width:" + col.dropdownWidth + ";" : ""}
-                            {@const cmaxwStyle = maxWidthStyle[col.col]}
-                            {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
                             {#if editRow == -1 || col.col == primaryKey}
-                                <td class="align-bottom" style="{cmaxwStyle}">
+                                <td class="align-bottom" > <!-- style="{maxWidthStyle[col.col]}" -->
                                     {#if colidx == 0}
                                         <p class="small m-0 p-0 pb-1 text-primary ml-1">New</p>
                                     {/if}
@@ -1881,15 +1928,15 @@
 
                                             <div tabindex="-1" class="join bg-base-200">
                                                 <input readonly tabindex="-1" bind:value={editRowText[col.col]} 
-                                                    class="input join-item bg-base-200 {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
+                                                    class="input join-item bg-base-200 {bg(col)}" style="{eminw(col)} {emaxw(col)}"
                                                     onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}
                                                 />
 
                                                 <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
-                                                <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
+                                                <summary class="btn btn-outline btn-square border-gray-600 {bg(col)} join-item" 
                                                     onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}
                                                     onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
-                                                <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{dropdownwidthStyle}">
+                                                <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{drwidth(col)}">
                                                     {#if col.nullable}
                                                         <!-- svelte-ignore a11y_missing_attribute -->
                                                         <li><a tabindex="0" id={"edit_select_"+col.col+"-"} 
@@ -1911,13 +1958,13 @@
                                         {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
 
                                         <div tabindex="-1" class="join bg-base-200">
-                                            <input readonly tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"/>
+                                            <input readonly tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg(col)}" style="{eminw(col)} {emaxw(col)}"/>
 
                                             <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
-                                            <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
+                                            <summary class="btn btn-outline btn-square border-gray-600 {bg(col)} join-item" 
                                                 onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}
                                                 onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
-                                            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style={dropdownwidthStyle}>
+                                            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style={drwidth(col)}>
                                             {#if col.nullable}
                                                 <!-- svelte-ignore a11y_missing_attribute -->
                                                 <li><a tabindex="0" id={"edit_select_"+col.col+"-"} 
@@ -1936,12 +1983,12 @@
 
                                         {:else if col.autoCompleteLink}    
                                             <div class="dropdown overflow:visible dropdown-open" id={"edit_ac_"+col.col}>
-                                                <input class="input m-0 w-full {bg} cursor-text" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
+                                                <input class="input m-0 w-full {bg(col)} cursor-text" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
                                                     onkeyup={(evt) => {if (evt.key == "Escape") {autoCompleteOpen[col.col]=false} else {autoCompleteKeyPress(evt, col, editRowText[col.col], false)}}}
                                                     onfocusout={(event) => {handleACBlur(event, col)}}
                                                     bind:value={editRowText[col.col]}/>
                                                  {#if autoCompleteOpen[col.col] && editRow == -1}
-                                                    <ul class="menu dropdown-content border max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-4 shadow" style="{dropdownwidthStyle}">
+                                                    <ul class="menu dropdown-content border max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-4 shadow" style="{drwidth(col)}">
                                                     {#each autoCompleteData as name}
                                                         <!-- svelte-ignore a11y_missing_attribute -->
                                                         <li><a tabindex="0" 
@@ -1953,7 +2000,7 @@
                                             </div>
                                         {:else if col.type == "date" || col.type == "partialdate"}    
                                             <div class="join">
-                                                <input type="text join-item" class="input bg-base-200 w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
+                                                <input type="text join-item" class="input bg-base-200 w-full" style="{eminw(col)} {emaxw(col)}" 
                                                     onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col]=false} else {editInputUpdate(evt, col)}}}
                                                     bind:value={editRowText[col.col]} 
                                                 />
@@ -1979,7 +2026,7 @@
 
                                             </div>
                                         {:else}
-                                            <input type="text" class="input w-full {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
+                                            <input type="text" class="input w-full {bg(col)}" style="{eminw(col)} {emaxw(col)}" 
                                                 bind:value={editRowText[col.col]} 
                                                 onkeyup={(evt) => editInputUpdate(evt, col)}
                                             />
@@ -2048,11 +2095,9 @@
                     {/if}
                     {#each columns as col, colidx}
 
-                        {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
-                        {@const dropdownwidthStyle = col.dropdownWidth ? "width:" + col.dropdownWidth : ";"}
                         {#if editRow == undefined || editRow != rowidx}
                             {@const value = formatColumn(getColumn(row, col), col, false)}
-                            <td class="align-top" style="{maxWidthStyle[col.col]}">
+                            <td class="align-top" > <!-- style="{maxWidthStyle[col.col]}"-->
                                 {#if (col.type == "date" || col.type == "datetime" || col.nowrap)}
                                     {#if col.link}
                                         <span class="text-nowrap text-base-content"><a class="text-base-content {linkFormat}" href={col.link(row)}>{value}</a></span>
@@ -2078,7 +2123,7 @@
                                 {/if}
                             </td>
                         {:else}
-                            <td class="align-bottom" style="{maxWidthStyle[col.col]}">
+                            <td class="align-bottom" > <!-- style="{maxWidthStyle[col.col]}" -->
                                 {#if colidx == 0}
                                     <p class="small m-0 p-0 pb-1 text-primary ml-1">Edit</p>
                                 {/if}
@@ -2094,14 +2139,14 @@
 
                                         <div tabindex="-1" class="join bg-base-200">
                                             <input readonly tabindex="-1" 
-                                                bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg}" 
-                                                style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
+                                                bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg(col)}" 
+                                                style="{eminw(col)} {emaxw(col)}"
                                             />
                                             <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
-                                            <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
+                                            <summary class="btn btn-outline btn-square border-gray-600 {bg(col)} join-item" 
                                                 onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col] = false}}}
                                                 onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
-                                            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{dropdownwidthStyle}">
+                                            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{drwidth(col)}">
                                                 {#if col.nullable}
                                                 <!-- svelte-ignore a11y_missing_attribute -->
                                                 <li><a tabindex="0" id={"edit_select_"+col.col+"-"} 
@@ -2123,13 +2168,13 @@
                                     {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
 
                                         <div tabindex="-1" class="join bg-base-200">
-                                            <input readonly tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg}" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"/>
+                                            <input readonly tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg(col)}" style="{eminw(col)} {emaxw(col)}"/>
 
                                             <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
-                                            <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
+                                            <summary class="btn btn-outline btn-square border-gray-600 {bg(col)} join-item" 
                                                 onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col] = false}}}
                                                 onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
-                                            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{dropdownwidthStyle}">
+                                            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{drwidth(col)}">
                                                 {#if col.nullable}
                                                     <!-- svelte-ignore a11y_missing_attribute -->
                                                     <li><a tabindex="0" id={"edit_select_"+col.col+"-"} 
@@ -2148,12 +2193,12 @@
 
                                     {:else if col.autoCompleteLink}    
                                         <div class="dropdown overflow:visible dropdown-open" id={"edit_ac_"+col.col}>
-                                            <input class="input m-0 -mb-1 w-full {bg} cursor-text" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
+                                            <input class="input m-0 -mb-1 w-full {bg(col)} cursor-text" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
                                                 onkeyup={(evt) => {if (evt.key == "Escape") {autoCompleteOpen[col.col] = false} else {autoCompleteKeyPress(evt, col, editRowText[col.col], false)}}}
                                                 onfocusout={(event) => {handleACBlur(event, col)}}
                                                 bind:value={editRowText[col.col]}/>
                                                 {#if autoCompleteOpen[col.col] && editRow >= 0}
-                                                <ul class="menu dropdown-content max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-4 shadow" style="{col.dropdownWidth ? "width:" + col.dropdownWidth + ";" : ""}">
+                                                <ul class="menu dropdown-content max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-4 shadow" style="{drwidth(col)}">
                                                 {#each autoCompleteData as name}
                                                         <!-- svelte-ignore a11y_missing_attribute -->
                                                         <li><a tabindex="0"
@@ -2165,7 +2210,7 @@
                                         </div>
                                     {:else if col.type == "date" || col.type == "partialdate"}    
                                         <div class="join">
-                                            <input type="text join-item" class="input bg-base-200 w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
+                                            <input type="text join-item" class="input bg-base-200 w-full" style="{eminw(col)} {emaxw(col)}" 
                                                 bind:value={editRowText[col.col]} 
                                                 onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col] = false} else {editInputUpdate(evt, col)}}}
                                             />
@@ -2191,7 +2236,7 @@
 
                                         </div>
                                     {:else}
-                                        <input type="text" class="input {bg} w-full" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}" 
+                                        <input type="text" class="input {bg(col)} w-full" style="{eminw(col)} {emaxw(col)}" 
                                             bind:value={editRowText[col.col]} 
                                             onkeyup={(evt) => editInputUpdate(evt, col)}
                                             />
@@ -2316,10 +2361,12 @@
 <CombiTableConfirmDeleteDialog id={"confirmDelete_"+uuid} okFn={confirmDeleteRow}/>
 
 <!-- To instantiate tailwind classes that are in variables therefore not seen by the preprocessor -->
+<div class="hidden w-full"></div>
 <div class="hidden ml-1"></div>
 <div class="hidden ml-6"></div>
 <div class="hidden ml-12"></div>
 <div class="hidden -mt-5.5 "></div>
+<div class="hidden overflow-x-auto"></div>
 <div class="hidden table-fixed"></div>
 <div class="hidden table-auto"></div>
 <div class="hidden -mt-5.25"></div>

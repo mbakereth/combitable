@@ -60,24 +60,43 @@ export interface CombiTableColumn {
     nowrap?: boolean,
 
     /**
-     * The minimum width when displaying in non-edit mode (CSS `min-width`)
+     * The minimum width when displaying in non-edit mode (CSS `min-width`).
+     * 
+     * This applies to the content of the cell and is only available when
+     * widthType = auto.
      */
     minWidth? : string,
 
     /**
      * The maximum width when displaying in non-edit mode (CSS `max-width`)
+     * 
+     * This applies to the content of the cell and is only available when
+     * widthType = auto.
      */
     maxWidth? : string,
 
     /**
      * The minimum width when displaying in edit mode (CSS `min-width`)
+     * 
+     * This applies to the content of the cell and is only available when
+     * widthType = auto.
      */
     editMinWidth? : string,
 
     /**
      * The maximum width when displaying in edit mode (CSS `max-width`)
+     * 
+     * This applies to the content of the cell and is only available when
+     * widthType = auto.
      */
     editMaxWidth? : string,
+
+    /**
+     * The width of the table column.
+     * 
+     * This is only available when widthType = "fixed";
+     */
+    width? : string,
 
     /**
      * The width when displaying drop-down menus (type `boolean`, 
