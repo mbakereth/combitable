@@ -200,6 +200,13 @@
         * Default "en".  Other supported values "de" and "el".
         */
        lang?:  string,
+
+       /**
+        * If true, columns can be resized.  
+        * 
+        * Only supported if widthType = "fixed"
+       */
+      resizable? : boolean,
     }
     import { onMount, untrack } from 'svelte';
     import { page } from '$app/stores';
@@ -228,7 +235,8 @@
 
     import DateSelector from './DateSelector.svelte';
 
-    let table : Element;
+    let table : HTMLElement;
+    let div : HTMLElement;
 
     let {
         rows,
@@ -264,7 +272,8 @@
         navExtra = [],
         primaryKeysChecked = $bindable([]),
         emptySearch = "-",
-        lang = "en"
+        lang = "en",
+        resizable = false,
     } : Props = $props();
 
     let No = $derived(lang == "de" ? "Nein" : (lang == "el" ? "Όχι" : "No"));
@@ -1725,24 +1734,94 @@
     function bg(col : CombiTableColumn) {
         return col.nullable != true ? "bg-required" : "bg-base-200"
     }
-    console.log(`table table-${widthType} overflow-y-visible ${widthType=="auto" ? "overflow-x-auto": "w-full"}" style="${tableHeightStyle} bg-base-100}"`)
-    console.log(`${cwidth(columns[0])} ${minw(columns[0])} ${maxw(columns[0])}`);
+
+    ////////////////////////////////////////////////////////////////
+    // Resizing
+    
+    /*
+    The following will soon be filled with column objects containing
+    the header element and their size value for grid-template-columns 
+    */
+    let headerBeingResized : HTMLElement|null = null;
+    let colidxBeingResized: number = -1;
+
+    // The next three functions are mouse event callbacks
+
+    // Where the magic happens. I.e. when they're actually resizing
+    const onMouseMove = (e: MouseEvent) => requestAnimationFrame(() => {
+        if (!headerBeingResized || colidxBeingResized < 0) return;
+        console.log('onMouseMove');
+    
+        // Calculate the desired width
+        const horizontalScrollOffset = document.documentElement.scrollLeft;
+        const width = (horizontalScrollOffset + e.clientX) - headerBeingResized.offsetLeft;
+    
+        // Update the column object with the new size value
+        const column = columns[colidxBeingResized];
+        if (!column) return;
+        column.width =  String(width/div.offsetWidth*100); // Enforce our minimum
+    
+        // For the other headers which don't have a set width, fix it to their computed width
+        columns.forEach((column, i) => {
+            if(!column.width){ // isn't fixed yet (it would be a pixel value otherwise)
+                const el = document.getElementById("table_"+uuid+"_header_"+i);
+                if (el) {
+                    column.width = String(el.clientWidth/div.offsetHeight*100);
+                }
+            }
+        });
+    
+        /* 
+            Update the column sizes
+            Reminder: grid-template-columns sets the width for all columns in one value
+        */
+        columns.forEach((c, i) => {
+                const el = document.getElementById("table_"+uuid+"_header_"+i);
+                if (el) {
+                    el.style.width = c.width + "%";
+                }
+        })
+    });
+
+    // Clean up event listeners, classes, etc.
+    const onMouseUp = () => {
+        console.log('onMouseUp');
+        
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+        if (headerBeingResized) headerBeingResized.classList.remove('header--being-resized');
+        headerBeingResized = null;
+    };
+
+    // Get ready, they're about to resize
+    const initResize = ({ target  } : {target : any}) => {
+        if (widthType == "auto" || !resizable) return;
+        console.log('initResize');
+        
+        headerBeingResized = target.parentNode as HTMLElement;
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+        headerBeingResized.classList.add('header--being-resized');
+    };
 </script>
 
 <svelte:window bind:innerWidth bind:innerHeight />
 
-<div class="{widthType=="auto" ? "overflow-x-auto": "w-full"} overflow-y-visible">
-    <table class="table table-{widthType} overflow-y-visible {widthType=="auto" ? "overflow-x-auto": "w-full"}" style="{tableHeightStyle} bg-base-100" bind:this={table}>
+<div class="{widthType=="auto" ? "overflow-x-auto": "w-full"} overflow-y-visible" bind:this={div}>
+    <table class="table table-{widthType} overflow-y-visible {widthType=="auto" ? "overflow-x-auto": "w-full"}" style="{tableHeightStyle} bg-base-100" 
+        bind:this={table}>
         <thead class="{stickyHeadRowClass} z-10">
 
             <!-- header row -->
-            <tr class="bg-base-100 z-10">
+            <tr class="bg-base-100 z-10 ">
                 {#if select}
                     <!-- checkbox column -->
-                    <td style="width: 40px;"></td>
+                    <td  class="bg-base-200" style="width: 40px;"></td>
                 {/if}
                 {#each columns as col, colidx}
-                    <th class="z-10" style="{cwidth(col)} ">
+                    <th id={"table_"+uuid+"_header_"+colidx} class="z-10 bg-base-200 my-0 py-0 {colidx == columns.length-1 || !resizable  || widthType == "auto" || true ? "" : "border-r-2 border-r-base-100"}" style="{cwidth(col)}">
+                        <div class="flex flex-row m-0 ">
+                            <div class="flex-1 py-3">
                         {#if enableSort && (col.sortable === undefined || col.sortable == true)}
                             <!-- svelte-ignore a11y_missing_attribute -->
                             <a tabindex="0" class="cursor-pointer" 
@@ -1761,15 +1840,20 @@
                         {:else}
                             <span class="text-primary"
                                 style="{minw(col)} {maxw(col)}"
-                            >{col.name}W</span>
+                            >{col.name}</span><span class="resize-handle"></span>
                         {/if}
+                        </div>
+                        {#if widthType == "fixed" && resizable && colidx < columns.length-1}
+                            <div class="flex-0 resize-handle w-2 p-0 m-0 min-w-1"></div>
+                        {/if}
+                        </div>
                     </th>
                 {/each}
 
                 <!-- actions column-->
                 {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl || unlinkUrl}
                 {@const width = deleteUrl && unlinkUrl ? "80px" : "60px"}
-                    <td class="last:sticky last:right-0 z-10 bg-base-100 " style="width: {deleteUrl && unlinkUrl ? "80px" : "60px"};"></td>
+                    <td class="last:sticky last:right-0 z-10 bg-base-200 border-l-0" style="width: {deleteUrl && unlinkUrl ? "80px" : "60px"};"></td>
                 {/if}
             </tr>
         </thead>
@@ -2367,7 +2451,7 @@
 <div class="hidden ml-12"></div>
 <div class="hidden -mt-5.5 "></div>
 <div class="hidden overflow-x-auto"></div>
-<div class="hidden table-fixed"></div>
+<div class="hidden table-fixed border-r-2 border-r-base-100"></div>
 <div class="hidden table-auto"></div>
 <div class="hidden -mt-5.25"></div>
 <div class="hidden -mt-10.5"></div>
@@ -2438,6 +2522,28 @@
   background-color: rgba(0,0,0,0.5); /* Black background with opacity */
   z-index: 2; /* Specify a stack order in case you're using a different order for other elements */
   /*cursor: pointer;*/ /* Add a pointer on hover */
+}
+
+.resize-handle {
+  /*position: absolute;
+  top: 0;
+  bottom: 0;*/
+  background: var(--color-base-100);
+  /*background: white;*/
+  /*opacity: 0;*/
+  opacity: 1;
+  width: 2px;
+  cursor: col-resize;
+}
+
+.resize-handle:hover,
+/* The following selector is needed so the handle is visible during resize even if the mouse isn't over the handle anymore */
+.header--being-resized .resize-handle {
+  opacity: 0.5;
+}
+
+th:hover .resize-handle {
+  /*opacity: 0.3;*/
 }
 
 </style>

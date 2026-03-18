@@ -92,9 +92,8 @@ export interface CombiTableColumn {
     editMaxWidth? : string,
 
     /**
-     * The width of the table column.
-     * 
-     * This is only available when widthType = "fixed";
+     * Only for fixed mode.  Width of column as a percentage or undefined for
+     * a proportion of the rest of the width
      */
     width? : string,
 
@@ -155,6 +154,7 @@ export interface CombiTableColumn {
     editHeight? : string,
     prismaWhereIgnore? : boolean,
     prismaOrderByIgnore? : boolean,
+
 }
 
 /**

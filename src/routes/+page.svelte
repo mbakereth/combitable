@@ -77,7 +77,8 @@
     paginate={5}
     havePrevious={data.havePrevious}
     haveNext={data.haveNext}    
-    widthType={"auto"}
+    widthType={"fixed"}
+    resizable={true}
     ops={[{label: "Kill", fn: killGods}]}
     urlSuffix=""
     navExtra={[{label: "New", fn: async () => {if (newButtonSearchUrl.url) goto(newButtonSearchUrl.url.href)}}]}
