@@ -201,12 +201,30 @@
         */
        lang?:  string,
 
-       /**
-        * If true, columns can be resized.  
-        * 
-        * Only supported if widthType = "fixed"
-       */
-      resizable? : boolean,
+    /**
+      * If true, columns can be resized.  
+      * 
+      * Only supported if widthType = "fixed"
+    */
+    resizable? : boolean,
+
+    /**
+      * If defined, this will be called when resizing starts
+      */
+    resizeStarted? : (colidx : number) => Promise<void>,
+
+    /**
+      * If defined, this will be called every resizeUpdateInterval move moves
+      */
+     resized? : (colidx : number, width: string) => Promise<void>,
+
+    /**
+      * See resized.  Default 1
+    */
+    resizeUpdateInterval? : number
+
+    resizeEnded? : (colidx : number, width: string) => Promise<void>,
+
     }
     import { onMount, untrack } from 'svelte';
     import { page } from '$app/stores';
@@ -274,18 +292,15 @@
         emptySearch = "-",
         lang = "en",
         resizable = false,
+        resizeStarted = undefined,
+        resized = undefined,
+        resizeEnded = undefined,
+        resizeUpdateInterval = 1,
     } : Props = $props();
 
     let No = $derived(lang == "de" ? "Nein" : (lang == "el" ? "Όχι" : "No"));
     let Yes = $derived(lang == "de" ? "Ja" : (lang == "el" ? "Ναι" : "Yes"));
     let Unset = $derived(lang == "de" ? "Ungefasst" : (lang == "el" ? "Άδιο" : "Unset"));
-
-    const objectMap = (obj : {[key:string]:any}, fn : (value: any) => any) =>
-        Object.fromEntries(
-            Object.entries(obj).map(
-            ([k, v]) => [k, fn(v)]
-            )
-        );
 
     const columnMap = (cols : CombiTableColumn[], fn : (v: CombiTableColumn) => any) =>
         Object.fromEntries(
@@ -1738,19 +1753,23 @@
     ////////////////////////////////////////////////////////////////
     // Resizing
     
+    function disableSelect(event : Event) {
+        event.preventDefault();
+    }
+
     /*
     The following will soon be filled with column objects containing
     the header element and their size value for grid-template-columns 
     */
     let headerBeingResized : HTMLElement|null = null;
     let colidxBeingResized: number = -1;
+    let mouseMoveCount = 0;
 
     // The next three functions are mouse event callbacks
 
     // Where the magic happens. I.e. when they're actually resizing
     const onMouseMove = (e: MouseEvent) => requestAnimationFrame(() => {
         if (!headerBeingResized || colidxBeingResized < 0) return;
-        console.log('onMouseMove');
     
         // Calculate the desired width
         const horizontalScrollOffset = document.documentElement.scrollLeft;
@@ -1759,49 +1778,44 @@
         // Update the column object with the new size value
         const column = columns[colidxBeingResized];
         if (!column) return;
-        column.width =  String(width/div.offsetWidth*100); // Enforce our minimum
-    
-        // For the other headers which don't have a set width, fix it to their computed width
-        columns.forEach((column, i) => {
-            if(!column.width){ // isn't fixed yet (it would be a pixel value otherwise)
-                const el = document.getElementById("table_"+uuid+"_header_"+i);
-                if (el) {
-                    column.width = String(el.clientWidth/div.offsetHeight*100);
-                }
-            }
-        });
-    
-        /* 
-            Update the column sizes
-            Reminder: grid-template-columns sets the width for all columns in one value
-        */
-        columns.forEach((c, i) => {
-                const el = document.getElementById("table_"+uuid+"_header_"+i);
-                if (el) {
-                    el.style.width = c.width + "%";
-                }
-        })
+        column.width =  String(width/div.offsetWidth*100 + "%"); // Enforce our minimum
+        headerBeingResized.style.width = column.width;
+
+        mouseMoveCount++;
+        if (resized && mouseMoveCount == resizeUpdateInterval ) resized(colidxBeingResized, column.width);
+        if (resized && mouseMoveCount == resizeUpdateInterval ) resized(colidxBeingResized, column.width);
+        if (mouseMoveCount == resizeUpdateInterval) mouseMoveCount = 0;
     });
 
     // Clean up event listeners, classes, etc.
     const onMouseUp = () => {
-        console.log('onMouseUp');
         
         window.removeEventListener('mousemove', onMouseMove);
         window.removeEventListener('mouseup', onMouseUp);
+        window.removeEventListener('selectstart', disableSelect);
         if (headerBeingResized) headerBeingResized.classList.remove('header--being-resized');
+        if (resizeEnded) resizeEnded(colidxBeingResized, columns[colidxBeingResized].width ?? "");
         headerBeingResized = null;
+        colidxBeingResized = -1;
     };
 
     // Get ready, they're about to resize
-    const initResize = ({ target  } : {target : any}) => {
+    const initResize = (evt : MouseEvent, colidx: number) => {
         if (widthType == "auto" || !resizable) return;
-        console.log('initResize');
+        window.addEventListener('selectstart', disableSelect);
         
-        headerBeingResized = target.parentNode as HTMLElement;
+        //headerBeingResized = (evt.target as any).parentNode as HTMLElement;
+        headerBeingResized = document.getElementById("table_"+uuid+"_header_"+colidx);
+        if (!headerBeingResized) {
+            console.log("Didn't click on header");
+            return;
+        }
+        colidxBeingResized = colidx;
         window.addEventListener('mousemove', onMouseMove);
         window.addEventListener('mouseup', onMouseUp);
         headerBeingResized.classList.add('header--being-resized');
+        mouseMoveCount = 0;
+        if (resizeStarted) resizeStarted(colidx);
     };
 </script>
 
@@ -1816,10 +1830,10 @@
             <tr class="bg-base-100 z-10 ">
                 {#if select}
                     <!-- checkbox column -->
-                    <td  class="bg-base-200" style="width: 40px;"></td>
+                    <td id={"table_"+uuid+"_header_-1"} class="bg-base-200" style="width: 40px;"></td>
                 {/if}
                 {#each columns as col, colidx}
-                    <th id={"table_"+uuid+"_header_"+colidx} class="z-10 bg-base-200 my-0 py-0 {colidx == columns.length-1 || !resizable  || widthType == "auto" || true ? "" : "border-r-2 border-r-base-100"}" style="{cwidth(col)}">
+                    <th id={"table_"+uuid+"_header_"+colidx} class="z-10 bg-base-200 my-0 {widthType=="fixed" && resizable? "pr-0" : ""} py-0 {colidx == columns.length-1 || !resizable  || widthType == "auto" || true ? "" : "border-r-2 border-r-base-100"}" style="{cwidth(col)}">
                         <div class="flex flex-row m-0 ">
                             <div class="flex-1 py-3">
                         {#if enableSort && (col.sortable === undefined || col.sortable == true)}
@@ -1840,11 +1854,13 @@
                         {:else}
                             <span class="text-primary"
                                 style="{minw(col)} {maxw(col)}"
-                            >{col.name}</span><span class="resize-handle"></span>
+                            
+                            >{col.name}</span>
                         {/if}
                         </div>
                         {#if widthType == "fixed" && resizable && colidx < columns.length-1}
-                            <div class="flex-0 resize-handle w-2 p-0 m-0 min-w-1"></div>
+                            <!-- svelte-ignore a11y_no_static_element_interactions -->
+                            <div class="flex-0 resize-handle w-2 p-0 m-0 min-w-1" onmousedown={(evt) => initResize(evt, colidx)}></div>
                         {/if}
                         </div>
                     </th>
@@ -1895,7 +1911,7 @@
                                         <!-- svelte-ignore a11y_missing_attribute -->
                                         <li><a tabindex="0" id={"filter_select_"+col.col+"-"} 
                                             onclick={() => filter(col, undefined)} 
-                                            role="button" onkeyup={(evt) => {if (evt.key == "Enter") {filter(col, undefined)} else if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}>Unset</a></li>
+                                            role="button" onkeyup={(evt) => {if (evt.key == "Enter") {filter(col, undefined)} else if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}>{Unset}</a></li>
                                         <!-- svelte-ignore a11y_missing_attribute -->
                                         <li><a tabindex="0" id={"filter_select_"+col.col+"-f"} 
                                             onclick={() => filter(col, false)} 
@@ -1919,7 +1935,7 @@
                                             <!-- svelte-ignore a11y_missing_attribute -->
                                             <li><a tabindex="0" id={"filter_select_"+col.col+"-"} 
                                                 onclick={() => filter(col, "")} 
-                                                role="button" onkeyup={(evt) => {if (evt.key == "Enter") {filter(col, "")} else if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}>Unset</a></li>
+                                                role="button" onkeyup={(evt) => {if (evt.key == "Enter") {filter(col, "")} else if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}>{Unset}</a></li>
                                             {#each col.names as name, i}
                                                 <!-- svelte-ignore a11y_missing_attribute -->
                                                 <li><a tabindex="0" id={"filter_select_"+col.col+"-"} 
@@ -2025,7 +2041,7 @@
                                                         <!-- svelte-ignore a11y_missing_attribute -->
                                                         <li><a tabindex="0" id={"edit_select_"+col.col+"-"} 
                                                         onclick={() => editRowUpdate(col, null)} role="button" 
-                                                        onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, null)} else if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}>Unset</a></li>
+                                                        onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, null)} else if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}>{Unset}</a></li>
                                                     {/if}
                                                     <!-- svelte-ignore a11y_missing_attribute -->
                                                     <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} 
@@ -2053,7 +2069,7 @@
                                                 <!-- svelte-ignore a11y_missing_attribute -->
                                                 <li><a tabindex="0" id={"edit_select_"+col.col+"-"} 
                                                 onclick={() => editRowUpdate(col, null)} 
-                                                role="button" onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, null)} else if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}>Unset</a></li>
+                                                role="button" onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, null)} else if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}>{Unset}</a></li>
                                             {/if}
                                                  {#each col.names as name, i}
                                                     <!-- svelte-ignore a11y_missing_attribute -->
@@ -2235,7 +2251,7 @@
                                                 <!-- svelte-ignore a11y_missing_attribute -->
                                                 <li><a tabindex="0" id={"edit_select_"+col.col+"-"} 
                                                     onclick={() => editRowUpdate(col, null)} 
-                                                    role="button" onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, null)} else if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}>Unset</a></li>
+                                                    role="button" onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, null)} else if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}>{Unset}</a></li>
                                                 {/if}
                                                 <!-- svelte-ignore a11y_missing_attribute -->
                                                 <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} 
@@ -2263,7 +2279,7 @@
                                                     <!-- svelte-ignore a11y_missing_attribute -->
                                                     <li><a tabindex="0" id={"edit_select_"+col.col+"-"} 
                                                         onclick={() => editRowUpdate(col, null)} 
-                                                        role="button" onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, null)} else if (evt.key == "Escape") {editRowMenusOpen[col.col] = false}}}>Unset</a></li>
+                                                        role="button" onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, null)} else if (evt.key == "Escape") {editRowMenusOpen[col.col] = false}}}>{Unset}</a></li>
                                                 {/if}
                                                  {#each col.names as name, i}
                                                     <!-- svelte-ignore a11y_missing_attribute -->
@@ -2453,7 +2469,7 @@
 <div class="hidden overflow-x-auto"></div>
 <div class="hidden table-fixed border-r-2 border-r-base-100"></div>
 <div class="hidden table-auto"></div>
-<div class="hidden -mt-5.25"></div>
+<div class="hidden -mt-5.25 pr-0"></div>
 <div class="hidden -mt-10.5"></div>
 <div class="hidden w-20"></div>
 <div class="hidden w-15"></div>
@@ -2542,8 +2558,8 @@
   opacity: 0.5;
 }
 
-th:hover .resize-handle {
-  /*opacity: 0.3;*/
-}
+/*th:hover .resize-handle {
+  opacity: 0.3;
+}*/
 
 </style>
