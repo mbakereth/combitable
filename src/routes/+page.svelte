@@ -11,7 +11,7 @@
     // order, appearance, how to format/parse their value whether to make them clickable
     let columns : CombiTableColumn[] = [
         {name: "Name", col: "name", type: "string", link: (row) => {return detailsLink("/god/" + row.id)}, editMinWidth: "6rem", width: "180px"},
-        {name: "Gender", col: "gender", type: "select:string", values: ["m", "f"], names: ["m", "f"], minWidth: "4rem", editMaxWidth: "4rem"},
+        {name: "Gender", col: "gender", type: "select:string", values: ["m", "f"], names: ["m", "f"], minWidth: "100px", editMaxWidth: "4rem"},
         {name: "Died", col: "died", type: "boolean", editMaxWidth: "4rem"},
         {name: "Type", col: "type", type: "select:integer", values: [0,1,2], names: ["God", "Titan", "Personification"], editMinWidth: "7rem"},
         {name: "Father", col: "father.name", type: "string", nullable: true, editMinWidth: "6rem", autoCompleteLink:"/autocomplete/god/name"},

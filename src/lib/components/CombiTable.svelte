@@ -692,40 +692,6 @@
     
     }
 
-    function colMaxWidthStyle(col : CombiTableColumn) : string {
-        if (col.maxWidth == undefined && col.editMaxWidth == undefined) return "";
-        if (col.maxWidth != undefined && col.editMaxWidth == undefined) return col.maxWidth;
-        if (col.maxWidth == undefined && col.editMaxWidth != undefined) return col.editMaxWidth;
-        if (col.maxWidth != undefined && col.editMaxWidth != undefined) {
-            const isNumber = (/[0-9]+/.test(col.maxWidth) && /[0-9]+/.test(col.editMaxWidth));
-            const isRem = (/\[?[0-9]+px\]?/.test(col.maxWidth) && /\[?[0-9]+px\]?/.test(col.editMaxWidth));
-            const isPx = (/\[?[0-9]+rem\]?/.test(col.maxWidth) && /\[?[0-9]+rem\]?/.test(col.editMaxWidth));
-            if (isNumber || isRem || isNumber) {
-                let editMaxWidthMatch = /([0-9]+)/.exec(col.editMaxWidth);
-                let maxWidthMatch = /([0-9]+)/.exec(col.maxWidth);
-                if (editMaxWidthMatch == null || editMaxWidthMatch.length == 0) return "";
-                if (maxWidthMatch == null || maxWidthMatch.length == 0) return "";
-                let editMaxWidth = parseInt(editMaxWidthMatch[0]);
-                let maxWidth = parseInt(maxWidthMatch[0]);
-                let maxMax = editMaxWidth > maxWidth ? editMaxWidth : maxWidth;
-                let maxMaxStr = "";
-                if (isNumber)  maxMaxStr = "max-width:"+maxMax + "px;";
-                else if (isRem) maxMaxStr = `max-width:${maxMax}rem;`;
-                else maxMaxStr = `max-width:${maxMax}px;`;
-                return maxMaxStr;
-            }
-
-        }
-        return "";
-    }
-    let maxWidthStyle = $derived.by(() => {
-        let val : {[key:string]:string} = {}
-        for (let col of columns) {
-            val[col.col] = colMaxWidthStyle(col);
-        }
-        return val;
-    })
-
     /////
     // sorting and filtering
 
@@ -1722,7 +1688,10 @@
 
     function cwidth(col: CombiTableColumn) {
         if (widthType == "auto") return "";
-        return (col.width ? "width: " + col.width + ";" : "");
+        let out = "";
+        if (col.width ) out += `width: ${col.width};`;
+        if (col.minWidth ) out += `min-width: ${col.minWidth}:`;
+        return out;
     }
     function minw(col: CombiTableColumn) {
         if (widthType == "fixed") return "width: 100%;";
@@ -1773,10 +1742,13 @@
     
         // Calculate the desired width
         const horizontalScrollOffset = document.documentElement.scrollLeft;
-        const width = (horizontalScrollOffset + e.clientX) - headerBeingResized.offsetLeft;
+        let width = (horizontalScrollOffset + e.clientX) - headerBeingResized.offsetLeft;
+        const column = columns[colidxBeingResized];
+        let minWidthNumberMatch = column.minWidth && column.minWidth.endsWith("px") ?  /([0-9]+)/.exec(column.minWidth) : undefined;
+        const minWidthNumber = minWidthNumberMatch && minWidthNumberMatch[0] ? parseInt(minWidthNumberMatch[0]) : undefined;
+        if (minWidthNumber && width < minWidthNumber) width = minWidthNumber;
     
         // Update the column object with the new size value
-        const column = columns[colidxBeingResized];
         if (!column) return;
         column.width =  String(width/div.offsetWidth*100 + "%"); // Enforce our minimum
         headerBeingResized.style.width = column.width;
@@ -1904,7 +1876,7 @@
                                 <div tabindex="-1" class="join bg-base-200">
                                     <input readonly tabindex="-1" bind:value={filterText[col.col]} class="input join-item bg-base-200" style="{eminw(col)} {emaxw(col)}"/>
                                     <details class="dropdown dropdown-end" bind:open={filterMenusOpen[col.col]}>
-                                    <summary id={"filter_select_summary_"+col.col} class="btn join-item btn-outline btn-square border-gray-600" 
+                                    <summary id={"filter_select_summary_"+col.col} class="btn join-item btn-outline px-2 border-gray-600" 
                                         onkeyup={(evt) => {if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}
                                         onblur={(evt) => closeFilter(evt, col)}>&#x25bc</summary>
                                     <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{drwidth(col)}">
@@ -1928,7 +1900,7 @@
                                     <input readonly tabindex="-1" class="input bg-base-200 join-item" style="{eminw(col)} {emaxw(col)}"
                                     onblur={(evt) => closeFilter(evt, col)} bind:value={filterText[col.col]}/>
                                     <details class="dropdown dropdown-end join-item" bind:open={filterMenusOpen[col.col]}>
-                                        <summary id={"filter_select_summary_"+col.col} class="btn join-item btn-outline border-gray-600" 
+                                        <summary id={"filter_select_summary_"+col.col} class="btn px-2 join-item btn-outline border-gray-600" 
                                             onkeyup={(evt) => {if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}
                                             onblur={(evt) => closeFilter(evt, col)}>&#x25bc</summary>
                                         <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded   z-1 p-2 mt-2 border border-gray-600" style={drwidth(col)}>
@@ -1969,7 +1941,7 @@
                                     <input type="text join-item" class="input bg-base-200 w-full" style="{eminw(col)} {emaxw(col)}" 
                                         bind:value={filterText[col.col]} 
                                         onkeypress={(evt) => {if (evt.key == "Escape") {filterMenusOpen[col.col]=false} else {filterKeyPress(evt, col, filterText[col.col])}}}/>
-                                    <button class="btn join-item btn-outline btn-square border-gray-600" 
+                                    <button class="btn join-item btn-outline px-1 border-gray-600" 
                                         onclick={() => toggleFilterDateDialog(col.col)} 
                                         onkeyup={(evt) => {if (evt.key == "Escape") {filterMenusOpen[col.col]=false} }}>{@html calendarIcon}</button>
                                     <details class="dropdown dropdown-end" bind:open={filterMenusOpen[col.col]} 
@@ -2033,7 +2005,7 @@
                                                 />
 
                                                 <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
-                                                <summary class="btn btn-outline btn-square border-gray-600 {bg(col)} join-item" 
+                                                <summary class="btn btn-outline px-2 border-gray-600 {bg(col)} join-item" 
                                                     onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}
                                                     onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
                                                 <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{drwidth(col)}">
@@ -2061,7 +2033,7 @@
                                             <input readonly tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg(col)}" style="{eminw(col)} {emaxw(col)}"/>
 
                                             <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
-                                            <summary class="btn btn-outline btn-square border-gray-600 {bg(col)} join-item" 
+                                            <summary class="btn btn-outline px-2 border-gray-600 {bg(col)} join-item" 
                                                 onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}
                                                 onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
                                             <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style={drwidth(col)}>
@@ -2104,7 +2076,7 @@
                                                     onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col]=false} else {editInputUpdate(evt, col)}}}
                                                     bind:value={editRowText[col.col]} 
                                                 />
-                                                <button class="btn join-item btn-outline btn-square border-gray-600" 
+                                                <button class="btn join-item btn-outline px-1 border-gray-600" 
                                                     onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}
                                                     onclick={() => toggleEditRowDateDialog(col.col)} >{@html calendarIcon}</button>
                                                 <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]} 
@@ -2243,7 +2215,7 @@
                                                 style="{eminw(col)} {emaxw(col)}"
                                             />
                                             <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
-                                            <summary class="btn btn-outline btn-square border-gray-600 {bg(col)} join-item" 
+                                            <summary class="btn btn-outline px-2 border-gray-600 {bg(col)} join-item" 
                                                 onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col] = false}}}
                                                 onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
                                             <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{drwidth(col)}">
@@ -2271,7 +2243,7 @@
                                             <input readonly tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg(col)}" style="{eminw(col)} {emaxw(col)}"/>
 
                                             <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
-                                            <summary class="btn btn-outline btn-square border-gray-600 {bg(col)} join-item" 
+                                            <summary class="btn btn-outline px-2 border-gray-600 {bg(col)} join-item" 
                                                 onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col] = false}}}
                                                 onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
                                             <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{drwidth(col)}">
@@ -2314,7 +2286,7 @@
                                                 bind:value={editRowText[col.col]} 
                                                 onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col] = false} else {editInputUpdate(evt, col)}}}
                                             />
-                                            <button class="btn join-item btn-outline btn-square border-gray-600" 
+                                            <button class="btn join-item btn-outline px-1 border-gray-600" 
                                                 onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col] = false} }}
                                                 onclick={() => toggleEditRowDateDialog(col.col)} >{@html calendarIcon}</button>
                                             <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]} 
