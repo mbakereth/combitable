@@ -20,6 +20,26 @@
         extraValue? : string,
 
         lang? : string,
+
+        /**
+         * Any additional classes for outer div (added at end)
+         */
+        divClasses? : string,
+
+        /**
+         * Any additional styles for outer div (added at end)
+         */
+        divStyles? : string,
+
+        /**
+         * Any additional classes for inout field (added at end)
+         */
+        inputClasses? : string,
+
+        /**
+         * Any additional styles for input field (added at end)
+         */
+        inputStyles? : string,
     }
 
     import type { CombiTableColumn } from '$lib/combitabletypes';
@@ -42,6 +62,10 @@
         dateFormat = "yyyy-mm-dd",
         lang = "en",
         editMenuOpen = $bindable(false),
+        divClasses = "",
+        divStyles = "",
+        inputClasses = "",
+        inputStyles = "",
     } : Props = $props();
     let origValue = (Array.isArray(value)) ? [...value] : value;
 
@@ -636,21 +660,35 @@
         editMenuOpen = false;
     }
 
+    function bg(col: CombiTableColumn) {
+        return col.nullable != true ? "bg-required" : "bg-base-200";
+    }
+
+    function cwidth(col: CombiTableColumn) {
+        let ret = "";
+        if (col.editMinWidth) ret += "min-width:" + col.editMinWidth + ";"
+        if (col.editMaxWidth) ret += "max-width:" + col.editMaxWidth + ";"
+        return ret;
+    }
+    function ddwidth(col: CombiTableColumn) {
+        let ret = "";
+        if (col.dropdownWidth) ret += "width:" + col.dropdownWidth + ";"
+        return ret;
+    }
+    function cheight(col: CombiTableColumn) {
+        let ret = "";
+        if (col.editHeight) ret += "height:" + col.editHeight + ";"
+        return ret;
+    }
+
 </script>
 
 
 {#if true}
-    {@const editminwStyle = col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""}
-    {@const boolEditminwStyle = col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: 4rem;"}
-    {@const editmaxwStyle = col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}
-    {@const editHeightStyle = col.editHeight ? "height:" + col.editHeight + ";" : ""}
-    {@const dropdownwidthStyle = col.dropdownWidth ? "width:" + col.dropdownWidth + ";" : ""}
-    {@const cmaxwStyle = maxWidthStyle}
-    {@const bg = col.nullable != true ? "bg-required" : "bg-base-200"}
     {#if col.type == "date" || col.type == "partialdate"}
 
-        <div class="join">
-            <input type="text join-item" class="input bg-base-200 {bg}" disabled={updateDisabled} style="{editminwStyle} {editmaxwStyle}" 
+        <div class="join {divClasses}" style="{divStyles}">
+            <input type="text join-item" class="input bg-base-200 {bg(col)} {inputClasses}" disabled={updateDisabled} style="{cwidth(col)} {inputStyles}" 
                 bind:value={displayValue} 
                 onkeyup={(evt) => {if (evt.key == "Escape") {editMenuOpen=false} else {fieldKeyPress(evt)}}}
             />
@@ -679,12 +717,12 @@
 
     {:else if col.autoCompleteLink && col.type != "array:string"}    
         <div class="acdropdown overflow:visible">
-            <input role="button" class="input m-0 -mb-1 w-full cursor-text {bg}" disabled={updateDisabled} style="{editminwStyle} {editmaxwStyle}"  tabindex="0"
+            <input role="button" class="input m-0 -mb-1 w-full cursor-text {bg(col)} {inputClasses}" disabled={updateDisabled} style="{cwidth(col)} {inputStyles}"  tabindex="0"
                 onkeyup={(evt) => {if (evt.key == "Escape") {autoCompleteOpen = false} else {autoCompleteKeyPress(evt)}}}
                 onblur={(evt) => handleACBlur(evt)}
                 bind:value={displayValue}/>
             {#if autoCompleteOpen}
-                <ul bind:this={autoCompleteList} class="menu dropdown-content border border-gray-600 rounded max-h-0.3 overflow-auto bg-base-200 rounded-box z-10 p-2 mt-4 shadow" style="{dropdownwidthStyle}">
+                <ul bind:this={autoCompleteList} class="menu dropdown-content border border-gray-600 rounded max-h-0.3 overflow-auto bg-base-200 rounded-box z-10 p-2 mt-4 shadow" style="{ddwidth(col)}">
                     {#each autoCompleteData as name}
                         <!-- svelte-ignore a11y_missing_attribute -->
                         <li><a tabindex="0" onclick={() => autoCompleteUpdate(col, name)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") autoCompleteUpdate(col, name)}}>{name}</a></li>
@@ -695,15 +733,15 @@
     {:else if col.type != "select:string" && col.type != "select:integer" && col.type != "boolean" && col.type != "array:string"}
         {#if col.editHeight}
             {#if col.default}
-                <textarea class="textarea bg-base-200 align-top {bg}" disabled={updateDisabled} style="{editminwStyle} {editmaxwStyle} {editHeightStyle}" onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
+                <textarea class="textarea bg-base-200 align-top {bg(col)}" disabled={updateDisabled} style="{cwidth(col)} {cheight(col)} {inputStyles}" onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
             {:else}
-                <textarea class="textarea bg-base-200 align-top {bg}" style="{editminwStyle} {editmaxwStyle} {editHeightStyle}" disabled={updateDisabled} onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
+                <textarea class="textarea bg-base-200 align-top {bg(col)}" style="{cwidth(col)} {cheight(col)}" disabled={updateDisabled} onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
             {/if}
         {:else}
             {#if col.default}
-                <input type="text" class="input bg-base-200 {bg}" style="{editminwStyle} {editmaxwStyle}" disabled={updateDisabled} onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"/>
+                <input type="text" class="input bg-base-200 {bg(col)} {inputClasses}" style="{cwidth(col)} {inputStyles}" disabled={updateDisabled} onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"/>
             {:else}
-                <input type="text" class="input bg-base-200 {bg}" style="{editminwStyle} {editmaxwStyle}" disabled={updateDisabled} onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"/>
+                <input type="text" class="input bg-base-200 {bg(col)} {inputClasses}" style="{cwidth(col)} {inputStyles}" disabled={updateDisabled} onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"/>
             {/if}
         {/if}
     {:else if col.type == "array:string"}
@@ -721,12 +759,12 @@
                         <button class="btn btn-neutral btn-small h-8 text-lg w-8 mr-2" disabled={extraValue==""} onclick={() => addElement()}>+</button>
                             {#if col.autoCompleteLink}
                                 <div class="acdropdown overflow:visible">
-                                    <input role="button" class="input m-0 -mb-1 w-full cursor-text {bg}" disabled={updateDisabled} style="{editminwStyle} {editmaxwStyle}"  tabindex="0"
+                                    <input role="button" class="input m-0 -mb-1 w-full cursor-text {bg(col)} {inputClasses}" disabled={updateDisabled} style="{cwidth(col)} {inputStyles}"  tabindex="0"
                                         onkeyup={(evt) => {if (evt.key == "Escape") {autoCompleteOpen = false} else {autoCompleteKeyPress(evt)}}}
                                          onblur={(evt) => handleACBlur(evt)}
                                        bind:value={extraValue}/>
                                     {#if autoCompleteOpen} 
-                                        <ul bind:this={autoCompleteList} class="menu dropdown-content bg-base-100 rounded   p-1 mt-4 border border-gray-600" style="{dropdownwidthStyle}">
+                                        <ul bind:this={autoCompleteList} class="menu dropdown-content bg-base-100 rounded   p-1 mt-4 border border-gray-600" style="{ddwidth(col)}">
                                             {#each autoCompleteData as name}
                                                 <!-- svelte-ignore a11y_missing_attribute -->
                                                 <li><a tabindex="0" onclick={() => autoCompleteUpdate(col, name)} role="button" onkeyup={(evt) => {if (evt.key == "Enter") autoCompleteUpdate(col, name)}}>{name}</a></li>
@@ -735,7 +773,7 @@
                                     {/if}
                                 </div>
                             {:else}
-                                <input type="text" class="input bg-base-200" disabled={updateDisabled} style="{editminwStyle} {editmaxwStyle}" onkeyup={(evt) => fieldKeyPress(evt)} bind:value={extraValue}  tabindex="0"/>
+                                <input type="text" class="input bg-base-200 {inputClasses}" disabled={updateDisabled} style="{cwidth(col)} {inputStyles}" onkeyup={(evt) => fieldKeyPress(evt)} bind:value={extraValue}  tabindex="0"/>
                             {/if}
                     {/if}
                 </div>
@@ -744,13 +782,14 @@
     {:else if col.type == "boolean"}
         {@const disabled = updateDisabled ? "disabled" : ""}
         <div tabindex="-1" class="join bg-base-200">
-            <input readonly tabindex="-1" bind:value={displayValue} class="input join-item bg-base-200 {bg}" style="{boolEditminwStyle} {editmaxwStyle}"/>
+            <input readonly tabindex="-1" bind:value={displayValue} class="input join-item bg-base-200 {bg(col)} {inputClasses}" style="{cwidth(col)} {inputStyles}"/>
 
             <details class="dropdown dropdown-end" bind:open={editMenuOpen}>
-            <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
+            <summary class="btn btn-outline btn-square border-gray-600 {bg(col)} join-item {inputClasses}"
+            style="{inputStyles}" 
             onkeyup={(e) => {if (e.key == "Escape") {editMenuOpen = false}}}
             onblur={(evt) => closeEdit(evt)}>&#x25bc</summary>
-            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded   p-1 mt-2 border border-gray-600" style="{dropdownwidthStyle}">
+            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded   p-1 mt-2 border border-gray-600" style="{ddwidth(col)}">
                 {#if col.nullable}
                     <!-- svelte-ignore a11y_missing_attribute -->
                     <li><a tabindex="0" id={"edit_select_"+col.col+"-"} onclick={() => editRowUpdate("")} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate("")}}>{Unset}</a></li>
@@ -766,13 +805,14 @@
         {@const disabled = updateDisabled ? "disabled" : ""}
 
         <div tabindex="-1" class="join bg-base-200">
-            <input readonly tabindex="-1" bind:value={displayValue} class="input join-item bg-base-200 {bg}" style="{boolEditminwStyle} {editmaxwStyle}"/>
+            <input readonly tabindex="-1" bind:value={displayValue} class="input join-item bg-base-200 {bg(col)} {inputClasses}" style="{cwidth(col)} {inputStyles}"/>
 
             <details class="dropdown dropdown-end" bind:open={editMenuOpen}>
-            <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
+            <summary class="btn btn-outline btn-square border-gray-600 {bg(col)} join-item {inputClasses}" 
+            style="{inputStyles}"
             onkeyup={(e) => {if (e.key == "Escape") {editMenuOpen = false}}}
             onblur={(evt) => closeEdit(evt)}>&#x25bc</summary>
-            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{dropdownwidthStyle}">
+            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{ddwidth(col)}">
                 {#if col.nullable == true}
                     <!-- svelte-ignore a11y_missing_attribute -->
                     <li><a tabindex="0" id={"edit_select_"+col.col+"-"} onclick={() => editRowUpdate("")} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate("")}}>{Unset}</a></li>
@@ -789,10 +829,11 @@
         {@const disabled = updateDisabled ? "disabled" : ""}
  
         <details class="dropdown dropdown-end" bind:open={editMenuOpen}>
-            <summary class="btn btn-outline btn-square border-gray-600 {bg} join-item" 
+            <summary class="btn btn-outline btn-square border-gray-600 {bg(col)} join-item {inputClasses}"  
+            style="{inputStyles}"
             onkeyup={(e) => {if (e.key == "Escape") {editMenuOpen = false}}}
             onblur={(evt) => closeEdit(evt)}>&#x25bc</summary>
-            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{dropdownwidthStyle}">
+            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{ddwidth(col)}">
                 {#if col.nullable == true}
                     <!-- svelte-ignore a11y_missing_attribute -->
                     <li><a tabindex="0" id={"edit_select_"+col.col+"-"} onclick={() => editRowUpdate("")} role="button" onkeyup={(evt) => {if (evt.key == "Enter") editRowUpdate("")}}>{Unset}</a></li>
