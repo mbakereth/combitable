@@ -31,7 +31,7 @@ import { PartialDateType } from '$lib/types'
  * @param cols tables and columns to allow (see description)
  * @returns a JSON array of results
  */
-export async function autocomplete(client : any, event : RequestEvent, cols? : {[key:string]: string[]}, insensitive=false) : Promise<Response> {
+export async function autocomplete(client : any, event : RequestEvent, cols? : {[key:string]: string[]}, insensitive=false, maxItems=10) : Promise<Response> {
     const table = event.params.table;
     const col = event.params.col;
 
@@ -68,7 +68,7 @@ export async function autocomplete(client : any, event : RequestEvent, cols? : {
     let include : {[key:string]:any}|undefined = undefined;
     let select : {[key:string]:any}|undefined = undefined;
     const isPostgres = process.env["DATABASE_URL"]?.startsWith("postgres");
-    const mode = isPostgres ? {mode: insensitive ? "insensitive" : "sensitive"} : {}
+    const mode = isPostgres ? (insensitive ? {mode: "insensitive"} : {}) : {};
     let where : {[key:string]:any} = {[parts[parts.length-1]]: {startsWith: text, ...mode}};
     
     if (parts.length == 1) {
@@ -85,7 +85,7 @@ export async function autocomplete(client : any, event : RequestEvent, cols? : {
         distinct,
         include,
         where,
-        take: env.PUBLIC_COMBITABLE_AUTOCOMPLETE_TAKE ? parseInt(env.PUBLIC_COMBITABLE_AUTOCOMPLETE_TAKE) :  10,
+        take: env.PUBLIC_COMBITABLE_AUTOCOMPLETE_TAKE ? parseInt(env.PUBLIC_COMBITABLE_AUTOCOMPLETE_TAKE) :  maxItems,
     };
     try {
             const res : {[key:string]:any}[] = await client[table??""].findMany(query); 

@@ -7,7 +7,7 @@
 
   @plugin "daisyui/theme" {
    name: "light";
-   --color-required: #a5a8c4;
+   --color-required: #bac0dc;
  }
  @plugin "daisyui/theme" {
    name: "dark";

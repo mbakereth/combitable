@@ -225,6 +225,13 @@
 
     resizeEnded? : (colidx : number, width: string) => Promise<void>,
 
+    /**
+     * Maximum height of dropdown before adding a scrollbar.
+     * 
+     * Default "10rem"".
+     */
+    maxDropdownHeight? : string,
+
     }
     import { onMount, untrack } from 'svelte';
     import { page } from '$app/stores';
@@ -296,11 +303,16 @@
         resized = undefined,
         resizeEnded = undefined,
         resizeUpdateInterval = 1,
+        maxDropdownHeight = "10rem",
     } : Props = $props();
 
     let No = $derived(lang == "de" ? "Nein" : (lang == "el" ? "Όχι" : "No"));
     let Yes = $derived(lang == "de" ? "Ja" : (lang == "el" ? "Ναι" : "Yes"));
     let Unset = $derived(lang == "de" ? "Ungefasst" : (lang == "el" ? "Άδιο" : "Unset"));
+
+    function normalize(str : string) : string {
+        return str.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+    }
 
     const columnMap = (cols : CombiTableColumn[], fn : (v: CombiTableColumn) => any) =>
         Object.fromEntries(
@@ -731,7 +743,7 @@
     }
 
     async function filter(col : CombiTableColumn, value : string|boolean|undefined) {
-        if (!value && !(col.col in urlfilters) && !urlfilters[col.col]) return;
+        //if (/*value === undefined &&*/ !(col.col in urlfilters) && !urlfilters[col.col]) return;
         if (col.col in urlfilters && urlfilters[col.col] == value) return;
         if (col.col in filterMenusOpen) filterMenusOpen[col.col] = false;
         if (col.type == "boolean") {
@@ -957,7 +969,7 @@
 
     function closeFilter(evt : FocusEvent, col: CombiTableColumn) {
         let id = (evt.relatedTarget as any)?.id as string;
-        if (!id || ( !(id.startsWith("filter_select_"+col.col+"-")) && !(id.startsWith("xfilter_select_summary_"+col.col+"-")) ) ){
+        if (!id || ( !(id.startsWith("filter_select_"+uuid+"_"+col.col+"-")) && !(id.startsWith("xfilter_select_summary_"+uuid+"_"+col.col+"-")) ) ){
             //for (let col of columns) {
                 //console.log("Close", col.col)
                 filterMenusOpen[col.col] = false;
@@ -966,7 +978,7 @@
     }
     function closeEdit(evt : FocusEvent, col: CombiTableColumn) {
         let id = (evt.relatedTarget as any)?.id as string;
-        if (!id || (!(id.startsWith("edit_select_"+col.col+"-")) && !(id.startsWith("xedit_select_summary_"+col.col+"-"))) ) {
+        if (!id || (!(id.startsWith("edit_select_"+uuid+"_"+col.col+"-")) && !(id.startsWith("xedit_select_summary_"+uuid+"_"+col.col+"-"))) ) {
             //for (let col of columns) {
                 editRowMenusOpen[col.col] = false;
             //}
@@ -1876,22 +1888,72 @@
                                 <div tabindex="-1" class="join bg-base-200">
                                     <input readonly tabindex="-1" bind:value={filterText[col.col]} class="input join-item bg-base-200" style="{eminw(col)} {emaxw(col)}"/>
                                     <details class="dropdown dropdown-end" bind:open={filterMenusOpen[col.col]}>
-                                    <summary id={"filter_select_summary_"+col.col} class="btn join-item btn-outline px-2 border-gray-600" 
-                                        onkeyup={(evt) => {if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}
+                                    <summary id={"filter_select_summary_"+uuid+"_"+col.col} class="btn join-item btn-outline px-2 border-gray-600" 
+                                        onkeyup={(evt) => {if (evt.key == "Escape") {
+                                                filterMenusOpen[col.col]=false
+                                            } else if (evt.key.toLowerCase() == normalize(Yes.charAt(0))) {
+                                                filterMenusOpen[col.col] = false;
+                                                filter(col, true);
+                                            } else if (evt.key.toLowerCase() == normalize(No.charAt(0))) {
+                                                filterMenusOpen[col.col] = false;
+                                               filter(col, false);
+                                            } else if (evt.key.toLowerCase() == "-") {
+                                                filterMenusOpen[col.col] = false;
+                                                filter(col, undefined);
+                                            }}}
                                         onblur={(evt) => closeFilter(evt, col)}>&#x25bc</summary>
-                                    <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{drwidth(col)}">
+                                    <ul id={"filter_select_"+uuid+"_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{drwidth(col)}">
                                         <!-- svelte-ignore a11y_missing_attribute -->
-                                        <li><a tabindex="0" id={"filter_select_"+col.col+"-"} 
+                                        <li><a tabindex="0" id={"filter_select_"+uuid+"_"+col.col+"-"} 
                                             onclick={() => filter(col, undefined)} 
-                                            role="button" onkeyup={(evt) => {if (evt.key == "Enter") {filter(col, undefined)} else if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}>{Unset}</a></li>
+                                            role="button" onkeyup={(evt) => {if (evt.key == "Enter") {
+                                                filter(col, undefined)
+                                            } else if (evt.key == "Escape") {
+                                                filterMenusOpen[col.col]=false
+                                            } else if (evt.key.toLowerCase() == normalize(Yes.charAt(0))) {
+                                                filterMenusOpen[col.col] = false;
+                                                filter(col, true);
+                                            } else if (evt.key.toLowerCase() == normalize(No.charAt(0))) {
+                                                filterMenusOpen[col.col] = false;
+                                                filter(col, false);
+                                            } else if (evt.key.toLowerCase() == "-") {
+                                                filterMenusOpen[col.col] = false;
+                                                filter(col, undefined);
+                                            }}}>{Unset}</a></li>
                                         <!-- svelte-ignore a11y_missing_attribute -->
-                                        <li><a tabindex="0" id={"filter_select_"+col.col+"-f"} 
+                                        <li><a tabindex="0" id={"filter_select_"+uuid+"_"+col.col+"-f"} 
                                             onclick={() => filter(col, false)} 
-                                            role="button" onkeyup={(evt) => {if (evt.key == "Enter") {filter(col, undefined)} else if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}>{No}</a></li>
+                                            role="button" onkeyup={(evt) => {console.log("Key", evt.key); if (evt.key == "Enter") {
+                                                filter(col, undefined)
+                                            } else if (evt.key == "Escape") {
+                                                filterMenusOpen[col.col]=false
+                                            } else if (evt.key.toLowerCase() == normalize(Yes.charAt(0))) {
+                                                filterMenusOpen[col.col] = false;
+                                                filter(col, true);
+                                            } else if (evt.key.toLowerCase() == normalize(No.charAt(0))) {
+                                                filterMenusOpen[col.col] = false;
+                                                filter(col, false);
+                                            } else if (evt.key.toLowerCase() == "-") {
+                                                filterMenusOpen[col.col] = false;
+                                                filter(col, undefined);
+                                            }}}>{No}</a></li>
                                         <!-- svelte-ignore a11y_missing_attribute -->
-                                        <li><a tabindex="0" id={"filter_select_"+col.col+"-t"} 
+                                        <li><a tabindex="0" id={"filter_select_"+uuid+"_"+col.col+"-t"} 
                                             onclick={() => filter(col, true)} 
-                                            role="button" onkeyup={(evt) => {if (evt.key == "Enter") {filter(col, undefined)} else if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}>{Yes}</a></li>
+                                            role="button" onkeyup={(evt) => {if (evt.key == "Enter") {
+                                                filter(col, undefined)
+                                            } else if (evt.key == "Escape") {
+                                                filterMenusOpen[col.col]=false
+                                            } else if (evt.key.toLowerCase() == normalize(Yes.charAt(0))) {
+                                                filterMenusOpen[col.col] = false;
+                                                filter(col, true);
+                                            } else if (evt.key.toLowerCase() == normalize(No.charAt(0))) {
+                                                filterMenusOpen[col.col] = false;
+                                                filter(col, false);
+                                            } else if (evt.key.toLowerCase() == "-") {
+                                                filterMenusOpen[col.col] = false;
+                                                filter(col, undefined);
+                                            }}}>{Yes}</a></li>
                                     </ul>
                                     </details>
                                 </div>
@@ -1900,20 +1962,59 @@
                                     <input readonly tabindex="-1" class="input bg-base-200 join-item" style="{eminw(col)} {emaxw(col)}"
                                     onblur={(evt) => closeFilter(evt, col)} bind:value={filterText[col.col]}/>
                                     <details class="dropdown dropdown-end join-item" bind:open={filterMenusOpen[col.col]}>
-                                        <summary id={"filter_select_summary_"+col.col} class="btn px-2 join-item btn-outline border-gray-600" 
-                                            onkeyup={(evt) => {if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}
+                                        <summary id={"filter_select_summary_"+uuid+"_"+col.col} class="btn px-2 join-item btn-outline border-gray-600" 
+                                            onkeyup={(evt) => {if (evt.key == "Escape") {
+                                                filterMenusOpen[col.col]=false
+                                            } else if (col.names) {
+                                                const k = evt.key.toLowerCase();
+                                                for (let i=0; i<col.names.length; ++i) {
+                                                    if (k == normalize(col.names[i].charAt(0))) {
+                                                        filterMenusOpen[col.col]= true;
+                                                        document.getElementById("filter_select_"+uuid+"_"+col.col+"-"+i)?.focus();
+                                                        break;
+                                                    }
+                                                }
+                                            }}}
                                             onblur={(evt) => closeFilter(evt, col)}>&#x25bc</summary>
-                                        <ul id={"filter_select_"+col.col} class="menu dropdown-content bg-base-100 rounded   z-1 p-2 mt-2 border border-gray-600" style={drwidth(col)}>
-                                            <!-- svelte-ignore a11y_missing_attribute -->
-                                            <li><a tabindex="0" id={"filter_select_"+col.col+"-"} 
-                                                onclick={() => filter(col, "")} 
-                                                role="button" onkeyup={(evt) => {if (evt.key == "Enter") {filter(col, "")} else if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}>{Unset}</a></li>
-                                            {#each col.names as name, i}
+                                        <ul id={"filter_select_"+uuid+"_"+col.col} class="menu dropdown-content bg-base-100 rounded   z-1 p-2 mt-2 border border-gray-600" style={drwidth(col)}>
+                                            <div class="overflow-y-auto" style="max-height: {maxDropdownHeight};">
                                                 <!-- svelte-ignore a11y_missing_attribute -->
-                                                <li><a tabindex="0" id={"filter_select_"+col.col+"-"} 
-                                                onclick={() => filter(col, col.values ? col.values[i]+"" : name)} 
-                                                role="button" onkeyup={(evt) => {if (evt.key == "Enter") {filter(col, col.values ? col.values[i]+"" : name)} else if (evt.key == "Escape") {filterMenusOpen[col.col]=false}}}>{name}</a></li>
-                                            {/each}
+                                                <li><a tabindex="0" id={"filter_select_"+uuid+"_"+col.col+"-"} 
+                                                    onclick={() => filter(col, "")} 
+                                                    role="button" onkeyup={(evt) => {if (evt.key == "Enter") {
+                                                        filter(col, "")
+                                                    } else if (evt.key == "Escape") {
+                                                        filterMenusOpen[col.col]=false
+                                                    } else if (col.names) {
+                                                        const k = evt.key.toLowerCase();
+                                                        for (let i=0; i<col.names.length; ++i) {
+                                                            if (k == normalize(col.names[i].charAt(0))) {
+                                                                filterMenusOpen[col.col]= true;
+                                                                document.getElementById("filter_select_"+uuid+"_"+col.col+"-"+i)?.focus();
+                                                                break;
+                                                            }
+                                                        }
+                                                   }}}>{Unset}</a></li>
+                                                {#each col.names as name, i}
+                                                    <!-- svelte-ignore a11y_missing_attribute -->
+                                                    <li><a tabindex="0" id={"filter_select_"+uuid+"_"+col.col+"-"+i} 
+                                                    onclick={() => filter(col, col.values ? col.values[i]+"" : name)} 
+                                                    role="button" onkeyup={(evt) => {if (evt.key == "Enter") {
+                                                        filter(col, col.values ? col.values[i]+"" : name)
+                                                    } else if (evt.key == "Escape") {
+                                                        filterMenusOpen[col.col]=false
+                                                    } else if (col.names) {
+                                                        const k = evt.key.toLowerCase();
+                                                        for (let i=0; i<col.names.length; ++i) {
+                                                            if (k == normalize(col.names[i].charAt(0))) {
+                                                                filterMenusOpen[col.col]= true;
+                                                                document.getElementById("filter_select_"+uuid+"_"+col.col+"-"+i)?.focus();
+                                                                break;
+                                                            }
+                                                        }
+                                                    }}}>{name}</a></li>
+                                                {/each}
+                                            </div>
                                         </ul>
                                     </details>
                                 </div>
@@ -1921,7 +2022,11 @@
                             {:else if col.autoCompleteLink}    
                                 <div class="dropdown overflow:visible dropdown-open" id={"filter_ac_"+col.col} >
                                     <input class="input m-0 w-full bg-base-200" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
-                                        onkeyup={(evt) => {if (evt.key == "Escape") {autoCompleteOpen[col.col]=false} else {autoCompleteKeyPress(evt, col, filterText[col.col], true)}}}
+                                        onkeyup={(evt) => {if (evt.key == "Escape") {
+                                            autoCompleteOpen[col.col]=false
+                                        } else if (evt.key != "Tab") {
+                                            autoCompleteKeyPress(evt, col, filterText[col.col], true)
+                                        }}}
                                         bind:value={filterText[col.col]}
                                         onfocusout={(event) => {handleACBlur(event, col)}}
                                         />
@@ -2006,23 +2111,60 @@
 
                                                 <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
                                                 <summary class="btn btn-outline px-2 border-gray-600 {bg(col)} join-item" 
-                                                    onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}
+                                                    onkeyup={(evt) => {if (evt.key == "Escape") {
+                                                        editRowMenusOpen[col.col]=false
+                                                    } else if (evt.key.toLowerCase() == normalize(Yes.charAt(0))) {
+                                                        filterMenusOpen[col.col] = false;
+                                                        editRowUpdate(col, true);
+                                                    } else if (evt.key.toLowerCase() == normalize(No.charAt(0))) {
+                                                        filterMenusOpen[col.col] = false;
+                                                        editRowUpdate(col, false);
+                                                    } else if (col.nullable && evt.key.toLowerCase() == "-") {
+                                                        filterMenusOpen[col.col] = false;
+                                                        editRowUpdate(col, null);
+                                                    }}}
                                                     onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
-                                                <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{drwidth(col)}">
+                                                <ul id={"edit_select_"+uuid+"_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{drwidth(col)}">
                                                     {#if col.nullable}
                                                         <!-- svelte-ignore a11y_missing_attribute -->
-                                                        <li><a tabindex="0" id={"edit_select_"+col.col+"-"} 
+                                                        <li><a tabindex="0" id={"edit_select_"+uuid+"_"+col.col+"-"} 
                                                         onclick={() => editRowUpdate(col, null)} role="button" 
-                                                        onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, null)} else if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}>{Unset}</a></li>
+                                                        onkeyup={(evt) => {if (evt.key == "Enter") {
+                                                            editRowUpdate(col, null)
+                                                        } else if (evt.key == "Escape") {
+                                                            editRowMenusOpen[col.col]=false
+                                                        } else if (evt.key.toLowerCase() == normalize(Yes.charAt(0))) {
+                                                            filterMenusOpen[col.col] = false;
+                                                            editRowUpdate(col, true);
+                                                        } else if (evt.key.toLowerCase() == normalize(No.charAt(0))) {
+                                                            filterMenusOpen[col.col] = false;
+                                                            editRowUpdate(col, false);
+                                                        } else if (col.nullable && evt.key.toLowerCase() == "-") {
+                                                            filterMenusOpen[col.col] = false;
+                                                            editRowUpdate(col, null);
+                                                        }}}>{Unset}</a></li>
                                                     {/if}
                                                     <!-- svelte-ignore a11y_missing_attribute -->
-                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} 
+                                                    <li><a tabindex="0" id={"edit_select_"+uuid+"_"+col.col+"-f"} 
                                                     onclick={() => editRowUpdate(col, false)} role="button" 
                                                     onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, false)} else if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}>{No}</a></li>
                                                     <!-- svelte-ignore a11y_missing_attribute -->
-                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-t"} 
+                                                    <li><a tabindex="0" id={"edit_select_"+uuid+"_"+col.col+"-t"} 
                                                     onclick={() => editRowUpdate(col, true)} 
-                                                    role="button" onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, true)} else if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}>{Yes}</a></li>
+                                                    role="button" onkeyup={(evt) => {if (evt.key == "Enter") {
+                                                        editRowUpdate(col, true)
+                                                    } else if (evt.key == "Escape") {
+                                                        editRowMenusOpen[col.col]=false
+                                                    } else if (evt.key.toLowerCase() == normalize(Yes.charAt(0))) {
+                                                        filterMenusOpen[col.col] = false;
+                                                        editRowUpdate(col, true);
+                                                    } else if (evt.key.toLowerCase() == normalize(No.charAt(0))) {
+                                                        filterMenusOpen[col.col] = false;
+                                                        editRowUpdate(col, false);
+                                                    } else if (col.nullable && evt.key.toLowerCase() == "-") {
+                                                        filterMenusOpen[col.col] = false;
+                                                        editRowUpdate(col, null);
+                                                    }}}>{Yes}</a></li>
                                                 </ul>
                                                 </details>
                                             </div>
@@ -2034,21 +2176,60 @@
 
                                             <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
                                             <summary class="btn btn-outline px-2 border-gray-600 {bg(col)} join-item" 
-                                                onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}
+                                                onkeyup={(evt) => {if (evt.key == "Escape") {
+                                                    editRowMenusOpen[col.col]=false
+                                                } else if (col.names) {
+                                                    const k = evt.key.toLowerCase();
+                                                    for (let i=0; i<col.names.length; ++i) {
+                                                        if (k == normalize(col.names[i].charAt(0))) {
+                                                            editRowMenusOpen[col.col]= true;
+                                                            document.getElementById("edit_select_"+uuid+"_"+col.col+"-"+i)?.focus();
+                                                            break;
+                                                        }
+                                                    }
+                                                }}}
                                                 onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
-                                            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style={drwidth(col)}>
-                                            {#if col.nullable}
-                                                <!-- svelte-ignore a11y_missing_attribute -->
-                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-"} 
-                                                onclick={() => editRowUpdate(col, null)} 
-                                                role="button" onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, null)} else if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}>{Unset}</a></li>
-                                            {/if}
-                                                 {#each col.names as name, i}
-                                                    <!-- svelte-ignore a11y_missing_attribute -->
-                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} 
-                                                    onclick={() => editRowUpdate(col, col.values ? col.values[i]+"" : name)} 
-                                                    role="button" onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, col.values ? col.values[i]+"" : name)} else if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}>{name}</a></li>
-                                                {/each}
+                                            <ul id={"edit_select_"+uuid+"_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style={drwidth(col)}>
+                                                <div class="overflow-y-auto" style="max-height: {maxDropdownHeight};">
+                                                    {#if col.nullable}
+                                                        <!-- svelte-ignore a11y_missing_attribute -->
+                                                        <li><a tabindex="0" id={"edit_select_"+uuid+"_"+col.col+"-"} 
+                                                        onclick={() => editRowUpdate(col, null)} 
+                                                        role="button" onkeyup={(evt) => {if (evt.key == "Enter") {
+                                                            editRowUpdate(col, null)
+                                                        } else if (evt.key == "Escape") {
+                                                            editRowMenusOpen[col.col]=false
+                                                        } else if (col.names) {
+                                                            const k = evt.key.toLowerCase();
+                                                            for (let i=0; i<col.names.length; ++i) {
+                                                                if (k == normalize(col.names[i].charAt(0))) {
+                                                                    editRowMenusOpen[col.col]= true;
+                                                                    document.getElementById("edit_select_"+uuid+"_"+col.col+"-"+i)?.focus();
+                                                                    break;
+                                                                }
+                                                            }
+                                                        }}}>{Unset}</a></li>
+                                                    {/if}
+                                                    {#each col.names as name, i}
+                                                        <!-- svelte-ignore a11y_missing_attribute -->
+                                                        <li><a tabindex="0" id={"edit_select_"+uuid+"_"+col.col+"-"+i} 
+                                                        onclick={() => editRowUpdate(col, col.values ? col.values[i]+"" : name)} 
+                                                        role="button" onkeyup={(evt) => {if (evt.key == "Enter") {
+                                                            editRowUpdate(col, col.values ? col.values[i]+"" : name)
+                                                        } else if (evt.key == "Escape") {
+                                                            editRowMenusOpen[col.col]=false
+                                                        } else if (col.names) {
+                                                            const k = evt.key.toLowerCase();
+                                                            for (let i=0; i<col.names.length; ++i) {
+                                                                if (k == normalize(col.names[i].charAt(0))) {
+                                                                    editRowMenusOpen[col.col]= true;
+                                                                    document.getElementById("edit_select_"+uuid+"_"+col.col+"-"+i)?.focus();
+                                                                    break;
+                                                                }
+                                                            }
+                                                        }}}>{name}</a></li>
+                                                    {/each}
+                                                </div>
                                             </ul>
                                             </details>
                                         </div>
@@ -2056,7 +2237,11 @@
                                         {:else if col.autoCompleteLink}    
                                             <div class="dropdown overflow:visible dropdown-open" id={"edit_ac_"+col.col}>
                                                 <input class="input m-0 w-full {bg(col)} cursor-text" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
-                                                    onkeyup={(evt) => {if (evt.key == "Escape") {autoCompleteOpen[col.col]=false} else {autoCompleteKeyPress(evt, col, editRowText[col.col], false)}}}
+                                                    onkeyup={(evt) => {if (evt.key == "Escape") {
+                                                        autoCompleteOpen[col.col]=false
+                                                    } else if (evt.key != "Tab") {
+                                                        autoCompleteKeyPress(evt, col, editRowText[col.col], false)
+                                                    }}}
                                                     onfocusout={(event) => {handleACBlur(event, col)}}
                                                     bind:value={editRowText[col.col]}/>
                                                  {#if autoCompleteOpen[col.col] && editRow == -1}
@@ -2216,23 +2401,73 @@
                                             />
                                             <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
                                             <summary class="btn btn-outline px-2 border-gray-600 {bg(col)} join-item" 
-                                                onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col] = false}}}
+                                                onkeyup={(evt) => {if (evt.key == "Escape") {
+                                                    editRowMenusOpen[col.col] = false
+                                                } else if (evt.key.toLowerCase() == normalize(Yes.charAt(0))) {
+                                                    filterMenusOpen[col.col] = false;
+                                                    editRowUpdate(col, true);
+                                                } else if (evt.key.toLowerCase() == normalize(No.charAt(0))) {
+                                                    filterMenusOpen[col.col] = false;
+                                                    editRowUpdate(col, false);
+                                                } else if (col.nullable && evt.key.toLowerCase() == "-") {
+                                                    filterMenusOpen[col.col] = false;
+                                                    editRowUpdate(col, null);
+                                                }}}
                                                 onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
-                                            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{drwidth(col)}">
+                                            <ul id={"edit_select_"+uuid+"_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{drwidth(col)}">
                                                 {#if col.nullable}
                                                 <!-- svelte-ignore a11y_missing_attribute -->
-                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-"} 
+                                                <li><a tabindex="0" id={"edit_select_"+uuid+"_"+col.col+"-"} 
                                                     onclick={() => editRowUpdate(col, null)} 
-                                                    role="button" onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, null)} else if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}>{Unset}</a></li>
+                                                    role="button" onkeyup={(evt) => {if (evt.key == "Enter") {
+                                                        editRowUpdate(col, null)
+                                                    } else if (evt.key == "Escape") {
+                                                        editRowMenusOpen[col.col]=false
+                                                    } else if (evt.key.toLowerCase() == normalize(Yes.charAt(0))) {
+                                                        filterMenusOpen[col.col] = false;
+                                                        editRowUpdate(col, true);
+                                                    } else if (evt.key.toLowerCase() == normalize(No.charAt(0))) {
+                                                        filterMenusOpen[col.col] = false;
+                                                        editRowUpdate(col, false);
+                                                    } else if (col.nullable && evt.key.toLowerCase() == "-") {
+                                                        filterMenusOpen[col.col] = false;
+                                                        editRowUpdate(col, null);
+                                                    }}}>{Unset}</a></li>
                                                 {/if}
                                                 <!-- svelte-ignore a11y_missing_attribute -->
-                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-f"} 
+                                                <li><a tabindex="0" id={"edit_select_"+uuid+"_"+col.col+"-f"} 
                                                     onclick={() => editRowUpdate(col, false)} 
-                                                    role="button" onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, false)} else if (evt.key == "Escape") {editRowMenusOpen[col.col] = false}}}>{No}</a></li>
+                                                    role="button" onkeyup={(evt) => {if (evt.key == "Enter") {
+                                                        editRowUpdate(col, false)
+                                                    } else if (evt.key == "Escape") {
+                                                        editRowMenusOpen[col.col] = false
+                                                    } else if (evt.key.toLowerCase() == normalize(Yes.charAt(0))) {
+                                                        filterMenusOpen[col.col] = false;
+                                                        editRowUpdate(col, true);
+                                                    } else if (evt.key.toLowerCase() == normalize(No.charAt(0))) {
+                                                        filterMenusOpen[col.col] = false;
+                                                        editRowUpdate(col, false);
+                                                    } else if (col.nullable && evt.key.toLowerCase() == "-") {
+                                                        filterMenusOpen[col.col] = false;
+                                                        editRowUpdate(col, null);
+                                                    }}}>{No}</a></li>
                                                 <!-- svelte-ignore a11y_missing_attribute -->
-                                                <li><a tabindex="0" id={"edit_select_"+col.col+"-t"} 
+                                                <li><a tabindex="0" id={"edit_select_"+uuid+"_"+col.col+"-t"} 
                                                     onclick={() => editRowUpdate(col, true)} role="button" 
-                                                    onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, true)} else if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}>{Yes}</a></li>
+                                                    onkeyup={(evt) => {if (evt.key == "Enter") {
+                                                        editRowUpdate(col, true)
+                                                    } else if (evt.key == "Escape") {
+                                                        editRowMenusOpen[col.col]=false
+                                                    } else if (evt.key.toLowerCase() == normalize(Yes.charAt(0))) {
+                                                        filterMenusOpen[col.col] = false;
+                                                        editRowUpdate(col, true);
+                                                    } else if (evt.key.toLowerCase() == normalize(No.charAt(0))) {
+                                                        filterMenusOpen[col.col] = false;
+                                                        editRowUpdate(col, false);
+                                                    } else if (col.nullable && evt.key.toLowerCase() == "-") {
+                                                        filterMenusOpen[col.col] = false;
+                                                        editRowUpdate(col, null);
+                                                    }}}>{Yes}</a></li>
                                             </ul>
                                             </details>
                                         </div>
@@ -2244,21 +2479,60 @@
 
                                             <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
                                             <summary class="btn btn-outline px-2 border-gray-600 {bg(col)} join-item" 
-                                                onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col] = false}}}
+                                                onkeyup={(evt) => {if (evt.key == "Escape") {
+                                                    editRowMenusOpen[col.col] = false
+                                                } else if (col.names) {
+                                                    const k = evt.key.toLowerCase();
+                                                    for (let i=0; i<col.names.length; ++i) {
+                                                        if (k == normalize(col.names[i].charAt(0))) {
+                                                            editRowMenusOpen[col.col]= true;
+                                                            document.getElementById("edit_select_"+uuid+"_"+col.col+"-"+i)?.focus();
+                                                            break;
+                                                        }
+                                                    }
+                                                }}}
                                                 onblur={(evt) => closeEdit(evt, col)}>&#x25bc</summary>
-                                            <ul id={"edit_select_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{drwidth(col)}">
-                                                {#if col.nullable}
-                                                    <!-- svelte-ignore a11y_missing_attribute -->
-                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-"} 
-                                                        onclick={() => editRowUpdate(col, null)} 
-                                                        role="button" onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, null)} else if (evt.key == "Escape") {editRowMenusOpen[col.col] = false}}}>{Unset}</a></li>
-                                                {/if}
-                                                 {#each col.names as name, i}
-                                                    <!-- svelte-ignore a11y_missing_attribute -->
-                                                    <li><a tabindex="0" id={"edit_select_"+col.col+"-f"}
-                                                     onclick={() => editRowUpdate(col, col.values ? col.values[i]+"" : name)} 
-                                                     role="button" onkeyup={(evt) => {if (evt.key == "Enter") {editRowUpdate(col, col.values ? col.values[i]+"" : name)} else if (evt.key == "Escape") {editRowMenusOpen[col.col] = false}}}>{name}</a></li>
-                                                {/each}
+                                            <ul id={"edit_select_"+uuid+"_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{drwidth(col)}">
+                                                <div class="overflow-y-auto" style="max-height: {maxDropdownHeight};">
+                                                    {#if col.nullable}
+                                                        <!-- svelte-ignore a11y_missing_attribute -->
+                                                        <li><a tabindex="0" id={"edit_select_"+uuid+"_"+col.col+"-"} 
+                                                            onclick={() => editRowUpdate(col, null)} 
+                                                            role="button" onkeyup={(evt) => {if (evt.key == "Enter") {
+                                                                editRowUpdate(col, null)
+                                                            } else if (evt.key == "Escape") {
+                                                                editRowMenusOpen[col.col] = false
+                                                            } else if (col.names) {
+                                                                const k = evt.key.toLowerCase();
+                                                                for (let i=0; i<col.names.length; ++i) {
+                                                                    if (k == normalize(col.names[i].charAt(0))) {
+                                                                        editRowMenusOpen[col.col]= true;
+                                                                        document.getElementById("edit_select_"+uuid+"_"+col.col+"-"+i)?.focus();
+                                                                        break;
+                                                                    }
+                                                                }
+                                                            }}}>{Unset}</a></li>
+                                                    {/if}
+                                                    {#each col.names as name, i}
+                                                        <!-- svelte-ignore a11y_missing_attribute -->
+                                                        <li><a tabindex="0" id={"edit_select_"+uuid+"_"+col.col+"-"+i}
+                                                        onclick={() => editRowUpdate(col, col.values ? col.values[i]+"" : name)} 
+                                                        role="button" onkeyup={(evt) => {if (evt.key == "Enter") {
+                                                            editRowUpdate(col, col.values ? col.values[i]+"" : name)
+                                                        } else if (evt.key == "Escape") {
+                                                            editRowMenusOpen[col.col] = false
+                                                        } else if (col.names) {
+                                                            const k = evt.key.toLowerCase();
+                                                            for (let i=0; i<col.names.length; ++i) {
+                                                                if (k == normalize(col.names[i].charAt(0))) {
+                                                                    editRowMenusOpen[col.col]= true;
+                                                                    document.getElementById("edit_select_"+uuid+"_"+col.col+"-"+i)?.focus();
+                                                                    break;
+                                                                }
+                                                            }
+                                                        }}}>{name}</a></li>
+                                                    {/each}
+                                                </div>
                                             </ul>
                                             </details>
                                         </div>
@@ -2266,7 +2540,11 @@
                                     {:else if col.autoCompleteLink}    
                                         <div class="dropdown overflow:visible dropdown-open" id={"edit_ac_"+col.col}>
                                             <input class="input m-0 -mb-1 w-full {bg(col)} cursor-text" style="{col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : ""} {col.editMaxWidth ? "max-width:" + col.editMaxWidth + ";" : ""}"
-                                                onkeyup={(evt) => {if (evt.key == "Escape") {autoCompleteOpen[col.col] = false} else {autoCompleteKeyPress(evt, col, editRowText[col.col], false)}}}
+                                                onkeyup={(evt) => {if (evt.key == "Escape") {
+                                                    autoCompleteOpen[col.col] = false
+                                                } else if (evt.key != "Tab") {
+                                                    autoCompleteKeyPress(evt, col, editRowText[col.col], false)
+                                                }}}
                                                 onfocusout={(event) => {handleACBlur(event, col)}}
                                                 bind:value={editRowText[col.col]}/>
                                                 {#if autoCompleteOpen[col.col] && editRow >= 0}

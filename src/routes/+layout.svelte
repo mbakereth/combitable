@@ -1,9 +1,18 @@
 <script>
     import "../app.css";
+    import ThemeChange from "$lib/components/ThemeChange.svelte";
+
 </script>
 <svelte:head>
   <title>CombiTable Test</title>
 </svelte:head>
+
+<div class="flex mt-2 mr-2">
+<div class="flex-1"></div>
+        <ThemeChange
+        />
+
+</div>
 
 <slot />
   
