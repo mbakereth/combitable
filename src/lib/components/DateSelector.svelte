@@ -59,7 +59,7 @@
 
         zIndex? : number,
 
-        onOk? (year: number, month: number|null, day: number|null) : void;
+        onOk? (year: number, month: number|null, day: number|null) : Promise<void>;
         onCancel? () : void;
 
     };
@@ -236,6 +236,7 @@
     }
     
     function dayClicked(rowIdx : number, dayIdx : number) {
+        console.log("allowPartial", allowPartial)
         if (!allowPartial) {
             day = getDateForCalendar(rowIdx, dayIdx)
         } else {
@@ -258,7 +259,6 @@
             month = null;
             day = null;
         }
-        console.log("monthClicked", month, currentMonth)
     }
 
     function monthForward() {

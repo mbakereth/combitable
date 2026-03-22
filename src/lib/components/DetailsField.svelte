@@ -67,7 +67,7 @@
     let {
         col,
         value = $bindable(),
-        extraValue = "",
+        extraValue = $bindable(""),
         dateFormat = "yyyy-mm-dd",
         lang = "en",
         editMenuOpen = $bindable(false),
@@ -655,12 +655,13 @@
         
     }
 
-    function dateSelectorOk(col: CombiTableColumn, year: number, month: number|null, day: number|null) {
+    async function dateSelectorOk(col: CombiTableColumn, year: number, month: number|null, day: number|null) {
         const newValue = joinPartialDate(year, month, day, dateFormat);
         let newDirty = displayValue != newValue;
         displayValue = newValue;
+        value = newValue;
         if (newDirty != dirty) {
-            dirty = newDirty
+            dirty = newDirty;
             detailsfieldset.updateDirty();
         }
         editMenuOpen = false;
@@ -721,7 +722,7 @@
                         year={dateSelectorYear} 
                         month={dateSelectorMonth} 
                         day={dateSelectorDay} 
-                        allowPartial={true}
+                        allowPartial={col.type == "partialdate"}
                         onOk={(year, month, day) => dateSelectorOk(col, year, month, day)}
                         onCancel={() => dateSelectorCancel(col)}
                     ></DateSelector>
@@ -755,9 +756,9 @@
     {:else if col.type != "select:string" && col.type != "select:integer" && col.type != "boolean" && col.type != "array:string"}
         {#if col.editHeight}
             {#if col.default}
-                <textarea class="textarea bg-base-200 align-top {bg(col)}" disabled={updateDisabled} style="{cwidth(col)} {cheight(col)} {inputStyles}" onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
+                <textarea class="textarea bg-base-200 align-top {bg(col)} resize" disabled={updateDisabled} style="{cwidth(col)} {cheight(col)} {inputStyles}" onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
             {:else}
-                <textarea class="textarea bg-base-200 align-top {bg(col)}" style="{cwidth(col)} {cheight(col)}" disabled={updateDisabled} onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
+                <textarea class="textarea bg-base-200 align-top {bg(col)} resize" style="{cwidth(col)} {cheight(col)}" disabled={updateDisabled} onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
             {/if}
         {:else}
             {#if col.default}
@@ -854,7 +855,7 @@
                 <li><a tabindex="0" id={"edit_select_"+uuid+"_"+col.col+"-f"} 
                 onclick={() => editRowUpdate(No)} 
                 role="button" 
-                onkeyup={(evt) => {console.log(evt.key);if (evt.key == "Enter") {
+                onkeyup={(evt) => {if (evt.key == "Enter") {
                     editRowUpdate("No")
                 } else if (evt.key == "Escape") {
                     editMenuOpen = false

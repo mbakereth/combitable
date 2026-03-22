@@ -232,6 +232,12 @@
      */
     maxDropdownHeight? : string,
 
+    tableClasses? : string,
+
+    zebra? : boolean,
+
+    tableStyles? : string,
+
     }
     import { onMount, untrack } from 'svelte';
     import { page } from '$app/stores';
@@ -304,6 +310,9 @@
         resizeEnded = undefined,
         resizeUpdateInterval = 1,
         maxDropdownHeight = "10rem",
+        tableClasses = "",
+        tableStyles = "",
+        zebra = false,
     } : Props = $props();
 
     let No = $derived(lang == "de" ? "Nein" : (lang == "el" ? "Όχι" : "No"));
@@ -722,7 +731,7 @@
 
     function filterKeyPress(evt: KeyboardEvent, col : CombiTableColumn, value : string|boolean|undefined) {
         if (evt.key === 'Enter') {
-            filter(col, value);
+            load(() => filter(col, value));
         }
     }
 
@@ -993,7 +1002,7 @@
 
     let autoCompleteData : string[] = $state([]);
 
-    function autoCompleteUpdate_filter(col : CombiTableColumn, value : string|undefined|null) {
+    async function autoCompleteUpdate_filter(col : CombiTableColumn, value : string|undefined|null) {
         if (value) {
             filterText[col.col] = value;
             for (let col in autoCompleteOpen) {
@@ -1631,7 +1640,7 @@
         
     }
 
-    function filterDateSelectorOk(col: CombiTableColumn, year: number, month: number|null, day: number|null) {
+    async function filterDateSelectorOk(col: CombiTableColumn, year: number, month: number|null, day: number|null) {
         filterText[col.col] = joinPartialDate(year, month, day, dateFormat);
         filterMenusOpen[col.col] = false;
         filter(col, filterText[col.col]);
@@ -1681,7 +1690,7 @@
         
     }
 
-    function editRowDateSelectorOk(col: CombiTableColumn, year: number, month: number|null, day: number|null) {
+    async function editRowDateSelectorOk(col: CombiTableColumn, year: number, month: number|null, day: number|null) {
         const newValue = joinPartialDate(year, month, day, dateFormat);
         if (!internalDirty && newValue != editRowText[col.col]) {
             internalDirty = true;
@@ -1801,12 +1810,23 @@
         mouseMoveCount = 0;
         if (resizeStarted) resizeStarted(colidx);
     };
+
+    let loading = $state(false);
+
+    async function load(fn: () => Promise<void>) {
+        loading = true;
+        try {
+            await fn();
+        } finally {
+            loading = false;
+        }
+    }
 </script>
 
 <svelte:window bind:innerWidth bind:innerHeight />
 
-<div class="{widthType=="auto" ? "overflow-x-auto": "w-full"} overflow-y-visible" bind:this={div}>
-    <table class="table table-{widthType} overflow-y-visible {widthType=="auto" ? "overflow-x-auto": "w-full"}" style="{tableHeightStyle} bg-base-100" 
+<div class="{loading ? "cursor-wait" : "cursor-auto"} {widthType=="auto" ? "overflow-x-auto": "w-full"} overflow-y-visible" bind:this={div}>
+    <table class="table table-{widthType} {zebra? "table-zebra" : ""} {tableClasses} overflow-y-visible {widthType=="auto" ? "overflow-x-auto": "w-full"}" style="{tableHeightStyle} bg-base-100 {tableStyles}" 
         bind:this={table}>
         <thead class="{stickyHeadRowClass} z-10">
 
@@ -1822,8 +1842,8 @@
                             <div class="flex-1 py-3">
                         {#if enableSort && (col.sortable === undefined || col.sortable == true)}
                             <!-- svelte-ignore a11y_missing_attribute -->
-                            <a tabindex="0" class="cursor-pointer" 
-                                onclick={() => sort(col.col)} 
+                            <a tabindex="0" class="{loading ? 'cursor-wait' : 'cursor-pointer'}" 
+                                onclick={() => load(() => sort(col.col))} 
                                 role="button" onkeyup={(evt) => {if (evt.key == "Enter") sort(col.col)}}
                                 style="{minw(col)} {maxw(col)}"
                                 >{col.name}</a>&nbsp;{#if col.col == sortCol}
@@ -1872,7 +1892,7 @@
                             Filter
                             {#if ids.length > 0}
                                     <!-- svelte-ignore a11y_missing_attribute -->
-                                    &nbsp;&nbsp;<a tabindex="0" class="cursor-pointer" onclick={() => clearIds()} role="button" onkeyup={() => clearIds()}>[Clear ID filter]</a>
+                                    &nbsp;&nbsp;<a tabindex="0" class="{loading ? 'cursor-wait' : 'cursor-pointer'}" onclick={() => clearIds()} role="button" onkeyup={() => clearIds()}>[Clear ID filter]</a>
                             {/if}
                         </p>
                     </td>
@@ -1893,66 +1913,66 @@
                                                 filterMenusOpen[col.col]=false
                                             } else if (evt.key.toLowerCase() == normalize(Yes.charAt(0))) {
                                                 filterMenusOpen[col.col] = false;
-                                                filter(col, true);
+                                                load(() => filter(col, true));
                                             } else if (evt.key.toLowerCase() == normalize(No.charAt(0))) {
                                                 filterMenusOpen[col.col] = false;
-                                               filter(col, false);
+                                               load(() => filter(col, false));
                                             } else if (evt.key.toLowerCase() == "-") {
                                                 filterMenusOpen[col.col] = false;
-                                                filter(col, undefined);
+                                                load(() => filter(col, undefined));
                                             }}}
                                         onblur={(evt) => closeFilter(evt, col)}>&#x25bc</summary>
                                     <ul id={"filter_select_"+uuid+"_"+col.col} class="menu dropdown-content bg-base-100 rounded z-1 p-2 border mt-2 border-gray-600" style="{drwidth(col)}">
                                         <!-- svelte-ignore a11y_missing_attribute -->
                                         <li><a tabindex="0" id={"filter_select_"+uuid+"_"+col.col+"-"} 
-                                            onclick={() => filter(col, undefined)} 
+                                            onclick={() => load(() => filter(col, undefined))} 
                                             role="button" onkeyup={(evt) => {if (evt.key == "Enter") {
-                                                filter(col, undefined)
+                                                load(() => filter(col, undefined));
                                             } else if (evt.key == "Escape") {
                                                 filterMenusOpen[col.col]=false
                                             } else if (evt.key.toLowerCase() == normalize(Yes.charAt(0))) {
                                                 filterMenusOpen[col.col] = false;
-                                                filter(col, true);
+                                                load(() => filter(col, true));
                                             } else if (evt.key.toLowerCase() == normalize(No.charAt(0))) {
                                                 filterMenusOpen[col.col] = false;
-                                                filter(col, false);
+                                                load(() => filter(col, false));
                                             } else if (evt.key.toLowerCase() == "-") {
                                                 filterMenusOpen[col.col] = false;
-                                                filter(col, undefined);
+                                                load(() => filter(col, undefined));
                                             }}}>{Unset}</a></li>
                                         <!-- svelte-ignore a11y_missing_attribute -->
                                         <li><a tabindex="0" id={"filter_select_"+uuid+"_"+col.col+"-f"} 
-                                            onclick={() => filter(col, false)} 
-                                            role="button" onkeyup={(evt) => {console.log("Key", evt.key); if (evt.key == "Enter") {
-                                                filter(col, undefined)
+                                            onclick={() => load(() => filter(col, false))} 
+                                            role="button" onkeyup={(evt) => {if (evt.key == "Enter") {
+                                                load(() => filter(col, undefined));
                                             } else if (evt.key == "Escape") {
                                                 filterMenusOpen[col.col]=false
                                             } else if (evt.key.toLowerCase() == normalize(Yes.charAt(0))) {
                                                 filterMenusOpen[col.col] = false;
-                                                filter(col, true);
+                                                load(() => filter(col, true));
                                             } else if (evt.key.toLowerCase() == normalize(No.charAt(0))) {
                                                 filterMenusOpen[col.col] = false;
-                                                filter(col, false);
+                                                load(() => filter(col, false));
                                             } else if (evt.key.toLowerCase() == "-") {
                                                 filterMenusOpen[col.col] = false;
-                                                filter(col, undefined);
+                                                load(() => filter(col, undefined));
                                             }}}>{No}</a></li>
                                         <!-- svelte-ignore a11y_missing_attribute -->
                                         <li><a tabindex="0" id={"filter_select_"+uuid+"_"+col.col+"-t"} 
-                                            onclick={() => filter(col, true)} 
+                                            onclick={() => load(() => filter(col, true))} 
                                             role="button" onkeyup={(evt) => {if (evt.key == "Enter") {
-                                                filter(col, undefined)
+                                                load(() => filter(col, undefined));
                                             } else if (evt.key == "Escape") {
                                                 filterMenusOpen[col.col]=false
                                             } else if (evt.key.toLowerCase() == normalize(Yes.charAt(0))) {
                                                 filterMenusOpen[col.col] = false;
-                                                filter(col, true);
+                                                load(() => filter(col, true));
                                             } else if (evt.key.toLowerCase() == normalize(No.charAt(0))) {
                                                 filterMenusOpen[col.col] = false;
-                                                filter(col, false);
+                                                load(() => filter(col, false));
                                             } else if (evt.key.toLowerCase() == "-") {
                                                 filterMenusOpen[col.col] = false;
-                                                filter(col, undefined);
+                                                load(() => filter(col, undefined));
                                             }}}>{Yes}</a></li>
                                     </ul>
                                     </details>
@@ -1980,9 +2000,9 @@
                                             <div class="overflow-y-auto" style="max-height: {maxDropdownHeight};">
                                                 <!-- svelte-ignore a11y_missing_attribute -->
                                                 <li><a tabindex="0" id={"filter_select_"+uuid+"_"+col.col+"-"} 
-                                                    onclick={() => filter(col, "")} 
+                                                    onclick={() => load(() => filter(col, ""))} 
                                                     role="button" onkeyup={(evt) => {if (evt.key == "Enter") {
-                                                        filter(col, "")
+                                                        load(() => filter(col, ""));
                                                     } else if (evt.key == "Escape") {
                                                         filterMenusOpen[col.col]=false
                                                     } else if (col.names) {
@@ -1998,9 +2018,9 @@
                                                 {#each col.names as name, i}
                                                     <!-- svelte-ignore a11y_missing_attribute -->
                                                     <li><a tabindex="0" id={"filter_select_"+uuid+"_"+col.col+"-"+i} 
-                                                    onclick={() => filter(col, col.values ? col.values[i]+"" : name)} 
+                                                    onclick={() => load(() => filter(col, col.values ? col.values[i]+"" : name))} 
                                                     role="button" onkeyup={(evt) => {if (evt.key == "Enter") {
-                                                        filter(col, col.values ? col.values[i]+"" : name)
+                                                        load(() => filter(col, col.values ? col.values[i]+"" : name));
                                                     } else if (evt.key == "Escape") {
                                                         filterMenusOpen[col.col]=false
                                                     } else if (col.names) {
@@ -2035,8 +2055,8 @@
                                         {#each autoCompleteData as name}
                                             <!-- svelte-ignore a11y_missing_attribute -->
                                             <li><a tabindex="0" 
-                                            onclick={() => autoCompleteUpdate_filter(col, name)} 
-                                            role="button" onkeyup={(evt) => {if (evt.key == "Enter") {autoCompleteUpdate_filter(col, name)} else if (evt.key == "Escape") {autoCompleteOpen[col.col]=false}}}>{name}</a></li>
+                                            onclick={() => load(() => autoCompleteUpdate_filter(col, name))} 
+                                            role="button" onkeyup={(evt) => {if (evt.key == "Enter") {load(() => autoCompleteUpdate_filter(col, name))} else if (evt.key == "Escape") {autoCompleteOpen[col.col]=false}}}>{name}</a></li>
                                         {/each}
                                     </ul>
                                     {/if}                                                                            
@@ -2061,7 +2081,7 @@
                                                 month={filterDateSelectorMonth} 
                                                 day={filterDateSelectorDay} 
                                                 allowPartial={true}
-                                                onOk={(year, month, day) => filterDateSelectorOk(col, year, month, day)}
+                                                onOk={(year, month, day) => load(() => filterDateSelectorOk(col, year, month, day))}
                                                 onCancel={() => filterDateSelectorCancel(col)}
                                             ></DateSelector>
                                     </details>
@@ -2070,7 +2090,7 @@
                             {:else}
                                 <input type="text" class="input bg-base-200 w-full" style="{eminw(col)} {emaxw(col)}" 
                                     bind:value={filterText[col.col]} 
-                                    onblur={() => filter(col, filterText[col.col])} 
+                                    onblur={() => {if (filterText[col.col]) load(() => filter(col, filterText[col.col]))}} 
                                     onkeyup={(evt) => filterKeyPress(evt, col, filterText[col.col])}/>
                             {/if}
                         </td>
@@ -2078,8 +2098,8 @@
                     {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl}
                         <td class="last:sticky last:right-0 z-10 bg-base-100">
                             {#if haveFilters}
-                            <span tabindex="0" role="button" onkeyup={(evt) => {if (evt.key == "Enter") clearFilters()}}
-                            class=" mt-1.5 -ml-5.5 flex cursor-pointer" onclick={() => clearFilters()}>{@html crossIcon}</span>
+                            <span tabindex="0" role="button" onkeyup={(evt) => {if (evt.key == "Enter") load(() => clearFilters())}}
+                            class=" mt-1.5 -ml-5.5 flex {loading ? 'cursor-wait' : 'cursor-pointer'}" onclick={() => load(() => clearFilters())}>{@html crossIcon}</span>
                             {/if}
                         </td>
                     {/if}
@@ -2301,7 +2321,7 @@
                                     tabindex="0"
                                     role="button"
                                     onkeyup={(evt) => {if (evt.key == "Enter") {saveEdit()}}}
-                                    class="{saveColorClass} flex pt-8 -ml-5 cursor-pointer" onclick={() => saveEdit()}>{@html checkIcon}</span>
+                                    class="{saveColorClass} flex pt-8 -ml-5 {loading ? 'cursor-wait' : 'cursor-pointer'}" onclick={() => saveEdit()}>{@html checkIcon}</span>
                                 {:else}
                                     <span 
                                     class="text-neutral-500 flex pt-8 -ml-5">{@html checkIcon}</span>
@@ -2310,7 +2330,7 @@
                                     tabindex="0"
                                     role="button"
                                     onkeyup={(evt) => {if (evt.key == "Enter") {cancelEdit()}}}
-                                    class="{cancelColorClass} -mt-5.5 ml-1.5 flex cursor-pointer" onclick={() => cancelEdit()}>{@html crossIcon}</span>
+                                    class="{cancelColorClass} -mt-5.5 ml-1.5 flex {loading ? 'cursor-wait' : 'cursor-pointer'}" onclick={() => cancelEdit()}>{@html crossIcon}</span>
                             </td>
                         {/if}
                     {:else}
@@ -2336,14 +2356,14 @@
             
             <!-- data rows -->
             {#each rrows as row, rowidx}
-                {@const rowLinkClass = link ? "cursor-pointer hover:bg-base-200" : ""}
+                {@const rowLinkClass = link ? "{loading ? 'cursor-wait' : 'cursor-pointer'} hover:bg-base-200" : ""}
                 <tr class="{rowLinkClass}"  onclick={() => {if (link) goto(link(row))}}>
                     {#if select}
                         <!-- checkbox column -->
                         <td>
                             {#if editRow == undefined || editRow != rowidx}
                             <div class="form-control">
-                                <label class="label cursor-pointer">
+                                <label class="label {loading ? 'cursor-wait' : 'cursor-pointer'}">
                                   <input type="checkbox" bind:checked={rowChecked[rowidx]} class="checkbox rounded-field" />
                                 </label>
                               </div>
@@ -2605,14 +2625,14 @@
                                         tabindex="0"
                                         role="button"
                                         onkeyup={(evt) => {if (evt.key == "Enter") {edit(rowidx)}}}
-                                        class="text-primary -ml-4 flex cursor-pointer" onclick={() => edit(rowidx)}>{@html editIcon}</span>
+                                        class="text-primary -ml-4 flex {loading ? 'cursor-wait' : 'cursor-pointer'}" onclick={() => edit(rowidx)}>{@html editIcon}</span>
                                 {/if}
                                 {#if unlinkUrl !== undefined}
                                     <span 
                                         tabindex="0"
                                         role="button"
                                         onkeyup={(evt) => {if (evt.key == "Enter") {unlinkRow(rowidx)}}}
-                                        class="ml-1 text-error {exitWidthClass} flex {exitHeightClass} cursor-pointer" 
+                                        class="ml-1 text-error {exitWidthClass} flex {exitHeightClass} {loading ? 'cursor-wait' : 'cursor-pointer'}" 
                                         onclick={() => unlinkRow(rowidx)}>{@html exitIcon}</span>
                                 {/if}
                                 {#if deleteUrl !== undefined}
@@ -2620,7 +2640,7 @@
                                         tabindex="0"
                                         role="button"
                                         onkeyup={(evt) => {if (evt.key == "Enter") {deleteRow(rowidx)}}}
-                                        class="ml-1 {trashColorClass} {trashWidthClass} flex {trashHeightClass} cursor-pointer" 
+                                        class="ml-1 {trashColorClass} {trashWidthClass} flex {trashHeightClass} {loading ? 'cursor-wait' : 'cursor-pointer'}" 
                                         onclick={() => {if (!updateDisabled) deleteRow(rowidx)}}>{@html trashIcon}</span>
                                 {/if}
                             </td>
@@ -2632,7 +2652,7 @@
                                     tabindex="0"
                                     role="button"
                                     onkeyup={(evt) => {if (evt.key == "Enter") {if (!updateDisabled) saveEdit()}}}
-                                    class="text-success flex pt-8 -ml-5 cursor-pointer" 
+                                    class="text-success flex pt-8 -ml-5 {loading ? 'cursor-wait' : 'cursor-pointer'}" 
                                     onclick={() => {if (!updateDisabled) saveEdit()}}>{@html checkIcon}</span>
                             {:else}
                                 <span 
@@ -2642,7 +2662,7 @@
                                     tabindex="0"
                                     role="button"
                                     onkeyup={(evt) => {if (evt.key == "Enter") {if (!updateDisabled) cancelEdit()}}}
-                                    class="text-error -mt-5.5 ml-1.5 flex cursor-pointer" 
+                                    class="text-error -mt-5.5 ml-1.5 flex {loading ? 'cursor-wait' : 'cursor-pointer'}" 
                                     onclick={() => {if (!updateDisabled) cancelEdit()}}>{@html crossIcon}</span>
                         </td>
                     {/if}
@@ -2739,7 +2759,10 @@
 <div class="hidden text-error"></div>
 <div class="hidden text-success"></div>
 <div class="hidden "></div>
+<div class="hidden cursor-auto"></div>
+<div class="hidden cursor-wait"></div>
 <div class="hidden cursor-pointer  hover:bg-neutral   text-neutral-500"></div>
+<div class="table table-zebra"></div>
 <style>
 .tail-icon {
   white-space: nowrap;

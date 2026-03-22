@@ -297,7 +297,7 @@ export function joinPartialDate(year: number, month: number|null, day: number|nu
     if (dateFormat == "yyyy-mm-dd") {
         out += String(year)
         if (month !== null) {
-            out += "-" + String(month).padStart(2, "0");
+            out += "-" + String(month+1).padStart(2, "0");
             if (day !== null) {
                 out += "-" + String(day).padStart(2, "0");
             }
@@ -305,17 +305,17 @@ export function joinPartialDate(year: number, month: number|null, day: number|nu
     } else if (dateFormat == "dd-mm-yyyy") {
         if (day !== null && month !== null) {
             out += String(day).padStart(2, "0") + "-";
-            out += String(month).padStart(2, "0") + "-";
+            out += String(month+1).padStart(2, "0") + "-";
         } else if (month !== null) {
-            out += String(month).padStart(2, "0") + "-";
+            out += String(month+1).padStart(2, "0") + "-";
         }
         out += String(year)
     } else { // mm-dd-yyyy
         if (day !== null && month !== null) {
-            out += String(month).padStart(2, "0") + "-";
+            out += String(month+1).padStart(2, "0") + "-";
             out += String(day).padStart(2, "0") + "-";
         } else if (month !== null) {
-            out += String(month).padStart(2, "0") + "-";
+            out += String(month+1).padStart(2, "0") + "-";
         }
         out += String(year)
     }

@@ -76,6 +76,13 @@
         * Extra buttons to place after along side the navigation buttons
         */
        extraButtons? : {label: string, action: () => undefined}[]
+
+       /**
+        * Run this before a button click.
+        * 
+        * Keys can be Save, Cancel, New, Delete or labels for extraButtons
+        */
+       beforeButtonClick? : {[key:string]: () => void}
     }
 
     import { goto, invalidateAll } from '$app/navigation';
@@ -104,6 +111,7 @@
     export let dirty = false;
     export let updateDisabled = false;
     export let extraButtons : {label: string, action: () => undefined}[] = []
+    export let beforeButtonClick : {[key:string]: () => Promise<void>} = {}
 
     let uuid = crypto.randomUUID();
 
@@ -182,6 +190,9 @@
     }
 
     async function cancelEdit() {
+        if ("Cancel" in beforeButtonClick) {
+            await beforeButtonClick.Cancel();
+        }
         if (isAdd) {
             (document.querySelector('#confirmEditDiscard1_'+uuid) as HTMLDialogElement)?.showModal(); 
         } else if (!internalDirty) {
@@ -278,6 +289,9 @@
 
     let urlToLoad = "";
     async function saveEdit() {
+        if ("Save" in beforeButtonClick) {
+            await beforeButtonClick.Save();
+        }
         validationErrors = validate();
         if (validationErrors.length > 0) {
             (document.querySelector('#validateDialog1_'+uuid) as HTMLDialogElement)?.showModal(); 
@@ -379,12 +393,22 @@
     }
 
     async function newEntry(url : string) {
+        if ("New" in beforeButtonClick) {
+            await beforeButtonClick.New();
+        }
         const backUrl = new SearchUrl($page.url);
         const newUrl = new SearchUrl(new URL(url, $page.url));
         newUrl.setBack(backUrl);
         goto(newUrl?.url?.href ?? $page.url);
         //await invalidateAll(); 
         //goto(url)
+    }
+
+    async function extraButton(button: {label: string, action: () => undefined}) {
+        if (button.label in beforeButtonClick) {
+            await beforeButtonClick[button.label]();
+        }
+        button.action()
     }
 
     /////
@@ -498,7 +522,7 @@
                 {/if}    
 
                 {#each extraButtons as button}
-                <button class="btn mt-0 mb-0 ml-2" on:click={button.action()}>{button.label}</button>
+                <button class="btn mt-0 mb-0 ml-2" on:click={(ev) => extraButton(button)}>{button.label}</button>
                 {/each}          
 
             </div>    
