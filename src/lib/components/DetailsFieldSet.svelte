@@ -3,6 +3,7 @@
         functionality
 -->
 <script lang="ts">
+    import { type Snippet } from 'svelte';
     type Props = {
 
         /** 
@@ -62,15 +63,15 @@
         persistance? : boolean;
 
         /**
+         * Bind to this to find out when the table has unsaved data
+         */
+        dirty? : false
+
+       /**
          * Set this if you want to be able to disable/reenable all
          * editinng
         */
        updateDisabled? : boolean
-
-       /**
-        * Bind to this to find out when the table has unsaved data
-        */
-       dirty? : false
 
        /**
         * Extra buttons to place after along side the navigation buttons
@@ -83,6 +84,15 @@
         * Keys can be Save, Cancel, New, Delete or labels for extraButtons
         */
        beforeButtonClick? : {[key:string]: () => void}
+
+       /**
+        * Run this after a button click.
+        * 
+        * Keys can be Save, Cancel, New, Delete or labels for extraButtons
+        */
+       afterButtonClick? : {[key:string]: () => void}
+
+       children : Snippet
     }
 
     import { goto, invalidateAll, afterNavigate } from '$app/navigation';
@@ -99,20 +109,24 @@
     import { browser } from '$app/environment';
     import { SearchUrl } from '$lib/searchurl';
 
-    export let pk : string|number|undefined = undefined;
-    export let editUrl : string|undefined = undefined;
-    export let addUrl : string|undefined = undefined;
-    export let newUrl : string|undefined = undefined;
-    export let deleteUrl : string|undefined = undefined;
-    export let deleteNextPage : string|undefined = undefined;
-    export let isAdd = false;    
-    export let saveNextPage : ((rec : {[key:string]:any}) => string)|undefined = undefined;
-    export let persistance : boolean = false;
-    export let dirty = false;
-    export let updateDisabled = false;
-    export let extraButtons : {label: string, action: () => undefined}[] = []
-    export let beforeButtonClick : {[key:string]: () => Promise<void>} = {}
-    export let afterButtonClick : {[key:string]:  () => Promise<void>} = {}
+    let {
+        pk,
+        editUrl,
+        addUrl,
+        newUrl,
+        deleteUrl,
+        deleteNextPage,
+        isAdd = $bindable(false),
+        saveNextPage,
+        persistance = false,
+        dirty = $bindable(false),
+        updateDisabled = false,
+        extraButtons = [],
+        beforeButtonClick = {},
+        afterButtonClick = {},
+        children
+    } : Props = $props();
+
 
     let uuid = crypto.randomUUID();
 
@@ -157,7 +171,7 @@
         persistFns.add(fn);
     }
 
-    $: internalDirty = false;
+    let internalDirty = $state(false);
     export function updateDirty() {
         internalDirty = false;
         isDirtyFns.forEach((fn) => {
@@ -168,14 +182,15 @@
         dirty = internalDirty;
     }
 
-    $: {
+    $effect(() =>  {
+        console.log("effect 1")
         for (let fn of setUpadteDisabledFns) {
             fn(updateDisabled)
         }
-    }
+    });
     // show dialogs
-    $: validationErrors = undefined as string[]|string|undefined;
-    $: opInfo = "";
+    let validationErrors = $state(undefined) as string[]|string|undefined;
+    let opInfo = $state("");
 
     export function showError(errors: string[]|string) {
         validationErrors = errors;
@@ -456,7 +471,7 @@
     /////
     // Persistance
 
-    async function newItemWithPersistanceLink(url : URL, fromCol? : string, toCol? : string) {
+    export async function newItemWithPersistanceLink(url : URL, fromCol? : string, toCol? : string) {
         let persist = new PersistedFields(page.url.href, columns);
         let data : any[] = [];
         getValueFns.forEach((fn) => {
@@ -547,7 +562,7 @@
 </script>
 
 <div>
-    <slot />
+    {@render children()}
     <div class="">
         {#if (addUrl && newUrl) || editUrl || deleteUrl}
             <div class="m-4 mt-8 mb-0">
