@@ -121,7 +121,7 @@
                                 col={columns[4]}
                                 bind:value={fieldData[4]}
                             />
-                            <PersistedNewButton url={chainedNewGodUrl}>New...</PersistedNewButton>
+                            <PersistedNewButton url={chainedNewGodUrl} fromCol="name" toCol="father.name">New...</PersistedNewButton>
                         </td>
                     </tr>
 

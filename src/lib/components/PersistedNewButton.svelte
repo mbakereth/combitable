@@ -8,23 +8,37 @@
     This component is a button to do that.
 -->
 <script lang="ts">
+    import { type Snippet } from 'svelte';
+
     type Props = {
 
         /**
          * Funtion to return the URL to go to when clicked
          */
         url: () => URL;
+
+        /**
+         * If passed together with toCol, value from this column will be
+         * pasted into toCol when returning to the previous page.
+         */
+        fromCol? : string;
+
+        /**
+         * See fromCol
+         */
+        toCol? : string;
+
+        children: Snippet;
     }
-    import { goto, invalidateAll } from '$app/navigation';
     import DetailsFieldSet from './DetailsFieldSet.svelte';
     import { getContext } from 'svelte';
 
     const { newItemWithPersistanceLink } = getContext<DetailsFieldSet>('detailsfieldset');
 
-    export let url : () => URL;
+    let { url, fromCol, toCol, children} : Props = $props();
 
 </script>
 
-<button class="btn btn-default" on:click={async () => {await newItemWithPersistanceLink(url())}}>
-    <slot/>
+<button class="btn btn-default" onclick={async () => {await newItemWithPersistanceLink(url(), fromCol, toCol)}}>
+    {@render children()}
 </button>

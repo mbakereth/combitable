@@ -165,6 +165,11 @@ export interface CombiTableOp {
     label: string,
 
     /**
+     * If true, will be drawn in theme secodnary colour.  Otherwise, default.
+     */
+    highlight? : boolean,
+
+    /**
      * Function to call when button is clicked
      * @param pks set of selected primary keys from the table
      * @returns can optionally return an error message or info message to display
@@ -177,6 +182,7 @@ export interface CombiTableOp {
  */
 export interface CombiTableExtraButton {
     label: string,
+    highlight: boolean,
     fn: () => Promise<void>
 } 
 

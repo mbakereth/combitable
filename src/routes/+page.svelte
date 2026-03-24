@@ -79,9 +79,11 @@
     haveNext={data.haveNext}    
     widthType={"fixed"}
     resizable={true}
-    ops={[{label: "Kill", fn: killGods}]}
+    ops={[{label: "Kill", highlight: false, fn: killGods}]}
     urlSuffix=""
-    navExtra={[{label: "New", fn: async () => {if (newButtonSearchUrl.url) goto(newButtonSearchUrl.url.href)}}]}
+    zebra={true}
+    select={true}
+    navExtra={[{label: "New", highlight: true, fn: async () => {if (newButtonSearchUrl.url) goto(newButtonSearchUrl.url.href)}}]}
 />
 
 

@@ -240,7 +240,7 @@
 
     }
     import { onMount, untrack } from 'svelte';
-    import { page } from '$app/stores';
+    import { page } from '$app/state';
     import { goto, invalidateAll } from '$app/navigation'
     import type { CombiTableColumn, CombiTableOp, CombiTableExtraButton , CombiTablePresets } from '$lib/combitabletypes';
     import { SearchUrl } from '$lib/searchurl';
@@ -347,16 +347,26 @@
     ));
 
     $effect(() => {
-        if (haveOps && !select) select = true; // XXX
+        //if (haveOps && !select) select = true; // XXX
         if (rows.length != rowChecked.length) {
             rowChecked = rows.map((row) => false)
         }
 
         if (primaryKey) {
-            primaryKeysChecked = [];
+            const newPrimaryKeysChecked : (string|number)[] = [];
+            //primaryKeysChecked = [];
             rowChecked.forEach((checked, i) => {
-                if (checked) primaryKeysChecked.push(rrows[i][primaryKey]);
+                if (checked) newPrimaryKeysChecked.push(rrows[i][primaryKey]);
             });
+            if (primaryKeysChecked.length != newPrimaryKeysChecked.length) {
+                primaryKeysChecked = [...newPrimaryKeysChecked]
+            } else {
+                for (let i=0; i<primaryKeysChecked.length; ++i) {
+                    if (primaryKeysChecked[i] != newPrimaryKeysChecked[i]) {
+                        primaryKeysChecked[i] = newPrimaryKeysChecked[i]
+                    }
+                }
+            }
         }
     });
 
@@ -671,7 +681,7 @@
     }
     async function confirmPrevious() {
         confirmCancelEdit();
-        const url = new SearchUrl($page.url, paginate);
+        const url = new SearchUrl(page.url, paginate);
         url.setSuffix(urlSuffix);
         let skip = url.getSkip();
         if (skip <= 0) return;
@@ -699,7 +709,7 @@
     }
     async function confirmNext() {
         confirmCancelEdit();
-        const url = new SearchUrl($page.url, paginate);
+        const url = new SearchUrl(page.url, paginate);
         url.setSuffix(urlSuffix);
         let skip = url.getSkip();
         let take = url.getTake();
@@ -717,7 +727,7 @@
     // sorting and filtering
 
     async function sort(col : string, dir? : "ascending"|"descending") {
-        const url = new SearchUrl($page.url, paginate);
+        const url = new SearchUrl(page.url, paginate);
         url.setSuffix(urlSuffix);
         url.setDefaultSortCol(defaultSort);
         let { sortCol, sortDirection } = url.getSort();
@@ -743,7 +753,7 @@
             filterValues[col.col] = "";
         }
 
-        const url = new SearchUrl($page.url, paginate);
+        const url = new SearchUrl(page.url, paginate);
         url.setSuffix(urlSuffix);
         url.setFilters(filters);
         await invalidateAll()
@@ -835,7 +845,7 @@
             }
         }
 
-        const url = new SearchUrl($page.url, paginate);
+        const url = new SearchUrl(page.url, paginate);
         url.setSuffix(urlSuffix);
         url.setFilters(filters);
         url.skip(0);
@@ -857,7 +867,7 @@
 
     async function clearIds() {
 
-        const url = new SearchUrl($page.url, paginate);
+        const url = new SearchUrl(page.url, paginate);
         url.setSuffix(urlSuffix);
         url.setFilters(filters);
         url.ids([])
@@ -869,7 +879,7 @@
 
 
 
-    const url = $derived(new SearchUrl($page.url, paginate));
+    const url = $derived(new SearchUrl(page.url, paginate));
     // svelte-ignore state_referenced_locally
     let urlfilters = {...url.getFilters()}; // set in effect below
     let sortCol = $state("");
@@ -1515,7 +1525,7 @@
     ///// Custom operations
 
     async function reload() {
-        const url = new SearchUrl($page.url, paginate);            
+        const url = new SearchUrl(page.url, paginate);            
         url.setSuffix(urlSuffix);
         await invalidateAll();
         searchParams = `?${url.searchParamsAsString()}`;
@@ -2096,7 +2106,7 @@
                         </td>
                     {/each}
                     {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl}
-                        <td class="last:sticky last:right-0 z-10 bg-base-100">
+                        <td class="last:sticky last:right-0 z-10">
                             {#if haveFilters}
                             <span tabindex="0" role="button" onkeyup={(evt) => {if (evt.key == "Enter") load(() => clearFilters())}}
                             class=" mt-1.5 -ml-5.5 flex {loading ? 'cursor-wait' : 'cursor-pointer'}" onclick={() => load(() => clearFilters())}>{@html crossIcon}</span>
@@ -2619,7 +2629,7 @@
                     {#if editRow == undefined}
                         <!-- displaying row - only show delete icon if delete allowed -->
                         {#if (editUrl  && editable) || deleteUrl !== undefined}
-                            <td class="w-4 last:sticky last:right-0 z-10 bg-base-100">
+                            <td class="w-4 last:sticky last:right-0 z-10">
                                 {#if editUrl && editable}
                                     <span 
                                         tabindex="0"
@@ -2691,7 +2701,7 @@
         {#if haveOps}
             {@const disabled = !updateDisabled && rowsAreChecked ? "" : "btn-disabled"}
             {#each ops as op}
-                <button class="btn btn-secondary {disabled} ml-2" onclick={() => execOp(op) }>{op.label}</button>
+                <button class="btn {op.highlight === true ? "btn-secondary" : "btn-default"} {disabled} ml-2" onclick={() => execOp(op) }>{op.label}</button>
             {/each}
             <button class="btn btn-neutral {disabled} ml-2" onclick={() => clearSelection() }>Clear Selection</button>
         {/if}
@@ -2699,7 +2709,7 @@
         {#if haveNavExtra}
             {@const disabled = !updateDisabled ? "" : "btn-disabled"}
             {#each navExtra as op}
-                <button class="btn {disabled} btn-secondary ml-2" onclick={() => callExtra(op) }>{op.label}</button>
+                <button class="btn {disabled} {op.highlight === true ? "btn-secondary" : "btn-default"} ml-2" onclick={() => callExtra(op) }>{op.label}</button>
             {/each}
         {/if}
         {/if}

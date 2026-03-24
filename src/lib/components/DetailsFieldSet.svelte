@@ -85,13 +85,13 @@
        beforeButtonClick? : {[key:string]: () => void}
     }
 
-    import { goto, invalidateAll } from '$app/navigation';
+    import { goto, invalidateAll, afterNavigate } from '$app/navigation';
     import type { CombiTableColumn, CombiTablePresets } from '$lib/combitabletypes';
     import CombiTableValidateDialog from '$lib/components/CombiTableErrorDialog.svelte';
     import CombiTableDiscardChanges from '$lib/components/CombiTableDiscardChanges.svelte';
     import CombiTableInfoDialog from '$lib/components/CombiTableInfoDialog.svelte';
     import CombiTableConfirmDeleteDialog from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
-    import { page } from '$app/stores';
+    import { page } from '$app/state';
     import { setContext } from 'svelte';
     import { SvelteSet, SvelteMap } from 'svelte/reactivity';
     import { PersistedFields } from '$lib/persistedfields';
@@ -112,10 +112,11 @@
     export let updateDisabled = false;
     export let extraButtons : {label: string, action: () => undefined}[] = []
     export let beforeButtonClick : {[key:string]: () => Promise<void>} = {}
+    export let afterButtonClick : {[key:string]:  () => Promise<void>} = {}
 
     let uuid = crypto.randomUUID();
 
-    //$: persist = browser && columns ? new PersistedFields($page.url, columns) : undefined;
+    //$: persist = browser && columns ? new PersistedFields(page.url, columns) : undefined;
 
     setContext("detailsfieldset", { registerGetAndSetValue, registerGetFieldError, registerIsDirty, registerSetUpdateDisabled, updateDirty, registerResetValue, registerPersist, newItemWithPersistanceLink });
 
@@ -200,26 +201,29 @@
         } else {
             (document.querySelector('#confirmEditDiscard1_'+uuid) as HTMLDialogElement)?.showModal(); 
         }
+        if ("Cancel" in afterButtonClick) {
+            await afterButtonClick.Cancel();
+        }
     }
 
     async function confirmCancelEdit() {
         if (isAdd) {
-            let prev = $page.url.searchParams.get("prev") ?? cancelUrl();
+            let prev = page.url.searchParams.get("prev") ?? cancelUrl();
             if (persistance) {
-                const persist = browser && columns ? new PersistedFields($page.url, columns) : undefined;
+                const persist = browser && columns ? new PersistedFields(page.url.href, columns) : undefined;
                 if (persist) persist.delete();
             }
             if (prev) {
                 await invalidateAll();
                 goto(prev);
             } else {
-                let searchUrl = new SearchUrl($page.url);
+                let searchUrl = new SearchUrl(page.url);
                 let backUrl = searchUrl.popBack();
                 if (backUrl?.url) goto (backUrl.url.href)
             }
         } else {
             if (persistance) {
-                const persist = browser && columns ? new PersistedFields($page.url, columns) : undefined;
+                const persist = browser && columns ? new PersistedFields(page.url.href, columns) : undefined;
                 if (persist) persist.delete();
             }
             for (let fn of resetValueFns) {
@@ -230,12 +234,12 @@
     }
 
     function nextPageUrl(rec : {[key:string]:any}) {
-        let url = new SearchUrl($page.url);
+        let url = new SearchUrl(page.url);
         let backUrl = url.popBack();
-        let current = $page.url.href;
-        let currentUrl = $page.url;
-        if ($page.url.searchParams.get("edt") == "1") 
-            return backUrl?.url?.href ?? $page.url.href
+        let current = page.url.href;
+        let currentUrl = page.url;
+        if (page.url.searchParams.get("edt") == "1") 
+            return backUrl?.url?.href ?? page.url.href
         //if (isAdd) {
             if (saveNextPage) {
                 let page = saveNextPage(rec) ?? current;
@@ -249,16 +253,16 @@
             }
 
         //}
-        return $page.url.href;
+        return page.url.href;
 
     }
 
     function cancelUrl() {
-        let url = new SearchUrl($page.url);
+        let url = new SearchUrl(page.url);
         let backUrl = url.popBack();
-        if ($page.url.searchParams.get("edt") == "1") 
-            return backUrl?.url?.href ?? $page.url.href
-        return backUrl?.url?.href ?? $page.url.href;
+        if (page.url.searchParams.get("edt") == "1") 
+            return backUrl?.url?.href ?? page.url.href
+        return backUrl?.url?.href ?? page.url.href;
 
     }
 
@@ -267,8 +271,30 @@
         {
             let prev = urlToLoad;
             if (persistance) {
-                const persist = browser && columns ? new PersistedFields($page.url, columns) : undefined;
-                if (persist) persist.delete();
+                const persist = browser && columns ? new PersistedFields(page.url.href, columns) : undefined;
+                if (persist) {
+                    persist.delete();
+                }
+
+                // get persisted values for last page so we can update toCol
+                if (prev) {
+                    const prevPersist = browser && columns ? new PersistedFields(prev, columns) : undefined;
+                    const prevPersisted = prevPersist?.get();
+                    if (prevPersist && prevPersisted?.fromCol && prevPersisted?.toCol) {
+                        // get value for fromCol
+                        let value : any = undefined;
+                        for (let fn of getValueFns) {
+                            let field = fn();
+                            if (field.col.col == prevPersisted.fromCol) {
+                                value = field.value;
+                                break;
+                            }
+                        };
+                        if (value) {
+                            prevPersist.set(prevPersisted, prevPersisted.toCol, value)
+                        }
+                    }
+                }
             }
             if (prev) {
                 await invalidateAll();
@@ -341,7 +367,7 @@
                         if (body.url) {
                             urlToLoad = body.url;
                         } else {
-                            //urlToLoad = saveNextPage ? saveNextPage(body.row) ?? $page.url.href : $page.url.href;
+                            //urlToLoad = saveNextPage ? saveNextPage(body.row) ?? page.url.href : page.url.href;
                             urlToLoad = nextPageUrl(body.row);
                         }
                         for (let fn of persistFns) {
@@ -353,11 +379,18 @@
             } catch (e) {
                 console.log(e);
                 showError("Couldn't call save function");
+            } finally {
+                if ("Cancel" in afterButtonClick) {
+                    await afterButtonClick.Cancel();
+                }
             }
         }
     }
 
-    function deleteRow() {
+    async function deleteRow() {
+        if ("Delete" in beforeButtonClick) {
+            await beforeButtonClick.Delete();
+        }
         (document.querySelector('#confirmDelete1_'+uuid) as HTMLDialogElement)?.showModal(); 
     }
     async function confirmDeleteRow() {
@@ -384,24 +417,30 @@
                     await invalidateAll();
                     if (deleteNextPage) goto(deleteNextPage)
                     else {
-                        let url = new SearchUrl($page.url);
+                        let url = new SearchUrl(page.url);
                         let back = url.popBack();
                         goto(back?.url?.href ?? "/");
                     }
                 }
             }
+        if ("Delete" in afterButtonClick) {
+            await afterButtonClick.Delete();
+        }
     }
 
     async function newEntry(url : string) {
         if ("New" in beforeButtonClick) {
             await beforeButtonClick.New();
         }
-        const backUrl = new SearchUrl($page.url);
-        const newUrl = new SearchUrl(new URL(url, $page.url));
+        const backUrl = new SearchUrl(page.url);
+        const newUrl = new SearchUrl(new URL(url, page.url));
         newUrl.setBack(backUrl);
-        goto(newUrl?.url?.href ?? $page.url);
+        goto(newUrl?.url?.href ?? page.url);
         //await invalidateAll(); 
         //goto(url)
+        if ("New" in afterButtonClick) {
+            await afterButtonClick.New();
+        }
     }
 
     async function extraButton(button: {label: string, action: () => undefined}) {
@@ -409,19 +448,22 @@
             await beforeButtonClick[button.label]();
         }
         button.action()
+        if (button.label in afterButtonClick) {
+            await afterButtonClick[button.label]();
+        }
     }
 
     /////
     // Persistance
 
-    async function newItemWithPersistanceLink(url : URL) {
-        let persist = new PersistedFields($page.url, columns);
+    async function newItemWithPersistanceLink(url : URL, fromCol? : string, toCol? : string) {
+        let persist = new PersistedFields(page.url.href, columns);
         let data : any[] = [];
         getValueFns.forEach((fn) => {
             let field = fn();
             data.push(field.value)
         })
-        persist.save(data);
+        persist.save(data, fromCol, toCol);
         await invalidateAll(); 
         url.searchParams.set("edt","1")
         /*data.forEach((item) => {
@@ -433,13 +475,15 @@
         await goto(url.pathname + url.search);
     }
 
-    page.subscribe((value) => {
+    //page.subscribe((value) => {
+    afterNavigate(() => {
+        const value = page;
         if (persistance) {
             if (!columns) {
                 console.log("Error: need to pass columns if setting persistance to true");
                 return;
             }
-            let persist = new PersistedFields(value.url, columns);
+            let persist = new PersistedFields(value.url.href, columns);
             if ( persist.has()) {
 
                 if (isAdd) {
@@ -458,7 +502,7 @@
                 }
 
                 //persist.restore(fieldData);
-                let fields = persist.getAsMap();
+                let fields = persist.getAsMap()?.fields;
                 if (fields) {
                     for (let col in fields) {
                         let val = fields[col]
