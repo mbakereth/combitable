@@ -1836,7 +1836,7 @@
 <svelte:window bind:innerWidth bind:innerHeight />
 
 <div class="{loading ? "cursor-wait" : "cursor-auto"} {widthType=="auto" ? "overflow-x-auto": "w-full"} overflow-y-visible" bind:this={div}>
-    <table class="table table-{widthType} {zebra? "table-zebra" : ""} {tableClasses} overflow-y-visible {widthType=="auto" ? "overflow-x-auto": "w-full"}" style="{tableHeightStyle} bg-base-100 {tableStyles}" 
+    <table class="table table-{widthType} {zebra? "table-zebra" : ""} {tableClasses} overflow-y-visible {widthType=="auto" ? "overflow-x-auto": "w-full"} {link? "cursor-pointer" : ""}" style="{tableHeightStyle} bg-base-100 {tableStyles}" 
         bind:this={table}>
         <thead class="{stickyHeadRowClass} z-10">
 
@@ -2654,7 +2654,10 @@
                                         onclick={() => {if (!updateDisabled) deleteRow(rowidx)}}>{@html trashIcon}</span>
                                 {/if}
                             </td>
-                        {/if}
+                        {:else if enableFilter}
+                            <td class="w-4 last:sticky last:right-0 z-10">
+                            </td>
+                {/if}
                     {:else if editRow == rowidx}
                         <td class="w-4 last:sticky last:right-0 z-10 bg-base-100">
                             {#if internalDirty}

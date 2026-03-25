@@ -138,7 +138,7 @@
     let setValueFns = new SvelteMap<string,(value: any) => void>();
     let columns : CombiTableColumn[] = [];
     let setOriginalValueFns = new SvelteMap<string,(value: any) => void>();
-    function registerGetAndSetValue(getFn: () => {value: any, col: CombiTableColumn}, setFn: (value: any) => void, setOriginalFn: (value: any) => void) {
+    export function registerGetAndSetValue(getFn: () => {value: any, col: CombiTableColumn}, setFn: (value: any) => void, setOriginalFn: (value: any) => void) {
         getValueFns.add(getFn);
         let col = getFn().col;
         columns.push(col);
@@ -147,27 +147,27 @@
     }
 
     let getFieldErrorFns = new SvelteSet<() => string|undefined>();
-    function registerGetFieldError(fn: () => string|undefined) {
+    export function registerGetFieldError(fn: () => string|undefined) {
         getFieldErrorFns.add(fn);
     }
 
     let isDirtyFns = new SvelteSet<() => boolean>();
-    function registerIsDirty(fn: () => boolean) {
+    export function registerIsDirty(fn: () => boolean) {
         isDirtyFns.add(fn);
     }
 
     let setUpadteDisabledFns = new SvelteSet<(val: boolean) => void>();
-    function registerSetUpdateDisabled(fn: () => void) {
+    export function registerSetUpdateDisabled(fn: (val: boolean) => void) {
         setUpadteDisabledFns.add(fn);
     }
 
     let resetValueFns = new SvelteSet<() => void>();
-    function registerResetValue(fn: () => void) {
+    export function registerResetValue(fn: () => void) {
         resetValueFns.add(fn);
     }
 
     let persistFns = new SvelteSet<() => void>();
-    function registerPersist(fn: () => void) {
+    export function registerPersist(fn: () => void) {
         persistFns.add(fn);
     }
 
