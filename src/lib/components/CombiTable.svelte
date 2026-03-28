@@ -1847,7 +1847,7 @@
                     <td id={"table_"+uuid+"_header_-1"} class="bg-base-200 overflow-hidden" style="width: 40px;"></td>
                 {/if}
                 {#each columns as col, colidx}
-                    <th id={"table_"+uuid+"_header_"+colidx} class="z-10 bg-base-200 my-0 {widthType=="fixed" && resizable? "pr-0" : ""} py-0 {colidx == columns.length-1 || !resizable  || widthType == "auto" || true ? "" : "border-r-2 border-r-base-100"}" style="{cwidth(col)}">
+                    <th id={"table_"+uuid+"_header_"+colidx} class="z-10 bg-base-200 my-0 overflow-hidden {widthType=="fixed" && resizable? "pr-0" : ""} py-0 {colidx == columns.length-1 || !resizable  || widthType == "auto" || true ? "" : "border-r-2 border-r-base-100"}" style="{cwidth(col)}">
                         <div class="flex flex-row m-0 ">
                             <div class="flex-1 py-3">
                         {#if enableSort && (col.sortable === undefined || col.sortable == true)}
@@ -1883,7 +1883,7 @@
                 <!-- actions column-->
                 {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl || unlinkUrl}
                 {@const width = deleteUrl && unlinkUrl ? "80px" : "60px"}
-                    <td class="last:sticky last:right-0 z-10 bg-base-200 border-l-0" style="width: {deleteUrl && unlinkUrl ? "80px" : "60px"};"></td>
+                    <td class="last:sticky last:right-0 z-10 bg-base-200 border-l-0" style="width: {deleteUrl && unlinkUrl ? "80px" : "20px"};"></td>
                 {/if}
             </tr>
         </thead>
