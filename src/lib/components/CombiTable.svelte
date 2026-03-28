@@ -1844,7 +1844,7 @@
             <tr class="bg-base-100 z-10 ">
                 {#if select}
                     <!-- checkbox column -->
-                    <td id={"table_"+uuid+"_header_-1"} class="bg-base-200" style="width: 40px;"></td>
+                    <td id={"table_"+uuid+"_header_-1"} class="bg-base-200 overflow-hidden" style="width: 40px;"></td>
                 {/if}
                 {#each columns as col, colidx}
                     <th id={"table_"+uuid+"_header_"+colidx} class="z-10 bg-base-200 my-0 {widthType=="fixed" && resizable? "pr-0" : ""} py-0 {colidx == columns.length-1 || !resizable  || widthType == "auto" || true ? "" : "border-r-2 border-r-base-100"}" style="{cwidth(col)}">
@@ -1897,7 +1897,7 @@
                     {#if select}
                         <td></td>
                     {/if}
-                    <td colspan="{columns.length+1}" class="pb-0">
+                    <td colspan="{columns.length+1}" class="pb-0 overflow-hidden">
                         <p class="small m-0 p-0 text-primary ml-1 mb-0">
                             Filter
                             {#if ids.length > 0}
@@ -1913,7 +1913,7 @@
                         <td></td>
                     {/if}
                     {#each columns as col, colidx}
-                        <td class="align-bottom" > <!-- style="{maxWidthStyle[col.col]}"-->
+                        <td class="align-bottom overflow-hidden" > <!-- style="{maxWidthStyle[col.col]}"-->
                             {#if col.type == "boolean"}
                                 <div tabindex="-1" class="join bg-base-200">
                                     <input readonly tabindex="-1" bind:value={filterText[col.col]} class="input join-item bg-base-200" style="{eminw(col)} {emaxw(col)}"/>
@@ -2126,7 +2126,7 @@
                         {/if}
                         {#each columns as col, colidx}
                             {#if editRow == -1 || col.col == primaryKey}
-                                <td class="align-bottom" > <!-- style="{maxWidthStyle[col.col]}" -->
+                                <td class="align-bottom overflow-hidden" > <!-- style="{maxWidthStyle[col.col]}" -->
                                     {#if colidx == 0}
                                         <p class="small m-0 p-0 pb-1 text-primary ml-1">New</p>
                                     {/if}
@@ -2384,7 +2384,7 @@
 
                         {#if editRow == undefined || editRow != rowidx}
                             {@const value = formatColumn(getColumn(row, col), col, false)}
-                            <td class="align-top" > <!-- style="{maxWidthStyle[col.col]}"-->
+                            <td class="align-top overflow-hidden" > <!-- style="{maxWidthStyle[col.col]}"-->
                                 {#if (col.type == "date" || col.type == "datetime" || col.nowrap)}
                                     {#if col.link}
                                         <span class="text-nowrap text-base-content"><a class="text-base-content {linkFormat}" href={col.link(row)}>{value}</a></span>
@@ -2410,7 +2410,7 @@
                                 {/if}
                             </td>
                         {:else}
-                            <td class="align-bottom" > <!-- style="{maxWidthStyle[col.col]}" -->
+                            <td class="align-bottom overflow-hidden" > <!-- style="{maxWidthStyle[col.col]}" -->
                                 {#if colidx == 0}
                                     <p class="small m-0 p-0 pb-1 text-primary ml-1">Edit</p>
                                 {/if}
