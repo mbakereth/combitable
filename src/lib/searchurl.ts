@@ -562,7 +562,6 @@ export class SearchUrl {
             }
             if (value2 == null) {
                 value2 = getNextDay(value1 as Date);
-                console.log("Value2", value2)
                 
             }
         } else {
@@ -609,6 +608,10 @@ export class SearchUrl {
 
         let where : {[key:string]:any} = {};
         if (invert) where[parts[parts.length-1]] = {not: value1};
+        else if (isStartsWith) {
+            if (insensitive) where[parts[parts.length-1]] = {startsWith: value1, mode: 'insensitive'};
+            else where[parts[parts.length-1]] = {startsWith: value1};
+        }
         else if (isContains) {
             if (insensitive) where[parts[parts.length-1]] = {contains: value1, mode: 'insensitive'};
             else where[parts[parts.length-1]] = {contains: value1};

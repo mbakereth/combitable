@@ -246,10 +246,10 @@
     import { SearchUrl } from '$lib/searchurl';
     import upIcon from "$lib/assets/prime--sort-up-fill.svg?raw"
     import downIcon from "$lib/assets/prime--sort-down-fill.svg?raw"
-    import checkIcon from "$lib/assets/bitcoin-icons--check-filled.svg?raw"
-    import crossIcon from "$lib/assets/bitcoin-icons--cross-filled.svg?raw"
-    import trashIcon from "$lib/assets/bitcoin-icons--trash-outline.svg?raw"
-    import editIcon from "$lib/assets/bitcoin-icons--edit-outline.svg?raw"
+    import CheckIcon from './icons/CheckIcon.svelte';
+    import CrossIcon from './icons/CrossIcon.svelte';
+    import TrashIcon from './icons/TrashIcon.svelte';
+    import EditIcon from './icons/EditIcon.svelte';
     import exitIcon from "$lib/assets/bitcoin-icons--exit-outline.svg?raw"
     import calendarIcon from "$lib/assets/bitcoin-icons--calendar-outline.svg?raw"
     import CombiTableDiscardChanges from '$lib/components/CombiTableDiscardChanges.svelte';
@@ -318,7 +318,20 @@
     let No = $derived(lang == "de" ? "Nein" : (lang == "el" ? "Όχι" : "No"));
     let Yes = $derived(lang == "de" ? "Ja" : (lang == "el" ? "Ναι" : "Yes"));
     let Unset = $derived(lang == "de" ? "Ungefasst" : (lang == "el" ? "Άδιο" : "Unset"));
-
+    let Previous = $derived(lang == "de" ? "Vorherige" : (lang == "el" ? "Προηγούμενο" : "Πρεωιοθσ"));
+    let Next = $derived(lang == "de" ? "Nächste" : (lang == "el" ? "Επόμενο" : "Next"));
+    let Add = $derived(lang == "de" ? "Hinzufügen" : (lang == "el" ? "Προσθέση" : "Add"));
+    let Filter = $derived(lang == "de" ? "Filter" : (lang == "el" ? "Φίλτρο" : "Filter"));
+    let New = $derived(lang == "de" ? "Neu" : (lang == "el" ? "Νέο" : "New"));
+    let Link = $derived(lang == "de" ? "Link" : (lang == "el" ? "Σύνδεση" : "Link"));
+    let Unlink = $derived(lang == "de" ? "Unlink" : (lang == "el" ? "Αποσύνδεση" : "Unlink"));
+    let QuestionMark = $derived(lang == "de" ? "?" : (lang == "el" ? ";" : "?")); // XXX
+    let DiscardChanges = $derived(lang == "de" ? "Möchtest du die Änderungen verwerfen?" : (lang == "el" ? "Θέλεις να απορρίψεις τις αλλαγές;" : "Do you want to discard changes?"));
+    let UnknwonError = $derived(lang == "de" ? "Es ist ein unbekannter Fehler aufgetreten." : (lang == "el" ? "Παρουσιάστηκε ένα άγνωστο σφάλμα" : "An unknown error occurred"));
+    let ReallyDelete = $derived(lang == "de" ? "Wirklich löschen?" : (lang == "el" ? "Πραγματικά να διαγραφεί;" : "Really delete?"));
+    let OperationSuccessful = $derived(lang == "de" ? "Aktion erfolgreich" : (lang == "el" ? "Η ενέργεια ήταν επιτυχής" : "Operation successful"));
+    let NotSavedInPreview = $derived(lang == "de" ? "Data not saved in preview mode" : (lang == "el" ? "Η Τα δεδομένα δεν αποθηκεύτηκαν στη λειτουργία προεπισκόπησης" : "Data not saved in preview mode"));
+    let ErrorTitle = $derived(lang == "de" ? "Bitte korrigieren Sie Folgendes:" : (lang == "el" ? "Παρακαλώ διορθώστε τα εξής:" : "Please correct the following:"));
     function normalize(str : string) : string {
         return str.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
     }
@@ -1334,7 +1347,7 @@
             editRow = undefined;
             internalDirty = false;
             dirty = internalDirty;
-            showInfo("Data not saved in preview mode");
+            showInfo(NotSavedInPreview);
             return;
 
         }
@@ -1404,7 +1417,7 @@
                         editRow = undefined;
                         internalDirty = false;
                         dirty = internalDirty;
-                        if (body.info) {
+                        if (body.info && Array.isArray(body.info) && body.info.length > 0) {
                             showInfo(body.info);
                         }  
                         if (onUpdate !== undefined) await onUpdate();
@@ -1548,7 +1561,7 @@
             } else if (ret.info) {
                 showReload(ret.info);
             } else {
-                showReload("Operation successful")
+                showReload(OperationSuccessful)
             }
         }
     }
@@ -1844,15 +1857,15 @@
             <tr class="bg-base-100 z-10 ">
                 {#if select}
                     <!-- checkbox column -->
-                    <td id={"table_"+uuid+"_header_-1"} class="bg-base-200 overflow-hidden" style="width: 40px;"></td>
+                    <td id={"table_"+uuid+"_header_-1"} class="bg-base-200 " style="width: 40px;"></td>
                 {/if}
                 {#each columns as col, colidx}
-                    <th id={"table_"+uuid+"_header_"+colidx} class="z-10 bg-base-200 my-0 overflow-hidden {widthType=="fixed" && resizable? "pr-0" : ""} py-0 {colidx == columns.length-1 || !resizable  || widthType == "auto" || true ? "" : "border-r-2 border-r-base-100"}" style="{cwidth(col)}">
-                        <div class="flex flex-row m-0 ">
-                            <div class="flex-1 py-3">
+                    <th id={"table_"+uuid+"_header_"+colidx} class="z-10 bg-base-200 my-0  {(widthType=="fixed" && resizable) || (colidx == columns.length-1) ? "pr-0" : ""} py-0 {colidx == columns.length-1 || !resizable  || widthType == "auto" || true ? "" : "border-r-2 border-r-base-100"}" style="{cwidth(col)}">
+                        <div class="flex flex-row m-0 overflow-hidden">
+                            <div class="flex-1 py-3 overflow-visible">
                         {#if enableSort && (col.sortable === undefined || col.sortable == true)}
                             <!-- svelte-ignore a11y_missing_attribute -->
-                            <a tabindex="0" class="{loading ? 'cursor-wait' : 'cursor-pointer'}" 
+                            <a tabindex="0" class="overflow-x-hidden {loading ? 'cursor-wait' : 'cursor-pointer'}" 
                                 onclick={() => load(() => sort(col.col))} 
                                 role="button" onkeyup={(evt) => {if (evt.key == "Enter") sort(col.col)}}
                                 style="{minw(col)} {maxw(col)}"
@@ -1874,7 +1887,7 @@
                         </div>
                         {#if widthType == "fixed" && resizable && colidx < columns.length-1}
                             <!-- svelte-ignore a11y_no_static_element_interactions -->
-                            <div class="flex-0 resize-handle w-2 p-0 m-0 min-w-1" onmousedown={(evt) => initResize(evt, colidx)}></div>
+                            <div class="flex-0 resize-handle w-2 p-0 m-0 min-w-1 right-0 overflow-visible" onmousedown={(evt) => initResize(evt, colidx)}></div>
                         {/if}
                         </div>
                     </th>
@@ -1882,8 +1895,8 @@
 
                 <!-- actions column-->
                 {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl || unlinkUrl}
-                {@const width = deleteUrl && unlinkUrl ? "80px" : "60px"}
-                    <td class="last:sticky last:right-0 z-10 bg-base-200 border-l-0" style="width: {deleteUrl && unlinkUrl ? "80px" : "20px"};"></td>
+                {@const width = (deleteUrl && unlinkUrl) || editUrl || addUrl ? "45px" : "20px"}
+                    <td class="last:sticky last:right-0 z-10 bg-base-200 border-l-0 ml-0 pl-0 mr-0 pr-0" style="width: {width};"></td>
                 {/if}
             </tr>
         </thead>
@@ -1897,9 +1910,9 @@
                     {#if select}
                         <td></td>
                     {/if}
-                    <td colspan="{columns.length+1}" class="pb-0 overflow-hidden">
+                    <td colspan="{columns.length+1}" class="pb-0 ">
                         <p class="small m-0 p-0 text-primary ml-1 mb-0">
-                            Filter
+                            {Filter}
                             {#if ids.length > 0}
                                     <!-- svelte-ignore a11y_missing_attribute -->
                                     &nbsp;&nbsp;<a tabindex="0" class="{loading ? 'cursor-wait' : 'cursor-pointer'}" onclick={() => clearIds()} role="button" onkeyup={() => clearIds()}>[Clear ID filter]</a>
@@ -1913,7 +1926,7 @@
                         <td></td>
                     {/if}
                     {#each columns as col, colidx}
-                        <td class="align-bottom overflow-hidden" > <!-- style="{maxWidthStyle[col.col]}"-->
+                        <td class="align-bottom  " > <!-- style="{maxWidthStyle[col.col]}"-->
                             {#if col.type == "boolean"}
                                 <div tabindex="-1" class="join bg-base-200">
                                     <input readonly tabindex="-1" bind:value={filterText[col.col]} class="input join-item bg-base-200" style="{eminw(col)} {emaxw(col)}"/>
@@ -2006,7 +2019,7 @@
                                                 }
                                             }}}
                                             onblur={(evt) => closeFilter(evt, col)}>&#x25bc</summary>
-                                        <ul id={"filter_select_"+uuid+"_"+col.col} class="menu dropdown-content bg-base-100 rounded   z-1 p-2 mt-2 border border-gray-600" style={drwidth(col)}>
+                                        <ul id={"filter_select_"+uuid+"_"+col.col} class="menu dropdown-content bg-base-100 rounded   z-10 p-2 mt-2 border border-gray-600" style={drwidth(col)}>
                                             <div class="overflow-y-auto" style="max-height: {maxDropdownHeight};">
                                                 <!-- svelte-ignore a11y_missing_attribute -->
                                                 <li><a tabindex="0" id={"filter_select_"+uuid+"_"+col.col+"-"} 
@@ -2106,10 +2119,10 @@
                         </td>
                     {/each}
                     {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl}
-                        <td class="last:sticky last:right-0 z-10">
+                        <td class="last:sticky last:right-0 z-10 ml-0 pl-0 pr-0 mr-0">
                             {#if haveFilters}
                             <span tabindex="0" role="button" onkeyup={(evt) => {if (evt.key == "Enter") load(() => clearFilters())}}
-                            class=" mt-1.5 -ml-5.5 flex {loading ? 'cursor-wait' : 'cursor-pointer'}" onclick={() => load(() => clearFilters())}>{@html crossIcon}</span>
+                            class=" mt-1.5 -flex {loading ? 'cursor-wait' : 'cursor-pointer'}" onclick={() => load(() => clearFilters())}><CrossIcon></CrossIcon></span>
                             {/if}
                         </td>
                     {/if}
@@ -2126,9 +2139,9 @@
                         {/if}
                         {#each columns as col, colidx}
                             {#if editRow == -1 || col.col == primaryKey}
-                                <td class="align-bottom overflow-hidden" > <!-- style="{maxWidthStyle[col.col]}" -->
+                                <td class="align-bottom {col.readOnly ? "overflow-x-hidden" : ""}" > <!-- style="{maxWidthStyle[col.col]}" -->
                                     {#if colidx == 0}
-                                        <p class="small m-0 p-0 pb-1 text-primary ml-1">New</p>
+                                        <p class="small m-0 p-0 pb-1 text-primary ml-1">{New}</p>
                                     {/if}
                                     {#if !col.readOnly}
                                         {#if col.type == "boolean"}
@@ -2325,22 +2338,22 @@
                             {/if}
                         {/each}
                         {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl}
-                            <td class="w-4 last:sticky last:right-0 z-10 bg-base-100">
+                            <td class="w-4 last:sticky last:right-0 z-10 bg-base-100 pl-0 ml-0 pr-0 mr-0">
                                 {#if internalDirty}
                                     <span 
                                     tabindex="0"
                                     role="button"
                                     onkeyup={(evt) => {if (evt.key == "Enter") {saveEdit()}}}
-                                    class="{saveColorClass} flex pt-8 -ml-5 {loading ? 'cursor-wait' : 'cursor-pointer'}" onclick={() => saveEdit()}>{@html checkIcon}</span>
+                                    class="{saveColorClass} flex pt-8 {loading ? 'cursor-wait' : 'cursor-pointer'}" onclick={() => saveEdit()}><CheckIcon></CheckIcon></span>
                                 {:else}
                                     <span 
-                                    class="text-neutral-500 flex pt-8 -ml-5">{@html checkIcon}</span>
+                                    class="text-neutral-500 flex pt-8"><CheckIcon></CheckIcon></span>
                                 {/if}
                                     <span 
                                     tabindex="0"
                                     role="button"
                                     onkeyup={(evt) => {if (evt.key == "Enter") {cancelEdit()}}}
-                                    class="{cancelColorClass} -mt-5.5 ml-1.5 flex {loading ? 'cursor-wait' : 'cursor-pointer'}" onclick={() => cancelEdit()}>{@html crossIcon}</span>
+                                    class="{cancelColorClass} -mt-5.5 ml-5.5 flex {loading ? 'cursor-wait' : 'cursor-pointer'}" onclick={() => cancelEdit()}><CrossIcon></CrossIcon></span>
                             </td>
                         {/if}
                     {:else}
@@ -2349,10 +2362,10 @@
                         {/if}
                         <td colspan="{columns.length+1}">
                         {#if addUrl && editable}
-                            <button class="btn btn-sm mr-2" onclick={() => edit(-1)}>Add</button>
+                            <button class="btn btn-sm mr-2" onclick={() => edit(-1)}>{Add}</button>
                         {/if}
                         {#if linkUrl}
-                            <button class="btn btn-sm" onclick={() => edit(-2)}>Link</button>
+                            <button class="btn btn-sm" onclick={() => edit(-2)}>{Link}</button>
                         {/if}
                         {#if haveAddExtra} 
                             {#each addExtra as row}
@@ -2384,7 +2397,7 @@
 
                         {#if editRow == undefined || editRow != rowidx}
                             {@const value = formatColumn(getColumn(row, col), col, false)}
-                            <td class="align-top overflow-hidden" > <!-- style="{maxWidthStyle[col.col]}"-->
+                            <td class="align-top overflow-x-hidden" > <!-- style="{maxWidthStyle[col.col]}"-->
                                 {#if (col.type == "date" || col.type == "datetime" || col.nowrap)}
                                     {#if col.link}
                                         <span class="text-nowrap text-base-content"><a class="text-base-content {linkFormat}" href={col.link(row)}>{value}</a></span>
@@ -2410,7 +2423,7 @@
                                 {/if}
                             </td>
                         {:else}
-                            <td class="align-bottom overflow-hidden" > <!-- style="{maxWidthStyle[col.col]}" -->
+                            <td class="align-bottom {col.readOnly ? "overflow-x-hidden" : ""}" > <!-- style="{maxWidthStyle[col.col]}" -->
                                 {#if colidx == 0}
                                     <p class="small m-0 p-0 pb-1 text-primary ml-1">Edit</p>
                                 {/if}
@@ -2629,20 +2642,20 @@
                     {#if editRow == undefined}
                         <!-- displaying row - only show delete icon if delete allowed -->
                         {#if (editUrl  && editable) || deleteUrl !== undefined}
-                            <td class="w-4 last:sticky last:right-0 z-10">
+                            <td class="w-4 last:sticky last:right-0 z-10 pl-0 pr-0">
                                 {#if editUrl && editable}
                                     <span 
                                         tabindex="0"
                                         role="button"
                                         onkeyup={(evt) => {if (evt.key == "Enter") {edit(rowidx)}}}
-                                        class="text-primary -ml-4 flex {loading ? 'cursor-wait' : 'cursor-pointer'}" onclick={() => edit(rowidx)}>{@html editIcon}</span>
+                                        class="text-primary flex {loading ? 'cursor-wait' : 'cursor-pointer'}" onclick={() => edit(rowidx)}><EditIcon></EditIcon></span>
                                 {/if}
                                 {#if unlinkUrl !== undefined}
                                     <span 
                                         tabindex="0"
                                         role="button"
                                         onkeyup={(evt) => {if (evt.key == "Enter") {unlinkRow(rowidx)}}}
-                                        class="ml-1 text-error {exitWidthClass} flex {exitHeightClass} {loading ? 'cursor-wait' : 'cursor-pointer'}" 
+                                        class="ml-4 text-error {exitWidthClass} flex {exitHeightClass} {loading ? 'cursor-wait' : 'cursor-pointer'}" 
                                         onclick={() => unlinkRow(rowidx)}>{@html exitIcon}</span>
                                 {/if}
                                 {#if deleteUrl !== undefined}
@@ -2650,8 +2663,8 @@
                                         tabindex="0"
                                         role="button"
                                         onkeyup={(evt) => {if (evt.key == "Enter") {deleteRow(rowidx)}}}
-                                        class="ml-1 {trashColorClass} {trashWidthClass} flex {trashHeightClass} {loading ? 'cursor-wait' : 'cursor-pointer'}" 
-                                        onclick={() => {if (!updateDisabled) deleteRow(rowidx)}}>{@html trashIcon}</span>
+                                        class="ml-4 {trashColorClass} {trashWidthClass} flex {trashHeightClass} {loading ? 'cursor-wait' : 'cursor-pointer'}" 
+                                        onclick={() => {if (!updateDisabled) deleteRow(rowidx)}}><TrashIcon></TrashIcon></span>
                                 {/if}
                             </td>
                         {:else if enableFilter}
@@ -2659,24 +2672,24 @@
                             </td>
                 {/if}
                     {:else if editRow == rowidx}
-                        <td class="w-4 last:sticky last:right-0 z-10 bg-base-100">
+                        <td class="w-4 last:sticky last:right-0 z-10 bg-base-100 pl-0 ml-0 pr-0 mr-0">
                             {#if internalDirty}
                                 <span 
                                     tabindex="0"
                                     role="button"
                                     onkeyup={(evt) => {if (evt.key == "Enter") {if (!updateDisabled) saveEdit()}}}
-                                    class="text-success flex pt-8 -ml-5 {loading ? 'cursor-wait' : 'cursor-pointer'}" 
-                                    onclick={() => {if (!updateDisabled) saveEdit()}}>{@html checkIcon}</span>
+                                    class="text-success flex pt-8  {loading ? 'cursor-wait' : 'cursor-pointer'}" 
+                                    onclick={() => {if (!updateDisabled) saveEdit()}}><CheckIcon></CheckIcon></span>
                             {:else}
                                 <span 
-                                class="text-neutral-500 flex pt-8 -ml-5">{@html checkIcon}</span>
+                                class="text-neutral-500 flex pt-8 "><CheckIcon></CheckIcon></span>
                             {/if}
                                 <span 
                                     tabindex="0"
                                     role="button"
                                     onkeyup={(evt) => {if (evt.key == "Enter") {if (!updateDisabled) cancelEdit()}}}
-                                    class="text-error -mt-5.5 ml-1.5 flex {loading ? 'cursor-wait' : 'cursor-pointer'}" 
-                                    onclick={() => {if (!updateDisabled) cancelEdit()}}>{@html crossIcon}</span>
+                                    class="text-error -mt-5.5 ml-5.5 flex {loading ? 'cursor-wait' : 'cursor-pointer'}" 
+                                    onclick={() => {if (!updateDisabled) cancelEdit()}}><CrossIcon></CrossIcon></span>
                         </td>
                     {/if}
                 </tr>
@@ -2691,14 +2704,14 @@
 <div class="ml-3 mt-2">
     {#if paginate > 0}
         {#if havePrevious}
-            <button class="btn btn-primary" onclick={() => previous()}>Previous</button>
+            <button class="btn btn-primary" onclick={() => previous()}>{Previous}</button>
         {:else}
-            <button class="btn btn-disabled">Previous</button>
+            <button class="btn btn-disabled">{Previous}</button>
         {/if}
         {#if haveNext}
-            <button class="btn btn-primary ml-2" onclick={() => next()}>Next</button>
+            <button class="btn btn-primary ml-2" onclick={() => next()}>{Next}</button>
         {:else}
-            <button class="btn btn-disabled ml-2">Next</button>
+            <button class="btn btn-disabled ml-2">{Next}</button>
         {/if}
 
         {#if haveOps}
@@ -2720,19 +2733,19 @@
 {/if}
 
 <!-- Modal to confirm discarding edit -->
-<CombiTableDiscardChanges id={"confirmEditDiscard_"+uuid} okFn={confirmCancelEdit}/>
+<CombiTableDiscardChanges id={"confirmEditDiscard_"+uuid} title={DiscardChanges} okFn={confirmCancelEdit}/>
 
 <!-- Modal to confirm discarding edit when clicking previous -->
-<CombiTableDiscardChanges id={"confirmPreviousDiscard_"+uuid} okFn={confirmPrevious}/>
+<CombiTableDiscardChanges id={"confirmPreviousDiscard_"+uuid} title={DiscardChanges} okFn={confirmPrevious}/>
 
 <!-- Modal to confirm discarding edit when clicking previous -->
-<CombiTableDiscardChanges id={"confirmNextDiscard_"+uuid} okFn={confirmNext}/>
+<CombiTableDiscardChanges id={"confirmNextDiscard_"+uuid} title={DiscardChanges} okFn={confirmNext}/>
 
 <!-- Modal to confirm discarding edit when clicking previous -->
-<CombiTableDiscardChanges id={"confirmUnlink_"+uuid} title="Unlink god from Olympus?" okFn={confirmUnlinkRow}/>
+<CombiTableDiscardChanges id={"confirmUnlink_"+uuid} title="{Unlink}{QuestionMark}" okFn={confirmUnlinkRow}/>
 
 <!-- Modal to display validation errors -->
-<CombiTableValidateDialog id={"validateDialog_"+uuid} errors={validationErrors}/>
+<CombiTableValidateDialog id={"validateDialog_"+uuid} errors={validationErrors ?? UnknwonError} title={ErrorTitle}/>
 
 <!-- Modal to display information after executing a function -->
 <CombiTableInfoDialog id={"infoDialog_"+uuid} info={opInfo}/>
@@ -2741,7 +2754,7 @@
 <CombiTableInfoDialog id={"reloadDialog_"+uuid} info={opInfo} okFn={reload}/>
 
 <!-- Modal to display validation errors -->
-<CombiTableConfirmDeleteDialog id={"confirmDelete_"+uuid} okFn={confirmDeleteRow}/>
+<CombiTableConfirmDeleteDialog id={"confirmDelete_"+uuid} text={ReallyDelete} okFn={confirmDeleteRow}/>
 
 <!-- To instantiate tailwind classes that are in variables therefore not seen by the preprocessor -->
 <div class="hidden w-full"></div>
@@ -2775,7 +2788,9 @@
 <div class="hidden cursor-auto"></div>
 <div class="hidden cursor-wait"></div>
 <div class="hidden cursor-pointer  hover:bg-neutral   text-neutral-500"></div>
-<div class="table table-zebra"></div>
+<div class="hidden table table-zebra"></div>
+<div class="hidden overflow-hidden"></div>
+
 <style>
 .tail-icon {
   white-space: nowrap;
@@ -2847,5 +2862,6 @@
 /*th:hover .resize-handle {
   opacity: 0.3;
 }*/
+
 
 </style>

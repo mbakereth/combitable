@@ -42,7 +42,7 @@ export async function autocomplete(client : any, event : RequestEvent, cols? : {
             );
         }
         const t = cols[table];
-        if (col && !(col in t) && !(t.length == 1 && (t[0] == "*"  || t[0] == "**")) ) {
+        if (col && !(t.includes(col)) && !(t.length == 1 && (t[0] == "*"  || t[0] == "**")) ) {
             return json({error: "Invalid column"},
                 {status: 400}
             );

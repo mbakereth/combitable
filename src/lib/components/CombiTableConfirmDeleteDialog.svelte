@@ -7,13 +7,14 @@
     // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
     export let okFn : () => void;
     export let id : string;
+    export let text: string = "Really delete?";
 </script>
     
     
 <dialog id={id} class="modal">
     <div class="modal-box">
         <div class="p-2 bg-warning text-warning-content rounded"><b>Warning</b></div>
-            <p>Really delete row?</p>
+            <p>{text}</p>
             <div class="modal-action">
             <form method="dialog">
                 <!-- if there is a button in form, it will close the modal -->

@@ -7,6 +7,7 @@
     // Copyright (c) 2024 Matthew Baker.  All rights reserved.  Licenced under the Apache Licence 2.0.  See LICENSE file
     export let id : string;
     export let errors : string[]|string|undefined;
+    export let title = "Please correct the following";
 </script>
     
     
@@ -16,7 +17,7 @@
         {#if !errors}
             <p>An unknown error occurrerd</p>
         {:else if Array.isArray(errors)}
-            <p class="py-4"><b>Please correct the following:</b></p>
+            <p class="py-4"><b>{title}</b></p>
             <ul>
               {#each errors as e}
                   <li class="list-disc ml-4">{e}</li>
