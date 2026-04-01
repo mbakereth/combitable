@@ -619,7 +619,17 @@ export class SearchUrl {
         else where[parts[parts.length-1]] = value1;
         for (let i=parts.length-2; i>=0; --i) {
             const part = parts[i];
-            where = {[part]: {is: where}};
+            if (part.endsWith(":is")) {
+                where = {[part.split(":")[0]]: {is: where}};
+            } else if (part.endsWith(":every")) {
+                where = {[part.split(":")[0]]: {every: where}};
+            } else if (part.endsWith(":some")) {
+                where = {[part.split(":")[0]]: {some: where}};
+            } else if (part.endsWith(":none")) {
+                where = {[part.split(":")[0]]: {none: where}};
+            } else  {
+                where = {[part]: {is: where}};
+            }
         }
         return where;
     }
