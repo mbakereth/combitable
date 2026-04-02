@@ -77,6 +77,7 @@ export class SearchUrl {
     idColumn = "id_pk";
     emptySearch : string|undefined = "-";
     insensitive = false;
+    private disallowedColumns : string[] = [];
 
     /**
      * Construct from a URL
@@ -151,6 +152,25 @@ export class SearchUrl {
         return this.insensitive;
     }
 
+    setDisallowedColumns(cols: string[]) {
+        this.disallowedColumns = cols;
+    }
+
+    private columnIsDisallowed(col : string) {
+        this.disallowedColumns.forEach((c) => {
+            if (c.startsWith("*") && c.endsWith("*")) {
+                if (col.includes(c.substring(1, c.length-1))) return true;
+            } else if (c.startsWith("*")) {
+                if (col.startsWith(c.substring(1, c.length))) return true;
+            } else if (c.endsWith("*")) {
+                if (col.endsWith(c.substring(0, c.length-1))) return true;
+            } else {
+                if (col == c) return true;
+            }
+        })
+        return false;
+    }
+
     ///// sorting
 
     /**
@@ -191,12 +211,16 @@ export class SearchUrl {
         const curCol = this.url ? this.url.searchParams.get("s"+this.suffix) : (this.body?this.body["s"+this.suffix]:undefined);
         if (curCol == null) return {sortCol: defaultCol, sortDirection : "ascending"};
         if (curCol.length >= 2 && curCol.substring(0,1) == "-") {
+            if (this.columnIsDisallowed(curCol.substring(1))) throw Error("Invalid sort");
             return {sortCol: curCol.substring(1), sortDirection: "descending"};
         } else if (curCol.length >= 2 && curCol.substring(0,1) == "+") {
+            if (this.columnIsDisallowed(curCol.substring(1))) throw Error("Invalid sort");
             return {sortCol: curCol.substring(1), sortDirection: "ascending"};
         } else if (curCol.length >= 1 && curCol.substring(0,1) != "+" && curCol.substring(0,1) != "-") {
+            if (this.columnIsDisallowed(curCol)) throw Error("Invalid sort");
             return {sortCol: curCol, sortDirection: "ascending"};
         }
+        if (this.columnIsDisallowed(curCol.substring(1))) throw Error("Invalid sort");
         return {sortCol: curCol.substring(1), sortDirection: "descending"};
     }
 
@@ -362,6 +386,9 @@ export class SearchUrl {
                 ret[components[0]] = components[1];
             }
         }
+        for (let r in ret) {
+            if (this.columnIsDisallowed(r)) throw Error("Invalid filter");
+        }
         return ret;
     }
 
@@ -508,6 +535,9 @@ export class SearchUrl {
             invert = true;
         }
         for (let part of parts) {
+            if (part.includes("!")) {
+                part = part.split("!")[0];
+            }
             if (!(modelName1 in models) || !(part in models[modelName1].fields)) break;
             let field = models[modelName1].fields[part];
             if (field.kind != "object") {

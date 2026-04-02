@@ -1596,7 +1596,6 @@
                 } else {
                     let body = await resp.json();
                     if (body.error) {
-                        console.log(body.error);
                         showError("Error deleting row");
                     } else {
                         rrows = rrows.filter((_el, i) => i != unlinkIdx);
@@ -2701,31 +2700,31 @@
 </div>
 
 {#if paginate > 0 || haveOps}
-<div class="ml-3 mt-2">
+<div class="ml-3">
     {#if paginate > 0}
         {#if havePrevious}
-            <button class="btn btn-primary" onclick={() => previous()}>{Previous}</button>
+            <button class="btn btn-primary mt-2 mr-2" onclick={() => previous()}>{Previous}</button>
         {:else}
-            <button class="btn btn-disabled">{Previous}</button>
+            <button class="btn btn-disabled mt-2 mr-2">{Previous}</button>
         {/if}
         {#if haveNext}
-            <button class="btn btn-primary ml-2" onclick={() => next()}>{Next}</button>
+            <button class="btn btn-primary mt-2 mr-2" onclick={() => next()}>{Next}</button>
         {:else}
-            <button class="btn btn-disabled ml-2">{Next}</button>
+            <button class="btn btn-disabled mt-2 mr-2">{Next}</button>
         {/if}
 
         {#if haveOps}
             {@const disabled = !updateDisabled && rowsAreChecked ? "" : "btn-disabled"}
             {#each ops as op}
-                <button class="btn {op.highlight === true ? "btn-secondary" : "btn-default"} {disabled} ml-2" onclick={() => execOp(op) }>{op.label}</button>
+                <button class="btn  mt-2 mr-2 {op.highlight === true ? "btn-secondary" : "btn-default"} {disabled}" onclick={() => execOp(op) }>{op.label}</button>
             {/each}
-            <button class="btn btn-neutral {disabled} ml-2" onclick={() => clearSelection() }>Clear Selection</button>
+            <button class="btn btn-neutral mr-2 mt-2 {disabled}" onclick={() => clearSelection() }>Clear Selection</button>
         {/if}
 
         {#if haveNavExtra}
             {@const disabled = !updateDisabled ? "" : "btn-disabled"}
             {#each navExtra as op}
-                <button class="btn {disabled} {op.highlight === true ? "btn-secondary" : "btn-default"} ml-2" onclick={() => callExtra(op) }>{op.label}</button>
+                <button class="btn mr-3 mt-2 {disabled} {op.highlight === true ? "btn-secondary" : "btn-default"}" onclick={() => callExtra(op) }>{op.label}</button>
             {/each}
         {/if}
         {/if}
