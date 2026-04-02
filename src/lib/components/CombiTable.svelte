@@ -1822,7 +1822,6 @@
         //headerBeingResized = (evt.target as any).parentNode as HTMLElement;
         headerBeingResized = document.getElementById("table_"+uuid+"_header_"+colidx);
         if (!headerBeingResized) {
-            console.log("Didn't click on header");
             return;
         }
         colidxBeingResized = colidx;

@@ -183,7 +183,6 @@
     }
 
     $effect(() =>  {
-        console.log("effect 1")
         for (let fn of setUpadteDisabledFns) {
             fn(updateDisabled)
         }

@@ -623,7 +623,6 @@ export class SearchUrl {
             }
             if (value2 == null) {
                 if (typeof(value1) == "object") { // date
-                    console.log("Date", new Date((value1 as Date).toISOString().split("T")[0]), value1 as Date)
                     return {[name]: new Date((value1 as Date).toISOString().split("T")[0])}
 
                 }
