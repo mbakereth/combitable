@@ -154,6 +154,12 @@ export interface CombiTableColumn {
     editHeight? : string,
     prismaWhereIgnore? : boolean,
     prismaOrderByIgnore? : boolean,
+
+    /**
+     * For date columns, which side to of the field to bind to.
+     * Default right.
+     */
+    side? : string,
 }
 
 /**
@@ -182,7 +188,7 @@ export interface CombiTableOp {
  */
 export interface CombiTableExtraButton {
     label: string,
-    highlight: boolean,
+    highlight?: boolean,
     fn: () => Promise<void>
 } 
 

@@ -711,7 +711,7 @@
                 onclick={() => toggleDateDialog(col.col)} 
                 onkeyup={(e) => {if (e.key == "Escape") editMenuOpen = false;}}
                 >{@html calendarIcon}</button>
-            <details class="dropdown dropdown-end " bind:open={editMenuOpen} 
+            <details class="dropdown {col.side == "left" ? "dropdown-start": "dropdown-end"} " bind:open={editMenuOpen} 
                 id={"edit_date_"+col.col} 
             >
                 <summary class="hidden" ></summary>
@@ -1026,6 +1026,8 @@
 {/if}
 <div class="hidden bg-base-200"></div>
 <div class="hidden bg-required"></div>
+<div class="hidden dropdown-start"></div>
+<div class="hidden dropdown-end"></div>
 
 <style>
 .tail-icon {

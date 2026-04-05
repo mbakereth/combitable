@@ -47,7 +47,7 @@
         /**
          * Number of rows to show per page.  Default 0 which is no pagination
         */
-        paginate? : number;
+        paginate? : number|"auto"|"none";
 
         /**
          * Whether there are more rows before the ones passed to this table
@@ -241,7 +241,7 @@
     }
     import { onMount, untrack } from 'svelte';
     import { page } from '$app/state';
-    import { goto, invalidateAll } from '$app/navigation'
+    import { goto, invalidateAll, afterNavigate } from '$app/navigation'
     import type { CombiTableColumn, CombiTableOp, CombiTableExtraButton , CombiTablePresets } from '$lib/combitabletypes';
     import { SearchUrl } from '$lib/searchurl';
     import upIcon from "$lib/assets/prime--sort-up-fill.svg?raw"
@@ -258,6 +258,7 @@
     import CombiTableConfirmDeleteDialog from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
     import { updated } from '$app/state';
     import { PartialDateType } from '$lib/types';
+
     import { PartialDateYear_Month, 
         PartialDateYear_Day, 
         PartialDateMonth_Day, getToday, 
@@ -268,6 +269,7 @@
 
     let table : HTMLElement;
     let div : HTMLElement;
+    let buttonBox : HTMLElement
 
     let {
         rows,
@@ -276,7 +278,7 @@
         enableFilter = false,
         defaultSort = "",
         dateFormat = "yyyy-mm-dd",
-        paginate = 0,
+        paginate = "none",
         havePrevious = false,
         haveNext = false,
         addUrl = undefined,
@@ -315,10 +317,12 @@
         zebra = false,
     } : Props = $props();
 
+    let actualPaginate = $state(1)
+
     let No = $derived(lang == "de" ? "Nein" : (lang == "el" ? "Όχι" : "No"));
     let Yes = $derived(lang == "de" ? "Ja" : (lang == "el" ? "Ναι" : "Yes"));
     let Unset = $derived(lang == "de" ? "Ungefasst" : (lang == "el" ? "Άδιο" : "Unset"));
-    let Previous = $derived(lang == "de" ? "Vorherige" : (lang == "el" ? "Προηγούμενο" : "Πρεωιοθσ"));
+    let Previous = $derived(lang == "de" ? "Vorherige" : (lang == "el" ? "Προηγούμενο" : "Previous"));
     let Next = $derived(lang == "de" ? "Nächste" : (lang == "el" ? "Επόμενο" : "Next"));
     let Add = $derived(lang == "de" ? "Hinzufügen" : (lang == "el" ? "Προσθέση" : "Add"));
     let Filter = $derived(lang == "de" ? "Filter" : (lang == "el" ? "Φίλτρο" : "Filter"));
@@ -387,11 +391,43 @@
     let innerHeight = $state(0)
     let maxHeight = $derived(restOfScreenHeight ? innerHeight - restOfScreenHeight : undefined);
     let tableHeightStyle = $derived(maxHeight && innerWidth > 0 ? "display: block; max-height:" + maxHeight + "px; min-height: " + maxHeight + "px" : "");
+    let rowHeights = $state([] as number[]);
+    let rowOffsets = $state([] as number[]);
+    let resizing = $state(false)
 
     function resize() {
+        resizing = true;
         maxHeight = restOfScreenHeight ? innerHeight - restOfScreenHeight : undefined;
         tableHeightStyle = maxHeight ? "display: block; max-height:" + maxHeight + "px; min-height: " + maxHeight + "px;" : "";
-        //console.log("Table height " + innerHeight + " " + restOfScreenHeight + " " + maxHeight + " " + tableHeightStyle);
+        if (typeof(paginate) == "number") {
+            actualPaginate = paginate;
+        } else if (paginate == "none") {
+            actualPaginate = 0;
+        } else {
+            //console.log("Table height " + innerHeight + " " + restOfScreenHeight + " " + maxHeight + " " + tableHeightStyle);
+            /*const el = document.getElementById("datarow_"+uuid+"_0");
+            if (el && maxHeight) {
+                actualPaginate = Math.floor((maxHeight - el.offsetTop) / el?.offsetHeight);
+
+            } else {
+                actualPaginate = 10;
+            }*/
+            if (maxHeight) {
+                actualPaginate = rows.length;
+                for (let i=0; i<rows.length; ++i) {
+                    const el = document.getElementById("datarow_"+uuid+"_"+i);
+                    rowHeights[i] = el?.offsetHeight ?? 0;
+                    rowOffsets[i] = el?.offsetTop ?? 0;
+                    if (rowOffsets[i] + rowHeights[i] < maxHeight) {
+                        actualPaginate = i;
+                    }
+                }
+
+            } else {
+                actualPaginate = 10;
+            }
+        }
+        resizing = false;
     }
     
     onMount(() => {
@@ -401,6 +437,12 @@
 		return () => {
 			window.removeEventListener('resize', resize);
 		}
+    });
+    afterNavigate(() => {
+        rowHeights = Array(rows.length).fill(0)
+        rowOffsets = Array(rows.length).fill(0)
+        resize();
+		
     });
 
     export function printDate(date : Date|undefined|null, edit=false) : string {
@@ -694,7 +736,7 @@
     }
     async function confirmPrevious() {
         confirmCancelEdit();
-        const url = new SearchUrl(page.url, paginate);
+        const url = new SearchUrl(page.url, actualPaginate);
         url.setSuffix(urlSuffix);
         let skip = url.getSkip();
         if (skip <= 0) return;
@@ -705,6 +747,8 @@
             skip -= take;
         }
         url.skip(skip);
+        //url.take(actualPaginate)
+
             
         await invalidateAll();
         searchParams = `?${url.searchParamsAsString()}`;
@@ -722,13 +766,15 @@
     }
     async function confirmNext() {
         confirmCancelEdit();
-        const url = new SearchUrl(page.url, paginate);
+        console.log("Requesting", actualPaginate)
+        const url = new SearchUrl(page.url, actualPaginate);
         url.setSuffix(urlSuffix);
         let skip = url.getSkip();
         let take = url.getTake();
         skip += take;
         if (skip < 0) skip = 0;
         url.skip(skip);
+        //url.take(actualPaginate)
             
         await invalidateAll();
         searchParams = `?${url.searchParamsAsString()}`;
@@ -740,7 +786,7 @@
     // sorting and filtering
 
     async function sort(col : string, dir? : "ascending"|"descending") {
-        const url = new SearchUrl(page.url, paginate);
+        const url = new SearchUrl(page.url, actualPaginate);
         url.setSuffix(urlSuffix);
         url.setDefaultSortCol(defaultSort);
         let { sortCol, sortDirection } = url.getSort();
@@ -766,7 +812,7 @@
             filterValues[col.col] = "";
         }
 
-        const url = new SearchUrl(page.url, paginate);
+        const url = new SearchUrl(page.url, actualPaginate);
         url.setSuffix(urlSuffix);
         url.setFilters(filters);
         await invalidateAll()
@@ -858,7 +904,7 @@
             }
         }
 
-        const url = new SearchUrl(page.url, paginate);
+        const url = new SearchUrl(page.url, actualPaginate);
         url.setSuffix(urlSuffix);
         url.setFilters(filters);
         url.skip(0);
@@ -880,7 +926,7 @@
 
     async function clearIds() {
 
-        const url = new SearchUrl(page.url, paginate);
+        const url = new SearchUrl(page.url, actualPaginate);
         url.setSuffix(urlSuffix);
         url.setFilters(filters);
         url.ids([])
@@ -892,7 +938,7 @@
 
 
 
-    const url = $derived(new SearchUrl(page.url, paginate));
+    const url = $derived(new SearchUrl(page.url, actualPaginate));
     // svelte-ignore state_referenced_locally
     let urlfilters = {...url.getFilters()}; // set in effect below
     let sortCol = $state("");
@@ -1538,7 +1584,7 @@
     ///// Custom operations
 
     async function reload() {
-        const url = new SearchUrl(page.url, paginate);            
+        const url = new SearchUrl(page.url, actualPaginate);            
         url.setSuffix(urlSuffix);
         await invalidateAll();
         searchParams = `?${url.searchParamsAsString()}`;
@@ -2378,7 +2424,11 @@
             <!-- data rows -->
             {#each rrows as row, rowidx}
                 {@const rowLinkClass = link ? "{loading ? 'cursor-wait' : 'cursor-pointer'} hover:bg-base-200" : ""}
-                <tr class="{rowLinkClass}"  onclick={() => {if (link) goto(link(row))}}>
+                <tr class="{rowLinkClass}"  
+                onclick={() => {if (link) goto(link(row))}} 
+                id={"datarow_"+uuid+"_"+rowidx}
+                hidden={maxHeight ? (!resizing && paginate=="auto" && rowidx > actualPaginate) : false}
+            >
                     {#if select}
                         <!-- checkbox column -->
                         <td>
@@ -2698,9 +2748,9 @@
     </table>
 </div>
 
-{#if paginate > 0 || haveOps}
-<div class="ml-3">
-    {#if paginate > 0}
+{#if actualPaginate > 0 || haveOps}
+<div class="ml-3" bind:this={buttonBox}>
+    {#if actualPaginate > 0}
         {#if havePrevious}
             <button class="btn btn-primary mt-2 mr-2" onclick={() => previous()}>{Previous}</button>
         {:else}
