@@ -162,8 +162,9 @@ export function asBoolean(val : string|number|boolean|undefined) : boolean {
     if (typeof(val) == "boolean") return val;
     if (typeof(val) == "number") return val > 0;
     if (typeof(val) == "string") {
-        val = val.toLowerCase();
-        return val == "yes" || val == "y" || val == "t" || val == "true" || val == "on";
+        val = val.toLocaleLowerCase();
+        return ["yes", "y", "ja", "j", "true", "t", "treu", "richtig", "r", "on", "1", "ναι", "ν"].includes(val)
+        //return val == "yes" || val == "y" || val == "t" || val == "true" || val == "on";
     }
     return false;
 }
@@ -392,3 +393,39 @@ export function numDaysBetween(date1 : Date, date2: Date) {
 export const PartialDateYear_Month = 7;
 export const PartialDateYear_Day = 1;
 export const PartialDateMonth_Day = 15;
+
+export function parsePartialDate(val : string, dateFormat: string) : {date: Date, type: PartialDateType} {
+    val = val.trim();
+    if (val.indexOf("T") > 0) {
+        val = val.split("T")[0];
+        let date = parseISODate(val);
+        return {date, type: PartialDateType.datetime};
+    }
+    let parts = val.includes("-") ? val.trim().split("-") : (val.includes(".") ? val.trim().split(".") : val.trim().split("/"));
+    let type :PartialDateType = PartialDateType.date;
+    if (parts.length == 2) {
+        if (dateFormat == "yyyy-mm-dd") {
+            parts = [parts[1], parts[0], PartialDateMonth_Day+""];
+        } else if (dateFormat == "mm-dd-yyyy") {
+            parts = [parts[0], ""+PartialDateMonth_Day, parts[1]]
+        } else { // dd-mm-yyyy
+            parts.unshift(PartialDateMonth_Day+""); 
+        }
+        type = PartialDateType.month;
+    } else if (parts.length == 1) {
+        if (dateFormat == "yyyy-mm-dd") {
+            parts.push(PartialDateYear_Month+"");
+            parts.push(PartialDateYear_Day+"");
+        } else if (dateFormat == "mm-dd-yyyy") {
+            parts = [PartialDateYear_Month+"", PartialDateYear_Day+"", parts[0]]
+        } else { // dd-mm-yyyy
+            parts = [PartialDateYear_Day+"", PartialDateYear_Month+"", parts[0]]
+        }
+        type = PartialDateType.year;
+    } else if (parts.length != 3) throw Error("Date " + val + " should be " + dateFormat);
+    let dateStr = parts[2] + "-" + parts[1] + "-" + parts[0];
+    if (dateFormat == "yyyy-mm-dd") dateStr = parts[0] + "-" + parts[1] + "-" + parts[2];
+    else if (dateFormat == "mm-dd-yyyy") dateStr = parts[2] + "-" + parts[0] + "-" + parts[1];
+    let date = parseISODate(dateStr);
+    return {date, type};
+}

@@ -138,7 +138,9 @@ export class JsonOrFormData {
         const val = this.get(param);
         if (val == undefined) return undefined;
         const l = val.toLowerCase();
-        return l == "t" || l == "true" || l == "1" || l == "y" || l == "yes" || l == "on";
+        //return l == "t" || l == "true" || l == "1" || l == "y" || l == "yes" || l == "on";
+        return ["yes", "y", "ja", "j", "true", "t", "treu", "richtig", "r", "on", "1", "ναι", "ν"].includes(l)
+
     }
 
     getAsNumber(param : string) : number|undefined {
