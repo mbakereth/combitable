@@ -733,16 +733,16 @@
     {:else if col.autoCompleteLink && col.type != "array:string"}    
         <div class="acdropdown overflow:visible">
             <input role="button" 
-                class="input m-0 -mb-1 w-full cursor-text {bg(col)} {inputClasses}" 
+                class="input m-0 -mb-1 w-full cursor-text z-0 {bg(col)} {inputClasses}" 
                 disabled={updateDisabled} style="{cwidth(col)} {inputStyles}"  tabindex="0"
                 onkeyup={(evt) => {if (evt.key == "Escape") {autoCompleteOpen = false} else if (evt.key != "Tab") {autoCompleteKeyPress(evt)}}}
                 onblur={(evt) => handleACBlur(evt)}
-                bind:value={displayValue}/>
+                bind:value={displayValue}/> 
             {#if autoCompleteOpen}
                 <ul bind:this={autoCompleteList} class="menu dropdown-content border border-gray-600 rounded max-h-0.3 overflow-auto bg-base-200 rounded-box z-10 p-2 mt-4 shadow" style="{ddwidth(col)}">
                     {#each autoCompleteData as name}
                         <!-- svelte-ignore a11y_missing_attribute -->
-                        <li><a tabindex="0" 
+                        <li><a tabindex="0"  class="z-10"
                             onclick={() => autoCompleteUpdate(col, name)} 
                             role="button" onkeyup={(evt) => {if (evt.key == "Enter") {
                             autoCompleteUpdate(col, name)} else if (evt.key == "Escape") {
@@ -787,7 +787,7 @@
                                          onblur={(evt) => handleACBlur(evt)}
                                        bind:value={extraValue}/>
                                     {#if autoCompleteOpen} 
-                                        <ul bind:this={autoCompleteList} class="menu dropdown-content bg-base-100 rounded   p-1 mt-4 border border-gray-600" style="{ddwidth(col)}">
+                                        <ul bind:this={autoCompleteList} class="menu dropdown-content bg-base-100 rounded  z-10 p-1 mt-4 border border-gray-600" style="{ddwidth(col)}">
                                             {#each autoCompleteData as name}
                                                 <!-- svelte-ignore a11y_missing_attribute -->
                                                 <li><a tabindex="0" 
