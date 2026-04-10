@@ -391,7 +391,7 @@
     <!-- buttons -->
     <div class="flex flex-row w-full items-center justify-around mt-2">
         <div style="{zIndexStyle}" class="join ">
-        <span tabindex="0" style="{zIndexStyle}" class="bg-primary px-4 py-2 rounded cursor-pointer" 
+        <span tabindex="0" style="{zIndexStyle}" class="bg-primary text-primary-content px-4 py-2 rounded cursor-pointer" 
             onclick={(e) => {if (onOk) onOk(year, month, day)}}
             role="button" onkeyup={(evt) => {if (onOk && evt.key == "Enter") {onOk(year, month, day)} else if (onCancel && evt.key == "Escape") {onCancel()}}}
         >{buttonText?.ok ?? "OK"}</span>
