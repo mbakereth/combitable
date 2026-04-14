@@ -65,7 +65,7 @@
         /**
          * Bind to this to find out when the table has unsaved data
          */
-        dirty? : false
+        dirty? : boolean
 
        /**
          * Set this if you want to be able to disable/reenable all
