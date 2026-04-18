@@ -319,7 +319,7 @@
 </script>
 
 <div id={id ?? crypto.randomUUID()} 
-    class="flex flex-col min-w-63 min-h-104 gap-1 bg-base-200  p-4 {classes}" 
+    class="flex flex-col min-w-63 min-h-104 gap-1  p-4 {classes} bg-base-100" 
     style="{zIndexStyle} {styles}"
     >
 
@@ -364,16 +364,16 @@
     </div>
 
     <!-- days -->
-    <div class="grid grid-flow-row grid-cols-7 gap-x-8 gap-y-4 text-base pr-4 pt-1">
+    <div class="grid grid-flow-row grid-cols-7 gap-x-7 gap-y-3 text-base pr-4 pt-1">
         {#each dayAbbrebiations as dayAbbrev, dayIdx}
             <div style="{zIndexStyle}" class="" >{dayAbbrev}</div>
         {/each}
         {#each { length: numberOfWeeks }, rowIdx}
             {#each dayAbbrebiations as dayAbbrev, dayIdx}
-                <span tabindex="{getDateForCalendar(rowIdx, dayIdx)===null ? -1 : 0}" style="{zIndexStyle}" class="cursor-pointer px-0 py-0 m-0 font-normal {getDateForCalendar(rowIdx, dayIdx) == day ? 'text-primary' : 'text-content-base'}"
+                <div tabindex="{getDateForCalendar(rowIdx, dayIdx)===null ? -1 : 0}" style="{zIndexStyle}" class="cursor-pointer px-0 py-0 m-0 font-normal {getDateForCalendar(rowIdx, dayIdx) == day ? 'text-primary' : 'text-content-base'}"
                     onclick={() => dayClicked(rowIdx, dayIdx)}
                     role="button" onkeyup={(e) => {keyEvent(e, () => dayClicked(rowIdx, dayIdx))}}
-                    ><span class="text-base">{getDateForCalendar(rowIdx, dayIdx)}</span></span>
+                    ><span class="text-base p-1 pr-2 rounded-field {getDateForCalendar(rowIdx, dayIdx) == day ? 'bg-base-300 border' : ''}">{getDateForCalendar(rowIdx, dayIdx)}</span></div>
             {/each}
         {/each}
         {#if numberOfWeeks < 5}

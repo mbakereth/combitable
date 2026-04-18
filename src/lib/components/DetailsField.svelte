@@ -718,7 +718,7 @@
                     <DateSelector 
                         id={"edit_dateselector_"+col.col}
                         dateFormat={dateFormat as "yyyy-mm-dd"|"mm-dd-yyyy"|"dd-mm-yyyy"}
-                        classes="dropdown-content border rounded border-gray-600 max-h-0.3 bg-base-200 rounded-box z-1 p-2 shadow mt-12 ml-4"
+                        classes="dropdown-content border rounded border-gray-600 max-h-0.3 bg-base-200 rounded-box z-1 p-2 shadow mt-12 {col.side == "left" ? "-ml-8" : "ml-4"}"
                         year={dateSelectorYear} 
                         month={dateSelectorMonth} 
                         day={dateSelectorDay} 

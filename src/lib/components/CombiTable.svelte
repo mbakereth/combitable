@@ -2136,13 +2136,13 @@
                                     <button class="btn join-item btn-outline px-1 border-gray-600" 
                                         onclick={() => toggleFilterDateDialog(col.col)} 
                                         onkeyup={(evt) => {if (evt.key == "Escape") {filterMenusOpen[col.col]=false} }}>{@html calendarIcon}</button>
-                                    <details class="dropdown dropdown-end" bind:open={filterMenusOpen[col.col]} 
+                                    <details class="dropdown {col.side == "left" ? "dropdown-start": "dropdown-end"}" bind:open={filterMenusOpen[col.col]} 
                                         id={"filter_date_"+col.col} 
                                     >
                                         <summary class="hidden" ></summary>
                                             <DateSelector 
                                                 id={"filter_dateselector_"+col.col}
-                                                classes="menu dropdown-content border rounded border-gray-600 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-2 shadow mt-12 ml-4" 
+                                                classes="menu dropdown-content border rounded border-gray-600 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-2 shadow mt-12 {col.side == "left" ? "-ml-8" : "ml-4"}" 
                                                 dateFormat={dateFormat as "yyyy-mm-dd"|"mm-dd-yyyy"|"dd-mm-yyyy"}
                                                 year={filterDateSelectorYear} 
                                                 month={filterDateSelectorMonth} 
