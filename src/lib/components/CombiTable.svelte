@@ -430,8 +430,41 @@
         resizing = false;
     }
     
+    function assignPercentageWidths() {
+        if (widthType != "fixed") return;
+        let assignedWidths = 0;
+        let assignedPerentages = 0;
+        let unassignedColCount = 0;
+        for (let i=0; i<columns.length; ++i) {
+            const column = columns[i]
+            let widthNumberMatch = column.width && column.width.endsWith("px") ?  /([0-9]+)/.exec(column.width) : undefined;
+            const widthNumber = widthNumberMatch && widthNumberMatch[0] ? parseInt(widthNumberMatch[0]) : undefined;
+            let widthPcMatch = column.width && column.width.endsWith("%") ?  /([0-9]+)/.exec(column.width) : undefined;
+            const widthPc = widthPcMatch && widthPcMatch[0] ? parseInt(widthPcMatch[0]) : undefined;
+            if (widthNumber) {
+                assignedWidths += widthNumber;
+            } else if (widthPc) {
+                assignedPerentages += widthPc;
+            } else {
+                unassignedColCount++;
+            }
+        }
+        assignedPerentages += assignedWidths / div.offsetWidth*100;
+        let pcRemaining = 100 - assignedPerentages;
+        if (pcRemaining < 0) pcRemaining = 0;
+        const distributedPc = pcRemaining / unassignedColCount;
+        for (let i=0; i<columns.length; ++i) {
+            const column = columns[i]
+            let header = document.getElementById("table_"+uuid+"_header_"+i);
+            if (header && !column.width) {
+                column.width =  String(distributedPc + "%");
+                header.style.width = column.width;
+            }
+        }
+    }
+
     onMount(() => {
-        resize();
+        //resize();
 		window.addEventListener('resize', resize);
 		
 		return () => {
@@ -442,7 +475,7 @@
         rowHeights = Array(rows.length).fill(0)
         rowOffsets = Array(rows.length).fill(0)
         resize();
-		
+        assignPercentageWidths();		
     });
 
     export function printDate(date : Date|undefined|null, edit=false) : string {
