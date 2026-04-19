@@ -92,6 +92,22 @@
         */
        afterButtonClick? : {[key:string]: () => void}
 
+        /**
+         * If true, cancel button is always active.  Otherwise (the default)
+         * it is only active when dirty
+         */
+        cancelAwaysActive?: boolean,
+
+        /**
+         * Run after cancelling edit
+        */
+        afterCancel? : () => Promise<void>
+
+        /**
+         * Default en
+         */
+        lang? : string,
+
        children : Snippet
     }
 
@@ -124,6 +140,8 @@
         extraButtons = [],
         beforeButtonClick = {},
         afterButtonClick = {},
+        cancelAwaysActive = false,
+        lang="en",
         children
     } : Props = $props();
 
@@ -212,11 +230,11 @@
             (document.querySelector('#confirmEditDiscard1_'+uuid) as HTMLDialogElement)?.showModal(); 
         } else if (!internalDirty) {
             confirmCancelEdit();
+        if ("Cancel" in afterButtonClick) {
+            afterButtonClick.Cancel();
+        }
         } else {
             (document.querySelector('#confirmEditDiscard1_'+uuid) as HTMLDialogElement)?.showModal(); 
-        }
-        if ("Cancel" in afterButtonClick) {
-            await afterButtonClick.Cancel();
         }
     }
 
@@ -245,6 +263,9 @@
             }
         }
 
+        if ("Cancel" in afterButtonClick) {
+            afterButtonClick.Cancel();
+        }
     }
 
     function nextPageUrl(rec : {[key:string]:any}) {
@@ -558,6 +579,15 @@
 
         }
     });
+
+    let Cancel = $derived(lang == "de" ? "Abbrechen" : (lang == "el" ? "Ακύρωση" : "Cancel"));
+    let Save = $derived(lang == "de" ? "Speichen" : (lang == "el" ? "Αποθήκευση" : "Save"));
+    let New = $derived(lang == "de" ? "Neu" : (lang == "el" ? "Νέο" : "New"));
+    let Delete = $derived(lang == "de" ? "Löschen" : (lang == "el" ? "Διαγραφή" : "Delete"));
+    let DiscardChanges = $derived(lang == "de" ? "Möchtest du die Änderungen verwerfen?" : (lang == "el" ? "Θέλεις να απορρίψεις τις αλλαγές;" : "Do you want to discard changes?"));
+    let ErrorTitle = $derived(lang == "de" ? "Bitte korrigieren Sie Folgendes:" : (lang == "el" ? "Παρακαλώ διορθώστε τα εξής:" : "Please correct the following:"));
+    let ReallyDelete = $derived(lang == "de" ? "Wirklich löschen?" : (lang == "el" ? "Πραγματικά να διαγραφεί;" : "Really delete?"));
+
 </script>
 
 <div>
@@ -566,13 +596,13 @@
         {#if (addUrl && newUrl) || editUrl || deleteUrl}
             <div class="m-4 mt-8 mb-0">
                 {#if addUrl || editUrl }
-                    <button class="btn btn-success mt-0 mb-0" disabled={updateDisabled || !internalDirty} on:click={() => saveEdit()}>Save</button>
+                    <button class="btn btn-success mt-0 mb-0" disabled={updateDisabled || !internalDirty} on:click={() => saveEdit()}>{Save}</button>
 
-                    <button class="btn btn-neutral mt-0 mb-0 ml-2" disabled={updateDisabled || (!internalDirty && !isAdd)} on:click={() => cancelEdit()}>Cancel</button>
+                    <button class="btn btn-neutral mt-0 mb-0 ml-2" disabled={!cancelAwaysActive && (updateDisabled || (!internalDirty && !isAdd))} on:click={() => cancelEdit()}>{Cancel}</button>
                 {/if}               
 
                 {#if addUrl && newUrl }
-                <button class="btn btn-primary mt-0 mb-0 ml-2" disabled={updateDisabled || internalDirty || isAdd} on:click={async () => {await newEntry(newUrl);}}>New</button>
+                <button class="btn btn-primary mt-0 mb-0 ml-2" disabled={updateDisabled || internalDirty || isAdd} on:click={async () => {await newEntry(newUrl);}}>{New}</button>
                 {/if}   
 
                 {#if deleteUrl }
@@ -590,10 +620,10 @@
 </div>
 
 <!-- Modal to confirm discarding changes -->
-<CombiTableDiscardChanges id={"confirmEditDiscard1_"+uuid} okFn={confirmCancelEdit}/> 
+<CombiTableDiscardChanges id={"confirmEditDiscard1_"+uuid} title={DiscardChanges} okFn={confirmCancelEdit}/> 
 
 <!-- Modal to display validation errors -->
-<CombiTableValidateDialog id={"validateDialog1_"+uuid} errors={validationErrors}/>
+<CombiTableValidateDialog id={"validateDialog1_"+uuid} errors={validationErrors} title={ErrorTitle}/>
 
 
 <!-- Modal to display information after executing a function -->
@@ -601,4 +631,4 @@
 <CombiTableInfoDialog id={"infoDialog2_"+uuid} info={opInfo} okFn={pageOnSave}/>
 
 <!-- Modal to display delete confirmation -->
-<CombiTableConfirmDeleteDialog id={"confirmDelete1_"+uuid} okFn={confirmDeleteRow}/>
+<CombiTableConfirmDeleteDialog id={"confirmDelete1_"+uuid} text={ReallyDelete} okFn={confirmDeleteRow}/>

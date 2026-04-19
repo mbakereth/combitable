@@ -703,7 +703,7 @@
     {#if col.type == "date" || col.type == "partialdate"}
 
         <div class="join {divClasses}" style="{divStyles}">
-            <input type="text join-item" class="input bg-base-200 {bg(col)} {inputClasses}" disabled={updateDisabled} style="{cwidth(col)} {inputStyles}" 
+            <input type="text join-item" class="input bg-base-200 {bg(col)} {inputClasses}" disabled={updateDisabled} style="width: 100%; {cwidth(col)} {inputStyles}" 
                 bind:value={displayValue} 
                 onkeyup={(evt) => {if (evt.key == "Escape") {editMenuOpen=false} else {fieldKeyPress(evt)}}}
             />
@@ -731,10 +731,10 @@
         </div>
 
     {:else if col.autoCompleteLink && col.type != "array:string"}    
-        <div class="acdropdown overflow:visible">
+        <div class="acdropdown overflow:visible {divClasses}" style="{divStyles}">
             <input role="button" 
                 class="input m-0 -mb-1 w-full cursor-text z-0 {bg(col)} {inputClasses}" 
-                disabled={updateDisabled} style="{cwidth(col)} {inputStyles}"  tabindex="0"
+                disabled={updateDisabled} style="width: 100%; {cwidth(col)} {inputStyles}"  tabindex="0"
                 onkeyup={(evt) => {if (evt.key == "Escape") {autoCompleteOpen = false} else if (evt.key != "Tab") {autoCompleteKeyPress(evt)}}}
                 onblur={(evt) => handleACBlur(evt)}
                 bind:value={displayValue}/> 
@@ -756,19 +756,19 @@
     {:else if col.type != "select:string" && col.type != "select:integer" && col.type != "boolean" && col.type != "array:string"}
         {#if col.editHeight}
             {#if col.default}
-                <textarea class="textarea bg-base-200 align-top {bg(col)} resize" disabled={updateDisabled} style="{cwidth(col)} {cheight(col)} {inputStyles}" onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
+                <textarea class="textarea bg-base-200 align-top {bg(col)} resize {divClasses} {inputClasses}" disabled={updateDisabled} style="{cwidth(col)} {cheight(col)} {divStyles} {inputStyles}" onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
             {:else}
-                <textarea class="textarea bg-base-200 align-top {bg(col)} resize" style="{cwidth(col)} {cheight(col)}" disabled={updateDisabled} onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
+                <textarea class="textarea bg-base-200 align-top {bg(col)} resize {divClasses} {inputStyles}" style="{cwidth(col)} {cheight(col)} {divStyles} {inputStyles}" disabled={updateDisabled} onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
             {/if}
         {:else}
             {#if col.default}
-                <input type="text" class="input bg-base-200 {bg(col)} {inputClasses}" style="{cwidth(col)} {inputStyles}" disabled={updateDisabled} onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"/>
+                <input type="text" class="input bg-base-200 {bg(col)} {divClasses} {inputClasses}" style="{cwidth(col)} {divStyles} {inputStyles}" disabled={updateDisabled} onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"/>
             {:else}
-                <input type="text" class="input bg-base-200 {bg(col)} {inputClasses}" style="{cwidth(col)} {inputStyles}" disabled={updateDisabled} onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"/>
+                <input type="text" class="input bg-base-200 {bg(col)} {divClasses} {inputClasses}" style="{cwidth(col)} {divStyles} {inputStyles}" disabled={updateDisabled} onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"/>
             {/if}
         {/if}
     {:else if col.type == "array:string"}
-        <div>
+        <div class="{divClasses}" style="{divStyles}">
                 {#each displayValue as val, i}
                     <div class="mb-2">
                         {#if !col.readOnly}
@@ -777,12 +777,12 @@
                         {val}
                     </div>
                 {/each}
-                <div>
+                <div style="width: 100%">
                     {#if !col.readOnly}
                         <button class="btn btn-neutral btn-small h-8 text-lg w-8 mr-2" disabled={extraValue==""} onclick={() => addElement()}>+</button>
                             {#if col.autoCompleteLink}
-                                <div class="acdropdown overflow:visible">
-                                    <input role="button" class="input m-0 -mb-1 w-full cursor-text {bg(col)} {inputClasses}" disabled={updateDisabled} style="{cwidth(col)} {inputStyles}"  tabindex="0"
+                                <div class="acdropdown overflow:visible" style="width: 100%">
+                                    <input role="button" class="input m-0 -mb-1 w-full cursor-text {bg(col)} {inputClasses}" disabled={updateDisabled} style="width: 100%; {cwidth(col)} {inputStyles}"  tabindex="0"
                                         onkeyup={(evt) => {if (evt.key == "Escape") {autoCompleteOpen = false} else {autoCompleteKeyPress(evt)}}}
                                          onblur={(evt) => handleACBlur(evt)}
                                        bind:value={extraValue}/>
@@ -806,12 +806,11 @@
         </div>
     {:else if col.type == "boolean"}
         {@const disabled = updateDisabled ? "disabled" : ""}
-        <div tabindex="-1" class="join bg-base-200">
-            <input readonly tabindex="-1" bind:value={displayValue} class="input join-item bg-base-200 {bg(col)} {inputClasses}" style="{cwidth(col)} {inputStyles}"/>
+        <div tabindex="-1" class="join bg-base-200 {divClasses}" style="{cwidth(col)}; {divStyles}">
+            <input readonly tabindex="-1" bind:value={displayValue} class="input join-item bg-base-200 {bg(col)} {inputClasses}" style="width: 100%; {inputStyles}"/>
 
             <details class="dropdown dropdown-end" bind:open={editMenuOpen}>
-            <summary class="btn btn-outline btn-square border-gray-600 {bg(col)} join-item {inputClasses}"
-            style="{inputStyles}" 
+            <summary class="btn btn-outline btn-square border-gray-600 {bg(col)} join-item w-10"
             onkeyup={(evt) => {if (evt.key == "Escape") {
                 editMenuOpen = false
             } else if (evt.key.toLowerCase() == normalize(Yes.charAt(0))) {
@@ -892,15 +891,15 @@
             </ul>
             </details>
         </div>
-    {:else if col.names}
+    {:else if col.names} <!-- select:string and select:integer-->
         {@const disabled = updateDisabled ? "disabled" : ""}
 
-        <div tabindex="-1" class="join bg-base-200">
-            <input readonly tabindex="-1" bind:value={displayValue} class="input join-item bg-base-200 {bg(col)} {inputClasses}" style="{cwidth(col)} {inputStyles}"/>
+        <div tabindex="-1" class="join bg-base-200 {divClasses}" style="{cwidth(col)} {divStyles}">
+            <input readonly tabindex="-1" bind:value={displayValue} class="input join-item bg-base-200 {bg(col)} {inputClasses}" style="width: 100%; {inputStyles}" />
 
             <details class="dropdown dropdown-end" bind:open={editMenuOpen}>
-            <summary class="btn btn-outline btn-square border-gray-600 {bg(col)} join-item {inputClasses}" 
-            style="{inputStyles}"
+            <summary class="btn btn-outline btn-square border-gray-600 {bg(col)} join-item w-10" 
+            style=""
             onkeyup={(evt) => {if (evt.key == "Escape") {
                 editMenuOpen = false;
             } else if (col.names) {
@@ -965,9 +964,11 @@
     {:else if col.values}
         {@const disabled = updateDisabled ? "disabled" : ""}
  
-        <details class="dropdown dropdown-end" bind:open={editMenuOpen}>
-            <summary class="btn btn-outline btn-square border-gray-600 {bg(col)} join-item {inputClasses}"  
-            style="{inputStyles}"
+        <div tabindex="-1" class="join bg-base-200 {divClasses}" style="{cwidth(col)} {divStyles}">
+            <input readonly tabindex="-1" bind:value={displayValue} class="input join-item bg-base-200 {bg(col)} {inputClasses}" style="width: 100%; {inputStyles}" />
+
+            <details class="dropdown dropdown-end" bind:open={editMenuOpen}>
+            <summary class="btn btn-outline btn-square border-gray-600 {bg(col)} join-item w-10"  
             onkeyup={(evt) => {if (evt.key == "Escape") {
                 editMenuOpen = false
             } else if (col.values) {
@@ -1022,6 +1023,7 @@
                 </div>
             </ul>
             </details>
+        </div>
     {/if}
 {/if}
 <div class="hidden bg-base-200"></div>
