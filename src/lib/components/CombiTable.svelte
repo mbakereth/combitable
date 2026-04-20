@@ -504,9 +504,41 @@
         return String(date.getDate()).padStart(2, '0') + "-" + String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getFullYear())
     }
 
+    export function printTime(date : Date|undefined|null, edit=false) : string {
+        if (!date) return edit ? "" : emptyValue;
+        const hourMin = String(date.getHours()).padStart(2, '0') + ":" + String((date.getMinutes())+1).padStart(2, '0');
+        if (date.getSeconds() == 0) return hourMin;
+        return hourMin  + ":" + String(date.getSeconds()).padStart(2, '0');
+    }
+
+    export function printDateTime(date : Date|undefined|null, edit=false) {
+        return printDate(date, edit) + " " + printTime(date, edit);
+    }
+
+    export function parseDateTime(val: string, df:string|undefined=undefined) {
+        let parts = val.trim().split(" ");
+        if (parts.length != 2) return new Date(Date.UTC(1900,0,1,0,0,0));
+        let d = parseDate(parts[0]);
+        let t = parseTime(parts[1])
+        d.setUTCHours(t.getUTCHours());
+        d.setUTCMinutes(t.getUTCMinutes());
+        d.setUTCSeconds(t.getUTCSeconds());
+        return d;
+    }
+
+    export function stringIsDateTime(val: string) {
+        let parts = val.trim().split(" ");
+        return parts.length == 2 && stringIsDate(parts[0]) && stringIsTime(parts[1])
+    }
+
     export function stringIsDate(val : string) {
-        if (dateFormat == "yyyy-mm-dd") return /^( *[0-9][0-9][0-9][0-9][/\.-][0-9][0-9]?[/\.-][0-9][0-9]? *?)$/.test(val);
-        return /^( *[0-9][0-9]?[/\.-][0-9][0-9]?[/\.-][0-9][0-9][0-9][0-9] *?)$/.test(val) ;
+        if (dateFormat == "yyyy-mm-dd") return /^( *[0-9][0-9][0-9][0-9]-[0-9][0-9]?-[0-9][0-9]? *?)$/.test(val);
+        return /^( *[0-9][0-9]?-[0-9][0-9]?-[0-9][0-9][0-9][0-9] *?)$/.test(val) ;
+    }
+
+    export function stringIsTime(val : string) {
+        return /^( *[0-9][0-9]?:[0-9][0-9]?:[0-9][0-9] *?)$/.test(val) ||
+            /^( *[0-9][0-9]?:[0-9][0-9]? *?)$/.test(val);
     }
 
     export function stringIsDateMonth(val : string) {
@@ -572,6 +604,15 @@
         return {date, type};
     }
 
+    export function parseTime(val : string) : Date {
+        val = val.trim();
+        if (val.indexOf("T") > 0) {
+            val = val.split("T")[0];
+            return parseISOTime(val)
+        }
+        return parseISOTime(val);
+    }
+
     // SVG wants to display with a new line.  Depending on what icons
     // we are displaying in the actions column set how far to offset
     // the delete icon
@@ -627,6 +668,25 @@
         return new Date(Date.UTC(parseInt(b[0]), parseInt(b[1])-1, parseInt(b[2]), 0, 0, 0));
     }
 
+    function parseISOTime(s : String) {
+        let hour = 0;
+        let min = 0;
+        let sec = 0;
+        let parts = s.split(":");
+        let regexp = /[0-9][0-9]?/;
+        let match = parts[0].match(regexp);
+        if (match) hour = parseInt(match[0]);
+        if (parts.length > 1) {
+            match = parts[1].match(regexp);
+            if (match) min = parseInt(match[0]);
+        }
+        if (parts.length > 2) {
+            match = parts[1].match(regexp);
+            if (match) sec = parseInt(match[0]);
+        }
+        return new Date(Date.UTC(0, 0, 1), hour, min, sec);
+    }
+
     /////
     // Functions to fetch data from a variable of arbitrary type as a given type
 
@@ -668,6 +728,7 @@
         if (typeof(val) == "boolean") return val ? Yes : No;
         if (typeof(val) == "number") return val+"";
         if (typeof(val) == "string") return val;
+        if (val instanceof Date && type=="time") printTime(val, edit)
         if (val instanceof Date && type=="date") printDate(val, edit)
         if (val instanceof Date && type=="partialdate") printPartialDate(val, dateType, edit)
         if (val instanceof Date) return printDate(val, edit);
@@ -742,6 +803,11 @@
         if (col.type == "date") {
             if (val instanceof Date) {
                 return printDate(val);
+            }
+        }
+        if (col.type == "time") {
+            if (val instanceof Date) {
+                return printTime(val);
             }
         }
         if (col.type == "datetime") {
@@ -1461,6 +1527,8 @@
                         data[col.col] = asStringOrUndefined(editRowText[col.col], col.type);
                     } else if (col.type == "datetime") {
                         data[col.col] = asStringOrUndefined(editRowText[col.col], col.type);
+                    } else if (col.type == "time") {
+                        data[col.col] = asStringOrUndefined(editRowText[col.col], col.type);
                     } else {
                         data[col.col] = editRowText[col.col];
                     }
@@ -1527,6 +1595,11 @@
                 } else if (col.type == "date") {
                     if (!stringIsDate(editRowText[col.col])) {
                         errors.push(col.name + " must be in the form " + dateFormat);
+                    }
+
+                } else if (col.type == "time") {
+                    if (!stringIsTime(editRowText[col.col])) {
+                        errors.push(col.name + " must be in the form hh:mm or hh:mm:ss");
                     }
 
                 } else if (col.type == "partialdate") {

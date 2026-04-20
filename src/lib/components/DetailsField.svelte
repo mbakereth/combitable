@@ -163,9 +163,34 @@
         }
     }
 
+    function printDateTime(date : Date|undefined|null, defaultValue="") {
+        return printDate(date, defaultValue) + " " + printTime(date, defaultValue);
+    }
+
+    export function parseDateTime(val: string) {
+        let parts = val.trim().split(" ");
+        if (parts.length != 2) return Date.UTC(1900,0,1,0,0,0);
+        let d = parseDate(parts[0]);
+        let t = parseTime(parts[1])
+        d.setUTCHours(t.getUTCHours());
+        d.setUTCMinutes(t.getUTCMinutes());
+        d.setUTCSeconds(t.getUTCSeconds());
+        return d;
+    }
+
+    function stringIsDateTime(val: string) {
+        let parts = val.trim().split(" ");
+        return parts.length == 2 && stringIsDate(parts[0]) && stringIsTime(parts[1])
+    }
+
     function stringIsDate(val : string) {
         if (dateFormat == "yyyy-mm-dd") return /^( *[0-9][0-9][0-9][0-9][/\.-][0-9][0-9]?[/\.-][0-9][0-9]? *?)$/.test(val);
         return /^( *[0-9][0-9]?[/\.-][0-9][0-9]?[/\.-][0-9][0-9][0-9][0-9] *?)$/.test(val) ;
+    }
+
+    export function stringIsTime(val : string) {
+        return /^( *[0-9][0-9]?:[0-9][0-9]?:[0-9][0-9] *?)$/.test(val) ||
+            /^( *[0-9][0-9]?:[0-9][0-9]? *?)$/.test(val);
     }
 
     function stringIsDateMonth(val : string) {
@@ -203,11 +228,21 @@
                         return col.name + " must be in the form " + dateFormat;
                     }
 
+                } else if (col.type == "time") {
+                    if (!stringIsTime(value)) {
+                        return col.name + " must be in the form hh:mm:ss or hh:mm" ;
+                    }
+
+                } else if (col.type == "datetime") {
+                    if (!stringIsDateTime(value)) {
+                        return col.name + " must be in the form " + dateFormat + " hh:mm:ss or hh:mm" ;
+                    }
+
                 }
-            } else if (col.type == "datetime") {
-                if (!/^( *[0-9][0-9][0-9][0-9]-[0-9][0-9]?-[0-9][0-9](T[0-9][0-9]?:[0-9][0-9]?:[0-9][0-9]?(\.[0-9]*)?[A-Za-z]?)? *?)$/.test(value)) {
+            /*} else if (col.type == "datetime") {
+                if (!/^( *[0-9][0-9][0-9][0-9]-[0-9][0-9]?-[0-9][0-9]([T ][0-9][0-9]?:[0-9][0-9]?:[0-9][0-9]?(\.[0-9]*)?[A-Za-z]?)? *?)$/.test(value)) {
                     return col.name + " must be in the form yyyy-mm-ddThh:99:ss.sssZ";
-                }
+                }*/
             }
 
         return undefined;
@@ -319,9 +354,44 @@
         return String(date.getDate()).padStart(2, '0') + "-" + String((date.getMonth())+1).padStart(2, '0') + "-" + String(date.getFullYear())
     }
 
+    export function printTime(date : Date|undefined|null, defaultValue="") : string {
+        if (!date) return defaultValue;
+        const hourMin = String(date.getHours()).padStart(2, '0') + ":" + String((date.getMinutes())+1).padStart(2, '0');
+        if (date.getSeconds() == 0) return hourMin;
+        return hourMin  + ":" + String(date.getSeconds()).padStart(2, '0');
+    }
+
     function parseISODate(s : String) {
         let b = s.split(/\D+/);
         return new Date(Date.UTC(parseInt(b[0]), parseInt(b[1])-1, parseInt(b[2]), 0, 0, 0));
+    }
+
+    function parseISOTime(s : String) {
+        let hour = 0;
+        let min = 0;
+        let sec = 0;
+        let parts = s.split(":");
+        let regexp = /[0-9][0-9]?/;
+        let match = parts[0].match(regexp);
+        if (match) hour = parseInt(match[0]);
+        if (parts.length > 1) {
+            match = parts[1].match(regexp);
+            if (match) min = parseInt(match[0]);
+        }
+        if (parts.length > 2) {
+            match = parts[1].match(regexp);
+            if (match) sec = parseInt(match[0]);
+        }
+        return new Date(Date.UTC(1900, 0, 1), hour, min, sec);
+    }
+
+    export function parseTime(val : string) : Date {
+        val = val.trim();
+        if (val.indexOf("T") > 0) {
+            val = val.split("T")[0];
+            return parseISOTime(val)
+        }
+        return parseISOTime(val);
     }
 
     export function parseDate(val : string) : Date {
