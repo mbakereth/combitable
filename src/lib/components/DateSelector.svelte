@@ -51,6 +51,16 @@
          */
         day : number|null|undefined,
 
+        /**
+         * Bind to this to get the day (1-31)
+         */
+        hour? : number|undefined,
+
+        /**
+         * Bind to this to get the day (1-31)
+         */
+        minute? : number|undefined,
+
         classes? : string,
 
         styles? : string,
@@ -59,7 +69,9 @@
 
         zIndex? : number,
 
-        onOk? (year: number, month: number|null, day: number|null) : Promise<void>;
+        includeTime? : boolean
+
+        onOk? (year: number, month: number|null, day: number|null, hour? : number, minute?: number) : Promise<void>;
         onCancel? () : void;
 
     };
@@ -170,6 +182,8 @@
         year = $bindable(getToday().getUTCFullYear()),
         month = $bindable(getToday().getUTCMonth()),
         day = $bindable(getToday().getUTCDate()),
+        hour = $bindable(getToday().getUTCHours()),
+        minute = $bindable(getToday().getUTCMinutes()),
         months = undefined,
         buttonText = undefined,
         dayAbbrebiations = undefined,
@@ -177,6 +191,7 @@
         onCancel = undefined,
         id = undefined,
         zIndex = undefined,
+        includeTime = false,
     } : Props = $props();
 
     let currentMonth = $state(month ?? getToday().getUTCMonth());
@@ -319,7 +334,7 @@
 </script>
 
 <div id={id ?? crypto.randomUUID()} 
-    class="flex flex-col min-w-63 min-h-104 gap-1  p-4 {classes} bg-base-100" 
+    class="flex flex-col min-w-63 min-h-104 gap-1  p-4 pb-2 {classes} bg-base-100" 
     style="{zIndexStyle} {styles}"
     >
 
@@ -388,12 +403,23 @@
         {/if}
     </div>
 
+    <!-- time -->
+     {#if includeTime}
+        <div class="flex flex-row w-full items-center justify-around mt-0 mb-2">
+        <span>
+            <input type="text" name="hour" id="hour" class="input w-12" placeholder="HH" bind:value={hour}/>
+            :
+            <input type="text" name="minute" id="hour" class="input w-12" placeholder="MM" bind:value={minute}/>
+        </span>
+        </div>
+    {/if}
+
     <!-- buttons -->
-    <div class="flex flex-row w-full items-center justify-around mt-2">
+    <div class="flex flex-row w-full items-center justify-around mt-2 mb-2">
         <div style="{zIndexStyle}" class="join ">
         <span tabindex="0" style="{zIndexStyle}" class="bg-primary text-primary-content px-4 py-2 rounded cursor-pointer" 
-            onclick={(e) => {if (onOk) onOk(year, month, day)}}
-            role="button" onkeyup={(evt) => {if (onOk && evt.key == "Enter") {onOk(year, month, day)} else if (onCancel && evt.key == "Escape") {onCancel()}}}
+            onclick={(e) => {if (onOk) onOk(year, month, day, hour, minute)}}
+            role="button" onkeyup={(evt) => {if (onOk && evt.key == "Enter") {onOk(year, month, day, hour, minute)} else if (onCancel && evt.key == "Escape") {onCancel()}}}
         >{buttonText?.ok ?? "OK"}</span>
         </div>
         <span tabindex="0" style="{zIndexStyle}" class="bg-base-100 px-4 py-2 rounded cursor-pointer" 

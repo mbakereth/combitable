@@ -356,7 +356,7 @@
 
     export function printTime(date : Date|undefined|null, defaultValue="") : string {
         if (!date) return defaultValue;
-        const hourMin = String(date.getHours()).padStart(2, '0') + ":" + String((date.getMinutes())+1).padStart(2, '0');
+        const hourMin = String(date.getUTCHours()).padStart(2, '0') + ":" + String((date.getUTCMinutes())).padStart(2, '0');
         if (date.getSeconds() == 0) return hourMin;
         return hourMin  + ":" + String(date.getSeconds()).padStart(2, '0');
     }

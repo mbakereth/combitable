@@ -238,6 +238,8 @@
 
     tableStyles? : string,
 
+    extraRowLinks? : {label: string, fn: (row: {[key:string]:any|undefined}) => Promise<void>|void, width: number}[]
+
     }
     import { onMount, untrack } from 'svelte';
     import { page } from '$app/state';
@@ -315,6 +317,7 @@
         tableClasses = "",
         tableStyles = "",
         zebra = false,
+        extraRowLinks = [],
     } : Props = $props();
 
     let actualPaginate = $state(1)
@@ -329,7 +332,7 @@
     let New = $derived(lang == "de" ? "Neu" : (lang == "el" ? "Νέο" : "New"));
     let Link = $derived(lang == "de" ? "Link" : (lang == "el" ? "Σύνδεση" : "Link"));
     let Unlink = $derived(lang == "de" ? "Unlink" : (lang == "el" ? "Αποσύνδεση" : "Unlink"));
-    let QuestionMark = $derived(lang == "de" ? "?" : (lang == "el" ? ";" : "?")); // XXX
+    let QuestionMark = $derived(lang == "de" ? "?" : (lang == "el" ? ";" : "?")); 
     let DiscardChanges = $derived(lang == "de" ? "Möchtest du die Änderungen verwerfen?" : (lang == "el" ? "Θέλεις να απορρίψεις τις αλλαγές;" : "Do you want to discard changes?"));
     let UnknwonError = $derived(lang == "de" ? "Es ist ein unbekannter Fehler aufgetreten." : (lang == "el" ? "Παρουσιάστηκε ένα άγνωστο σφάλμα" : "An unknown error occurred"));
     let ReallyDelete = $derived(lang == "de" ? "Wirklich löschen?" : (lang == "el" ? "Πραγματικά να διαγραφεί;" : "Really delete?"));
@@ -364,7 +367,7 @@
     ));
 
     $effect(() => {
-        //if (haveOps && !select) select = true; // XXX
+        //if (haveOps && !select) select = true; 
         if (rows.length != rowChecked.length) {
             rowChecked = rows.map((row) => false)
         }
@@ -430,8 +433,10 @@
         resizing = false;
     }
     
+    let lastDivWidth = 0;
     function assignPercentageWidths() {
-        if (widthType != "fixed") return;
+        if (widthType != "fixed" || div.offsetWidth == 0) return;
+        lastDivWidth = div.offsetWidth;
         let assignedWidths = 0;
         let assignedPerentages = 0;
         let unassignedColCount = 0;
@@ -465,18 +470,29 @@
 
     onMount(() => {
         //resize();
-		window.addEventListener('resize', resize);
-		
+        window.addEventListener('resize', resize);
+        const observer = new ResizeObserver(entries => {
+            const e = entries[0]; // should be only one
+            visibilitychange();
+        })
+		observer.observe(div)
 		return () => {
 			window.removeEventListener('resize', resize);
 		}
     });
     afterNavigate(() => {
+        lastDivWidth = 0;
         rowHeights = Array(rows.length).fill(0)
         rowOffsets = Array(rows.length).fill(0)
         resize();
         assignPercentageWidths();		
     });
+
+    function visibilitychange() {
+        if (widthType == "fixed" && lastDivWidth == 0 && div.offsetWidth != 0) {
+        assignPercentageWidths();
+        }
+    }
 
     export function printDate(date : Date|undefined|null, edit=false) : string {
         if (!date) return edit ? "" : emptyValue;
@@ -506,7 +522,7 @@
 
     export function printTime(date : Date|undefined|null, edit=false) : string {
         if (!date) return edit ? "" : emptyValue;
-        const hourMin = String(date.getHours()).padStart(2, '0') + ":" + String((date.getMinutes())+1).padStart(2, '0');
+        const hourMin = String(date.getUTCHours()).padStart(2, '0') + ":" + String((date.getUTCMinutes())).padStart(2, '0');
         if (date.getSeconds() == 0) return hourMin;
         return hourMin  + ":" + String(date.getSeconds()).padStart(2, '0');
     }
@@ -737,6 +753,7 @@
     }
     function asStringOrUndefined(val : string|number|boolean|undefined, type : string|undefined=undefined) : string|undefined {
         if (typeof(val) == "string" && val == "") return undefined;
+        if (typeof(val) == "string") return val;
         return val == undefined ? undefined : asString(val, type);
     }
 
@@ -812,7 +829,8 @@
         }
         if (col.type == "datetime") {
             if (val instanceof Date) {
-                return val.toISOString();
+                return printDateTime(val, editing);
+                //return val.toISOString();
             }
         }
         if (col.type == "select:integer" || col.type == "select:string" && col.col in selectMap) {
@@ -865,7 +883,6 @@
     }
     async function confirmNext() {
         confirmCancelEdit();
-        console.log("Requesting", actualPaginate)
         const url = new SearchUrl(page.url, actualPaginate);
         url.setSuffix(urlSuffix);
         let skip = url.getSkip();
@@ -1889,22 +1906,22 @@
         return out;
     }
     function minw(col: CombiTableColumn) {
-        if (widthType == "fixed") return "width: 100%;";
+        //if (widthType == "fixed") return "width: 100%;";
         return col.minWidth ? "min-width:" + col.minWidth + ";" : "";
     }
     function maxw(col: CombiTableColumn) {
-        if (widthType == "fixed") return "width: 100%;";
+        // if (widthType == "fixed") return "width: 100%;";
         return col.maxWidth ? "max-width:" + col.maxWidth + ";" : "";
     }
     function eminw(col: CombiTableColumn, min="") {
-        if (widthType == "fixed") return "width: 100%;";
+        //if (widthType == "fixed") return "width: 100%;";
         if (min != "") {
             return col.editMinWidth ? "min-width:" + col.editMinWidth + ";" : "min-width: " + min + ";"
         }
         return col.minWidth ? "min-width:" + col.editMinWidth + ";" : "";
     }
     function emaxw(col: CombiTableColumn) {
-        if (widthType == "fixed") return "width: 100%;";
+        //if (widthType == "fixed") return "width: 100%;";
         return col.maxWidth ? "max-width:" + col.editMaxWidth + ";" : "";
     }
     function drwidth(col : CombiTableColumn) {
@@ -1994,6 +2011,16 @@
             loading = false;
         }
     }
+
+    let rowButtonsWidth = $derived.by(() => calc_rowButtonsWidth());
+    function calc_rowButtonsWidth() {
+        let w = ((deleteUrl && unlinkUrl) || editUrl || addUrl ? 45 : 20);
+        for (let link of extraRowLinks) {
+            w += link.width;
+        }
+        return w + "px";
+    }
+    
 </script>
 
 <svelte:window bind:innerWidth bind:innerHeight />
@@ -2029,7 +2056,7 @@
                                 </span>
                             {/if}
                         {:else}
-                            <span class="text-primary"
+                           <span class=""
                                 style="{minw(col)} {maxw(col)}"
                             
                             >{col.name}</span>
@@ -2044,9 +2071,9 @@
                 {/each}
 
                 <!-- actions column-->
-                {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl || unlinkUrl}
+                {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl || unlinkUrl || extraRowLinks.length > 0}
                 {@const width = (deleteUrl && unlinkUrl) || editUrl || addUrl ? "45px" : "20px"}
-                    <td class="last:sticky last:right-0 z-10 bg-base-200 border-l-0 ml-0 pl-0 mr-0 pr-0" style="width: {width};"></td>
+                    <td class="last:sticky last:right-0 z-10 bg-base-200 border-l-0 ml-0 pl-0 mr-0 pr-0" style="width: {rowButtonsWidth};"></td>
                 {/if}
             </tr>
         </thead>
@@ -2268,7 +2295,7 @@
                             {/if}
                         </td>
                     {/each}
-                    {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl}
+                    {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl || extraRowLinks.length > 0}
                         <td class="last:sticky last:right-0 z-10 ml-0 pl-0 pr-0 mr-0">
                             {#if haveFilters}
                             <span tabindex="0" role="button" onkeyup={(evt) => {if (evt.key == "Enter") load(() => clearFilters())}}
@@ -2280,7 +2307,7 @@
             {/if}
 
             <!-- add row -->
-            {#if !updateDisabled && ((addUrl && editable) || linkUrl)}
+            {#if !updateDisabled && ((addUrl && editable) || linkUrl || extraRowLinks.length > 0)}
                 <tr class="">
                     {#if editRow == -1 || editRow == -2}
                         {#if select}
@@ -2487,7 +2514,7 @@
                                 </td>
                             {/if}
                         {/each}
-                        {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl}
+                        {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl  || extraRowLinks.length > 0}
                             <td class="w-4 last:sticky last:right-0 z-10 bg-base-100 pl-0 ml-0 pr-0 mr-0">
                                 {#if internalDirty}
                                     <span 
@@ -2552,7 +2579,7 @@
                         {#if editRow == undefined || editRow != rowidx}
                             {@const value = formatColumn(getColumn(row, col), col, false)}
                             <td class="align-top overflow-x-hidden" > <!-- style="{maxWidthStyle[col.col]}"-->
-                                {#if (col.type == "date" || col.type == "datetime" || col.nowrap)}
+                                {#if (col.type == "date" || /*col.type == "datetime" ||*/ col.nowrap)}
                                     {#if col.link}
                                         <span class="text-nowrap text-base-content"><a class="text-base-content {linkFormat}" href={col.link(row)}>{value}</a></span>
                                     {:else}
@@ -2795,7 +2822,7 @@
                     {/each}
                     {#if editRow == undefined}
                         <!-- displaying row - only show delete icon if delete allowed -->
-                        {#if (editUrl  && editable) || deleteUrl !== undefined}
+                        {#if (editUrl  && editable) || deleteUrl !== undefined  || extraRowLinks.length > 0}
                             <td class="w-4 last:sticky last:right-0 z-10 pl-0 pr-0">
                                 {#if editUrl && editable}
                                     <span 
@@ -2820,6 +2847,15 @@
                                         class="ml-4 {trashColorClass} {trashWidthClass} flex {trashHeightClass} {loading ? 'cursor-wait' : 'cursor-pointer'}" 
                                         onclick={() => {if (!updateDisabled) deleteRow(rowidx)}}><TrashIcon></TrashIcon></span>
                                 {/if}
+                                {#each extraRowLinks as link}
+                                    <span 
+                                        tabindex="0"
+                                        role="button"
+                                        onkeyup={(evt) => {if (evt.key == "Enter") {deleteRow(rowidx)}}}
+                                        class="ml-4 flex {loading ? 'cursor-wait' : 'cursor-pointer'}" 
+                                        style={link.width + "px"}
+                                        onclick={() => link.fn(row)}>{@html link.label}</span>
+                                {/each}
                             </td>
                         {:else if enableFilter}
                             <td class="w-4 last:sticky last:right-0 z-10">
