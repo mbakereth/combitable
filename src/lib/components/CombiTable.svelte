@@ -64,7 +64,7 @@
         /**
          * URL to call to add a new row.  If not given, adding is not activated.
          */
-        addUrl? : string;
+        addUrl? : string | ((data: {[key:string]:any}) => {[key:string]:any}|Promise<{[key:string]:any}>);
 
         /**
          * URL to call to link this record to another.  If not given, linking is not activated.
@@ -79,12 +79,12 @@
         /**
          * URL to call to edit a row.  If not given, editing is not activated.
          */
-        editUrl? : string;
+        editUrl? : string| ((data: {[key:string]:any}) => {[key:string]:any}|Promise<{[key:string]:any}>);
 
         /**
          * URL to call to delete a row.  If not given, deleting is not activated.
          */
-        deleteUrl? : string;
+        deleteUrl? : string | ((pk: string|number, idx: number) => void|Promise<void>);
 
         /**
          * If passed, any column in this map will be pre-populated with
@@ -440,6 +440,9 @@
         let assignedWidths = 0;
         let assignedPerentages = 0;
         let unassignedColCount = 0;
+        let rowButtonWidthPx = calc_rowButtonsWidth()
+        let rowButtonWidth = parseInt(rowButtonWidthPx.substring(0, rowButtonWidthPx.length-2));
+        assignedWidths += rowButtonWidth;
         for (let i=0; i<columns.length; ++i) {
             const column = columns[i]
             let widthNumberMatch = column.width && column.width.endsWith("px") ?  /([0-9]+)/.exec(column.width) : undefined;
@@ -489,8 +492,14 @@
     });
 
     function visibilitychange() {
-        if (widthType == "fixed" && lastDivWidth == 0 && div.offsetWidth != 0) {
-        assignPercentageWidths();
+        if (lastDivWidth == 0 && div.offsetWidth != 0) {
+        resize();
+        lastDivWidth = div.offsetWidth;
+
+            if (widthType == "fixed" && div.offsetWidth != 0) {
+                assignPercentageWidths();
+            }
+
         }
     }
 
@@ -1503,7 +1512,7 @@
     let validationErrors = $state(undefined as string[]|string|undefined);
     let opInfo = $state("");
 
-    async function saveEdit() {
+    export async function saveEdit() {
         if (preview) {
             clearEdit();
             editRow = undefined;
@@ -1519,6 +1528,7 @@
             (document.querySelector('#validateDialog_'+uuid) as HTMLDialogElement)?.showModal(); 
         } else {
             let url = editRow == -1 ? addUrl : (editRow == -2 ? linkUrl : editUrl);
+            let isAdd = editRow == -1;
             if (url == undefined) {
                 console.log("saveEdit called but edit/add url is not set");
                 return;
@@ -1551,41 +1561,51 @@
                     }
                 }
                 if (editRow !== undefined && editRow >= 0) data._pk = rrows[editRow][pk];
-                const resp = await fetch(url, {
-                    method: "POST",
-                    headers: {"content-type": "application/json"},
-                    body: JSON.stringify(data),
-                });
-                if (!resp.ok) {
-                    showError("Error saving data");
-                } else {
-                    const body = await resp.json();
-                    if (body.errors) {
-                        showError(body.errors);
+                if (typeof(url) == "string") {
+                    const resp = await fetch(url, {
+                        method: "POST",
+                        headers: {"content-type": "application/json"},
+                        body: JSON.stringify(data),
+                    });
+                    if (!resp.ok) {
+                        showError("Error saving data");
                     } else {
-                        for (let column of columns) {
-                            if (column.type == "date" && typeof(body.row[column.col]) == "string") {
-                                body.row[column.col] = parseDate(body.row[column.col]);
-                            } else if (column.type == "datetime" && typeof(body.row[column.col]) == "string") {
-                                body.row[column.col] = new Date(body.row[column.col]);
+                        const body = await resp.json();
+                        if (body.errors) {
+                            showError(body.errors);
+                        } else {
+                            for (let column of columns) {
+                                if (column.type == "date" && typeof(body.row[column.col]) == "string") {
+                                    body.row[column.col] = parseDate(body.row[column.col]);
+                                } else if (column.type == "datetime" && typeof(body.row[column.col]) == "string") {
+                                    body.row[column.col] = new Date(body.row[column.col]);
+                                }
                             }
+                            if (editRow == -1 || editRow == -2) {
+                                rrows = [body.row, ...rrows]
+                                rowChecked.unshift(false);
+                            } else if (editRow !== undefined) {
+                                rrows[editRow] = body.row;
+                                rrows = [...rrows];
+                            }
+                            clearEdit();
+                            editRow = undefined;
+                            internalDirty = false;
+                            dirty = internalDirty;
+                            if (body.info && Array.isArray(body.info) && body.info.length > 0) {
+                                showInfo(body.info);
+                            }  
+                            if (onUpdate !== undefined) await onUpdate();
                         }
-                        if (editRow == -1 || editRow == -2) {
-                            rrows = [body.row, ...rrows]
-                            rowChecked.unshift(false);
-                        } else if (editRow !== undefined) {
-                            rrows[editRow] = body.row;
-                            rrows = [...rrows];
-                        }
-                        clearEdit();
-                        editRow = undefined;
-                        internalDirty = false;
-                        dirty = internalDirty;
-                        if (body.info && Array.isArray(body.info) && body.info.length > 0) {
-                            showInfo(body.info);
-                        }  
-                        if (onUpdate !== undefined) await onUpdate();
                     }
+
+                } else { // addUrl is a function 
+                    let newRow = await url(data)
+                    clearEdit();
+                    editRow = undefined;
+                    internalDirty = false;
+                    dirty = internalDirty;
+                    if (onUpdate !== undefined) await onUpdate();
                 }
             } catch (e) {
                 console.log(e);
@@ -1663,7 +1683,7 @@
             console.log("Cannot delete as no primary key defined in columns");
         } else if (deleteIdx == -1) {
             console.log("Delete not initiated");
-        } else {
+        } else if (typeof(deleteUrl) == "string") {
             const data = {_pk: rrows[deleteIdx][pk]}
             const resp = await fetch(deleteUrl, {
                     method: "POST",
@@ -1681,9 +1701,12 @@
                         rowChecked = rowChecked.filter((_el, i) => i != deleteIdx);
                     }
                 }
+        } else { // delete url is a function
+            await deleteUrl(rrows[deleteIdx][pk], deleteIdx)
         }
         deleteIdx = -1;
-        invalidateAll();
+        if (typeof(deleteUrl) == "string")
+            invalidateAll();
         if (onUpdate !== undefined) onUpdate();
 }
 
@@ -2015,8 +2038,10 @@
     let rowButtonsWidth = $derived.by(() => calc_rowButtonsWidth());
     function calc_rowButtonsWidth() {
         let w = ((deleteUrl && unlinkUrl) || editUrl || addUrl ? 45 : 20);
-        for (let link of extraRowLinks) {
-            w += link.width;
+        if (extraRowLinks) {
+            for (let link of extraRowLinks) {
+                w += link.width;
+            }
         }
         return w + "px";
     }

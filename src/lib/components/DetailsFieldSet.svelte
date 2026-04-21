@@ -67,6 +67,12 @@
          */
         dirty? : boolean
 
+        /**
+         * Pass this if you have data not managed but detailsfieldset that
+         * may have a dirty state
+         */
+        extraDirty? : boolean | (() => boolean)
+
        /**
          * Set this if you want to be able to disable/reenable all
          * editinng
@@ -81,9 +87,10 @@
        /**
         * Run this before a button click.
         * 
-        * Keys can be Save, Cancel, New, Delete or labels for extraButtons
+        * Keys can be Save, Cancel, New, Delete or labels for extraButtons.
+        * If the function returns false, the operation is cancelled.
         */
-       beforeButtonClick? : {[key:string]: () => void}
+       beforeButtonClick? : {[key:string]: () => boolean|Promise<boolean>}
 
        /**
         * Run this after a button click.
@@ -142,6 +149,7 @@
         afterButtonClick = {},
         cancelAwaysActive = false,
         lang="en",
+        extraDirty,
         children
     } : Props = $props();
 
@@ -191,19 +199,28 @@
 
     let internalDirty = $state(false);
     export function updateDirty() {
-        internalDirty = false;
+        internalDirty = returnDirty();
+        dirty = internalDirty;
+    }
+    function returnDirty() {
+        const ed = (extraDirty? (typeof(extraDirty) == "boolean" ? extraDirty : extraDirty()) : false)
+        let internalDirty = false;
         isDirtyFns.forEach((fn) => {
             if (fn()) {
                 internalDirty = true;
             }
         })
-        dirty = internalDirty;
+        return internalDirty || ed;
     }
 
     $effect(() =>  {
         for (let fn of setUpadteDisabledFns) {
             fn(updateDisabled)
         }
+        const ed = (extraDirty? (typeof(extraDirty) == "boolean" ? extraDirty : extraDirty()) : false);
+        let d = returnDirty();
+        if (d != dirty) dirty = d;
+        if (d != internalDirty) internalDirty = d;
     });
     // show dialogs
     let validationErrors = $state(undefined) as string[]|string|undefined;
@@ -224,7 +241,8 @@
 
     async function cancelEdit() {
         if ("Cancel" in beforeButtonClick) {
-            await beforeButtonClick.Cancel();
+            let ret = await beforeButtonClick.Cancel();
+            if (ret === false) return;
         }
         if (isAdd) {
             (document.querySelector('#confirmEditDiscard1_'+uuid) as HTMLDialogElement)?.showModal(); 
@@ -351,7 +369,8 @@
     let urlToLoad = "";
     async function saveEdit() {
         if ("Save" in beforeButtonClick) {
-            await beforeButtonClick.Save();
+            let ret = await beforeButtonClick.Save();
+            if (ret === false) return;
         }
         validationErrors = validate();
         if (validationErrors.length > 0) {
@@ -424,7 +443,8 @@
 
     async function deleteRow() {
         if ("Delete" in beforeButtonClick) {
-            await beforeButtonClick.Delete();
+            let ret = await beforeButtonClick.Delete();
+            if (ret === false) return;
         }
         (document.querySelector('#confirmDelete1_'+uuid) as HTMLDialogElement)?.showModal(); 
     }
