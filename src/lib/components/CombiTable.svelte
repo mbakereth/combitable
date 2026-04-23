@@ -63,6 +63,9 @@
 
         /**
          * URL to call to add a new row.  If not given, adding is not activated.
+         * If a function is passed instead of a URL, that function is called
+         * with the record as its argument.  It should return undefined or true
+         * on success and false on failure.
          */
         addUrl? : string | ((data: {[key:string]:any}) => {[key:string]:any}|Promise<{[key:string]:any}>);
 
@@ -78,11 +81,18 @@
 
         /**
          * URL to call to edit a row.  If not given, editing is not activated.
+         * If a function is passed instead of a URL, that function is called
+         * with the record as its argument.  It should return undefined or true
+         * on success and false on failure.
          */
         editUrl? : string| ((data: {[key:string]:any}) => {[key:string]:any}|Promise<{[key:string]:any}>);
 
         /**
          * URL to call to delete a row.  If not given, deleting is not activated.
+         * If a function is passed instead of a URL, that function is called
+         * with the primary key and index in the row array.  
+         * It should return undefined or true
+         * on success and false on failure.
          */
         deleteUrl? : string | ((pk: string|number, idx: number) => void|Promise<void>);
 
@@ -201,6 +211,26 @@
         */
        lang?:  string,
 
+       /**
+        * This component can also function as an input for DetailsFieldSet,
+        * like a DetailsField.  In this case. addUrl, editUrl, deleteUrl,
+        * linkUrl and unlinkUrl are ignored and the parameters passed here
+        * determine which of these functions are enabled.  Linking and
+        * unlinking are not currently supported in this mode.
+        * 
+        * The add and edit functions are passed the following object :
+        * name: {addItems: {[key:string]:any}[], editItems: {[key:string]:any}[],
+        *  deleteItems: (string|number)[]}.
+        * Note that editItems also include _pk per row (addItems does as
+        * well but it is a negative number, unpersisted number)
+        */
+       detailsField?: {
+            name: string,
+            enableAdd?: boolean,
+            enableEdit? : boolean,
+            enableDelete? : boolean,
+       },
+
     /**
       * If true, columns can be resized.  
       * 
@@ -260,6 +290,8 @@
     import CombiTableConfirmDeleteDialog from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
     import { updated } from '$app/state';
     import { PartialDateType } from '$lib/types';
+    import { getContext } from 'svelte';
+    import DetailsFieldSet from './DetailsFieldSet.svelte';
 
     import { PartialDateYear_Month, 
         PartialDateYear_Day, 
@@ -274,7 +306,7 @@
     let buttonBox : HTMLElement
 
     let {
-        rows,
+        rows = $bindable(),
         columns,
         enableSort,
         enableFilter = false,
@@ -318,6 +350,7 @@
         tableStyles = "",
         zebra = false,
         extraRowLinks = [],
+        detailsField,
     } : Props = $props();
 
     let actualPaginate = $state(1)
@@ -343,6 +376,10 @@
         return str.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
     }
 
+    let addItems: {[key:string]:any}[] = $state([]);
+    let editItems: {[key:string]:any}[] = $state([]);
+    let deleteItems: (string|number)[] = $state([]);
+
     const columnMap = (cols : CombiTableColumn[], fn : (v: CombiTableColumn) => any) =>
         Object.fromEntries(
             cols.map((c) => [c.col, fn(c)])
@@ -350,6 +387,8 @@
     
 
     let rrows = $derived(rows);
+    //let rrows = $state($state.snapshot(rows));
+    let orig_rrows = $state.snapshot(detailsField ? rows : {}) as {[key:string]:any|undefined}[];
 
     let uuid = crypto.randomUUID();
 
@@ -407,7 +446,6 @@
         } else if (paginate == "none") {
             actualPaginate = 0;
         } else {
-            //console.log("Table height " + innerHeight + " " + restOfScreenHeight + " " + maxHeight + " " + tableHeightStyle);
             /*const el = document.getElementById("datarow_"+uuid+"_0");
             if (el && maxHeight) {
                 actualPaginate = Math.floor((maxHeight - el.offsetTop) / el?.offsetHeight);
@@ -471,6 +509,70 @@
         }
     }
 
+    // DetailsField functionality
+
+    let registered = false;
+    $effect(() =>  {
+    if (detailsField && !registered && getContext<DetailsFieldSet>("detailsfieldset")) {
+        getContext<DetailsFieldSet>("detailsfieldset").registerGetAndSetValue(getValue, setValue, setOriginalValue);
+        getContext<DetailsFieldSet>("detailsfieldset").registerResetValue(resetValue);
+        getContext<DetailsFieldSet>("detailsfieldset").registerGetFieldError(getFieldError);
+        getContext<DetailsFieldSet>("detailsfieldset").registerIsDirty(isDirty);
+        getContext<DetailsFieldSet>("detailsfieldset").registerPersist(persist);
+        getContext<DetailsFieldSet>("detailsfieldset").registerSetUpdateDisabled(setUpdateDisabled);
+        registered = true;
+    }});
+
+    const detailsfieldset = getContext<DetailsFieldSet>("detailsfieldset");
+
+    function getValue() : {value: any, col: CombiTableColumn} {
+        const col : CombiTableColumn = {col: detailsField?.name ?? "", name: "", type: "object"}
+        return {
+            col,
+            value: {addItems, editItems, deleteItems} 
+        }
+    }
+
+    function setValue(val: any) {
+        let vals : {addItems: {[key:string]:any}[], editItems: {[key:string]:any}[], deleteItems: (string|number)[]} = val;
+        for (let item of editItems) {
+            for (let i=0; i<rrows.length; ++i) {
+                if (rrows[i][primaryKey] == item[primaryKey]) {
+                    rrows[i] = {...rrows[i], ...item};
+                    break;
+                }
+            }
+        }
+        for (let item of addItems) {
+            rrows.unshift(item)
+        }
+        rrows = rrows.filter((el) => !deleteItems.includes(el[primaryKey]));
+    }
+
+    function setOriginalValue(val: any) {
+        setValue(val);
+        orig_rrows = $state.snapshot(rrows)
+    }
+
+    function persist() {        
+    }
+
+    function resetValue() {
+        rrows = [...rrows]
+    }
+
+    function getFieldError() {
+        return undefined;
+    }
+
+    function isDirty() {
+        return dirty;
+    }
+
+    function setUpdateDisabled(val : boolean) {
+        updateDisabled = val;
+    }
+
     onMount(() => {
         //resize();
         window.addEventListener('resize', resize);
@@ -484,6 +586,11 @@
 		}
     });
     afterNavigate(() => {
+        //rrows = $state.snapshot(rows);
+        if (detailsField) orig_rrows = $state.snapshot(rows);
+        addItems = [];
+        editItems = [];
+        deleteItems = [];
         lastDivWidth = 0;
         rowHeights = Array(rows.length).fill(0)
         rowOffsets = Array(rows.length).fill(0)
@@ -641,10 +748,10 @@
     // SVG wants to display with a new line.  Depending on what icons
     // we are displaying in the actions column set how far to offset
     // the delete icon
-    let exitHeightClass = $derived(editUrl ? "-mt-4.5" : "");
-    let exitWidthClass = $derived(editUrl ? "ml-1" : "-ml-6");
-    let trashHeightClass = $derived(editUrl && unlinkUrl ? "-mt-5" : (editUrl || unlinkUrl ? "-mt-5.25" : ""));
-    let trashWidthClass = $derived(editUrl && unlinkUrl ? "ml-6" :  (editUrl || unlinkUrl ? "-ml-1" : "-ml-6"));
+    let exitHeightClass = $derived((editUrl || detailsField?.enableEdit) ? "-mt-4.5" : "");
+    let exitWidthClass = $derived((editUrl || detailsField?.enableEdit) ? "ml-1" : "-ml-6");
+    let trashHeightClass = $derived((editUrl || detailsField?.enableEdit) && unlinkUrl ? "-mt-5" : ((editUrl || detailsField?.enableEdit) || unlinkUrl ? "-mt-5.25" : ""));
+    let trashWidthClass = $derived(editUrl && unlinkUrl ? "ml-6" :  ((editUrl || detailsField?.enableEdit) || unlinkUrl ? "-ml-1" : "-ml-6"));
     let trashColorClass = $derived(updateDisabled ? "text-neutral-500" : "text-error");
     let saveColorClass = $derived(updateDisabled ? "text-neutral-500" : "text-success");
     let cancelColorClass = $derived(updateDisabled ? "text-neutral-500" : "text-error");
@@ -679,12 +786,13 @@
 
     let editable = $derived(columns.reduce((acc, cur) => acc && cur.type != "array:string", true));
     $effect(() => {
-        if (!editable && (addUrl || editUrl)) {
+        if (!editable && (addUrl || editUrl || detailsField?.enableAdd || detailsField?.enableEdit)) {
             console.log("Warning: Add and edit disabled as array:string is not supported when editing table data");
         }
-        if (pk == "" && (editUrl)) {
+        if (pk == "" && (editUrl || detailsField?.enableEdit)) {
             console.log("Warning: edit enabled but no primary key column - disabling edit");
             editUrl = undefined;
+            if (detailsField) detailsField.enableEdit = false
         }
     })
 
@@ -1174,7 +1282,6 @@
         let id = (evt.relatedTarget as any)?.id as string;
         if (!id || ( !(id.startsWith("filter_select_"+uuid+"_"+col.col+"-")) && !(id.startsWith("xfilter_select_summary_"+uuid+"_"+col.col+"-")) ) ){
             //for (let col of columns) {
-                //console.log("Close", col.col)
                 filterMenusOpen[col.col] = false;
             //}
         }
@@ -1254,7 +1361,6 @@
                 return;
             } else {
                 const body = await resp.json() as string[];
-                //console.log("Autocomplete", body)
                 autoCompleteData = [...body];
             }
 
@@ -1522,6 +1628,8 @@
             return;
 
         }
+
+        if (editRow == undefined || !internalDirty) return; 
         
         validationErrors = validate();
         if (validationErrors.length > 0) {
@@ -1529,7 +1637,7 @@
         } else {
             let url = editRow == -1 ? addUrl : (editRow == -2 ? linkUrl : editUrl);
             let isAdd = editRow == -1;
-            if (url == undefined) {
+            if ((isAdd && !detailsField?.enableAdd) || (!isAdd && !detailsField?.enableEdit)) {
                 console.log("saveEdit called but edit/add url is not set");
                 return;
             }
@@ -1599,13 +1707,42 @@
                         }
                     }
 
-                } else { // addUrl is a function 
+                } else if (!detailsField && url) { // addUrl is a function 
                     let newRow = await url(data)
                     clearEdit();
                     editRow = undefined;
                     internalDirty = false;
                     dirty = internalDirty;
                     if (onUpdate !== undefined) await onUpdate();
+                } else if (detailsField) {
+                    // we are a DetailsField
+                    if (isAdd) {
+                        let minId = addItems.reduce((prev, cur) =>{return prev<cur[primaryKey] ? prev :cur[primaryKey] }, -1 );
+                        addItems.push({...data, [primaryKey]: minId-1});
+                        rrows.unshift({...data, [primaryKey]: minId-1});
+                        //rrows = [data, ...rrows]
+                    } else {
+                        if (data[primaryKey] < 0) { // editing a new item
+                            for (let i=0; i<addItems.length; ++i) {
+                                if (addItems[i][primaryKey] == data[primaryKey]) {
+                                    addItems[i] = {...data};
+                                    break;
+                                }
+                            }
+                        } else { // editing an existing item
+                            for (let i=0; i<editItems.length; ++i) {
+                                if (editItems[i][primaryKey] == data[primaryKey]) {
+                                    editItems[i] = {...data};
+                                    break;
+                                }
+                            }
+                        }
+                        if (editRow != undefined) rrows[editRow] = {...data};
+                    }
+                    
+                    dirty = true;
+                    internalDirty = true;
+                    editRow = undefined;
                 }
             } catch (e) {
                 console.log(e);
@@ -1677,7 +1814,7 @@
         (document.querySelector('#confirmDelete_'+uuid) as HTMLDialogElement)?.showModal(); 
     }
     async function confirmDeleteRow() {
-        if (deleteUrl === undefined) {
+        if (deleteUrl === undefined && !detailsField?.enableDelete) {
             console.log("No delete URL provided");
         } else if (!pk) {
             console.log("Cannot delete as no primary key defined in columns");
@@ -1701,14 +1838,21 @@
                         rowChecked = rowChecked.filter((_el, i) => i != deleteIdx);
                     }
                 }
-        } else { // delete url is a function
+        } else if (!detailsField && deleteUrl) { // delete url is a function
             await deleteUrl(rrows[deleteIdx][pk], deleteIdx)
+        } else if (detailsField?.enableDelete) {
+            addItems = addItems.filter((el) => el[pk] != rrows[deleteIdx][pk]);
+            editItems = editItems.filter((el) => el[pk] != rrows[deleteIdx][pk]);
+            deleteItems.unshift(rrows[deleteIdx][pk])
+            rrows = rrows.filter((el) => el[pk] != rrows[deleteIdx][pk]);
+            internalDirty = true;
+            dirty = true;
         }
         deleteIdx = -1;
         if (typeof(deleteUrl) == "string")
             invalidateAll();
         if (onUpdate !== undefined) onUpdate();
-}
+    }
 
     // show dialogs
     export function showInfo(info : string) {
@@ -2037,7 +2181,7 @@
 
     let rowButtonsWidth = $derived.by(() => calc_rowButtonsWidth());
     function calc_rowButtonsWidth() {
-        let w = ((deleteUrl && unlinkUrl) || editUrl || addUrl ? 45 : 20);
+        let w = (((deleteUrl || detailsField?.enableDelete) && unlinkUrl) || editUrl || addUrl || detailsField?.enableAdd || detailsField?.enableEdit ? 45 : 20);
         if (extraRowLinks) {
             for (let link of extraRowLinks) {
                 w += link.width;
@@ -2096,8 +2240,8 @@
                 {/each}
 
                 <!-- actions column-->
-                {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl || unlinkUrl || extraRowLinks.length > 0}
-                {@const width = (deleteUrl && unlinkUrl) || editUrl || addUrl ? "45px" : "20px"}
+                {#if enableFilter || ((addUrl || detailsField?.enableAdd) && editable) || ((editUrl || detailsField?.enableEdit) && editable) || (deleteUrl || detailsField?.enableDelete) || linkUrl || unlinkUrl || extraRowLinks.length > 0}
+                {@const width = ((deleteUrl || detailsField?.enableDelete) && unlinkUrl) || (editUrl || detailsField?.enableEdit) || (addUrl || detailsField?.enableAdd) ? "45px" : "20px"}
                     <td class="last:sticky last:right-0 z-10 bg-base-200 border-l-0 ml-0 pl-0 mr-0 pr-0" style="width: {rowButtonsWidth};"></td>
                 {/if}
             </tr>
@@ -2320,7 +2464,7 @@
                             {/if}
                         </td>
                     {/each}
-                    {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl || extraRowLinks.length > 0}
+                    {#if enableFilter || ((addUrl || detailsField?.enableAdd) && editable) || ((editUrl || detailsField?.enableEdit) && editable) || (deleteUrl || detailsField?.enableDelete) || linkUrl || extraRowLinks.length > 0}
                         <td class="last:sticky last:right-0 z-10 ml-0 pl-0 pr-0 mr-0">
                             {#if haveFilters}
                             <span tabindex="0" role="button" onkeyup={(evt) => {if (evt.key == "Enter") load(() => clearFilters())}}
@@ -2332,7 +2476,7 @@
             {/if}
 
             <!-- add row -->
-            {#if !updateDisabled && ((addUrl && editable) || linkUrl || extraRowLinks.length > 0)}
+            {#if !updateDisabled && (((addUrl || detailsField?.enableAdd) && editable) || linkUrl || extraRowLinks.length > 0)}
                 <tr class="">
                     {#if editRow == -1 || editRow == -2}
                         {#if select}
@@ -2539,7 +2683,7 @@
                                 </td>
                             {/if}
                         {/each}
-                        {#if enableFilter || (addUrl && editable) || (editUrl && editable) || deleteUrl || linkUrl  || extraRowLinks.length > 0}
+                        {#if enableFilter || ((addUrl || detailsField?.enableAdd) && editable) || ((editUrl || detailsField?.enableEdit) && editable) || (deleteUrl || detailsField?.enableDelete) || linkUrl  || extraRowLinks.length > 0}
                             <td class="w-4 last:sticky last:right-0 z-10 bg-base-100 pl-0 ml-0 pr-0 mr-0">
                                 {#if internalDirty}
                                     <span 
@@ -2563,7 +2707,7 @@
                             <td></td>
                         {/if}
                         <td colspan="{columns.length+1}">
-                        {#if addUrl && editable}
+                        {#if (addUrl || detailsField?.enableAdd) && editable}
                             <button class="btn btn-sm mr-2" onclick={() => edit(-1)}>{Add}</button>
                         {/if}
                         {#if linkUrl}
@@ -2847,9 +2991,9 @@
                     {/each}
                     {#if editRow == undefined}
                         <!-- displaying row - only show delete icon if delete allowed -->
-                        {#if (editUrl  && editable) || deleteUrl !== undefined  || extraRowLinks.length > 0}
+                        {#if ((editUrl || detailsField?.enableEdit)  && editable) || (deleteUrl !== undefined || detailsField?.enableDelete)  || extraRowLinks.length > 0}
                             <td class="w-4 last:sticky last:right-0 z-10 pl-0 pr-0">
-                                {#if editUrl && editable}
+                                {#if (editUrl || detailsField?.enableEdit) && editable}
                                     <span 
                                         tabindex="0"
                                         role="button"
@@ -2864,7 +3008,7 @@
                                         class="ml-4 text-error {exitWidthClass} flex {exitHeightClass} {loading ? 'cursor-wait' : 'cursor-pointer'}" 
                                         onclick={() => unlinkRow(rowidx)}>{@html exitIcon}</span>
                                 {/if}
-                                {#if deleteUrl !== undefined}
+                                {#if (deleteUrl || detailsField?.enableDelete) !== undefined}
                                     <span 
                                         tabindex="0"
                                         role="button"
