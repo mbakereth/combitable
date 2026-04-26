@@ -270,6 +270,8 @@
 
     extraRowLinks? : {label: string, fn: (row: {[key:string]:any|undefined}) => Promise<void>|void, width: number}[]
 
+    filterCheckBoxes? : {title: string, tag: string, default: boolean}[]
+
     }
     import { onMount, untrack } from 'svelte';
     import { page } from '$app/state';
@@ -351,6 +353,7 @@
         zebra = false,
         extraRowLinks = [],
         detailsField,
+        filterCheckBoxes = []
     } : Props = $props();
 
     let actualPaginate = $state(1)
@@ -372,6 +375,8 @@
     let OperationSuccessful = $derived(lang == "de" ? "Aktion erfolgreich" : (lang == "el" ? "Η ενέργεια ήταν επιτυχής" : "Operation successful"));
     let NotSavedInPreview = $derived(lang == "de" ? "Data not saved in preview mode" : (lang == "el" ? "Η Τα δεδομένα δεν αποθηκεύτηκαν στη λειτουργία προεπισκόπησης" : "Data not saved in preview mode"));
     let ErrorTitle = $derived(lang == "de" ? "Bitte korrigieren Sie Folgendes:" : (lang == "el" ? "Παρακαλώ διορθώστε τα εξής:" : "Please correct the following:"));
+    let filterCheckBoxValues = $state<boolean[]>([]);
+
     function normalize(str : string) : string {
         return str.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
     }
@@ -573,6 +578,7 @@
         updateDisabled = val;
     }
 
+    let searchUrl = $state(new SearchUrl(page.url, actualPaginate));
     onMount(() => {
         //resize();
         window.addEventListener('resize', resize);
@@ -586,6 +592,7 @@
 		}
     });
     afterNavigate(() => {
+        searchUrl = new SearchUrl(page.url, actualPaginate);
         //rrows = $state.snapshot(rows);
         if (detailsField) orig_rrows = $state.snapshot(rows);
         addItems = [];
@@ -594,6 +601,8 @@
         lastDivWidth = 0;
         rowHeights = Array(rows.length).fill(0)
         rowOffsets = Array(rows.length).fill(0)
+        filterCheckBoxValues = filterCheckBoxes.map((el) => url.getFilters()[el.tag] === "t" ? true : (url.getFilters()[el.tag] === "f" ? false : el.default));
+
         resize();
         assignPercentageWidths();		
     });
@@ -1038,11 +1047,16 @@
     }
 
     async function clearFilters() {
+        filterCheckBoxValues = filterCheckBoxes.map((el) => el.default);
         filters = {};
         haveFilters = false;
         for (let col of columns) {
             filterText[col.col] = "";
             filterValues[col.col] = "";
+        }
+        for (let box of filterCheckBoxes) {
+            if (box.default) filters[box.tag] = "t";
+            else filters[box.tag] = "f";
         }
 
         const url = new SearchUrl(page.url, actualPaginate);
@@ -1135,6 +1149,25 @@
                 else filters[col.col] = value ?? "";
                 filters = {...filters, [col.col]: filters[col.col]}
             }
+        }
+
+        const url = new SearchUrl(page.url, actualPaginate);
+        url.setSuffix(urlSuffix);
+        url.setFilters(filters);
+        url.skip(0);
+        await invalidateAll()
+        searchParams = `?${url.searchParamsAsString()}`;
+        goto(searchParams);
+
+    }
+
+    async function filterCheckBoxToggle(idx: number) {
+        console.log("filterCheckBoxToggle", filterCheckBoxValues[idx]);
+        let val = !filterCheckBoxValues[idx]; // because onclick is calleed before reactive value update
+        if (val) {
+            filters[filterCheckBoxes[idx].tag] = "t"
+        } else if (filterCheckBoxes[idx].tag in filters) {
+            filters[filterCheckBoxes[idx].tag] = "f"
         }
 
         const url = new SearchUrl(page.url, actualPaginate);
@@ -2257,12 +2290,15 @@
                         <td></td>
                     {/if}
                     <td colspan="{columns.length+1}" class="pb-0 ">
-                        <p class="small m-0 p-0 text-primary ml-1 mb-0">
-                            {Filter}
+                        <p class="small m-0 p-0 ml-1 mb-0">
+                            <span class="text-primary">{Filter}</span>
                             {#if ids.length > 0}
                                     <!-- svelte-ignore a11y_missing_attribute -->
                                     &nbsp;&nbsp;<a tabindex="0" class="{loading ? 'cursor-wait' : 'cursor-pointer'}" onclick={() => clearIds()} role="button" onkeyup={() => clearIds()}>[Clear ID filter]</a>
                             {/if}
+                            {#each filterCheckBoxes as filterBox, i}
+                                <span><input type="checkbox" class="checkbox ml-2" bind:checked={filterCheckBoxValues[i]} onclick={() => filterCheckBoxToggle(i)} /> {filterBox.title}</span>
+                            {/each}
                         </p>
                     </td>
                 </tr>

@@ -626,7 +626,7 @@
                 {/if}   
 
                 {#if deleteUrl }
-                <button class="btn btn-error mt-0 mb-0 ml-2" disabled={updateDisabled || internalDirty} on:click={() => deleteRow()}>Delete</button>
+                <button class="btn btn-error mt-0 mb-0 ml-2" disabled={updateDisabled || internalDirty} on:click={() => deleteRow()}>{Delete}</button>
                 {/if}    
 
                 {#each extraButtons as button}
