@@ -2,6 +2,13 @@ import { json, type RequestEvent } from '@sveltejs/kit';
 import type { CombiTableColumn, ColumnType } from '$lib/combitabletypes';
 import { env } from '$env/dynamic/public';
 import { PartialDateType } from '$lib/types'
+
+export interface AutoCompleteOptions {
+    insensitive? : boolean,
+    maxItems? : number,
+    prefilter? : {[key:string]: {[key:string]:any}}
+};
+
 /**
  * Provides autocomplete functionality with Prisma
  * 
@@ -31,9 +38,29 @@ import { PartialDateType } from '$lib/types'
  * @param cols tables and columns to allow (see description)
  * @returns a JSON array of results
  */
-export async function autocomplete(client : any, event : RequestEvent, cols? : {[key:string]: string[]}, insensitive=false, maxItems=10) : Promise<Response> {
+export async function autocomplete(client : any, event : RequestEvent, cols? : {[key:string]: string[]}, options? : AutoCompleteOptions) : Promise<Response> {
     const table = event.params.table;
     const col = event.params.col;
+    const insensitive = options?.insensitive === undefined ? false : options.insensitive;
+    const maxItems = options?.maxItems == undefined ? 10 : options.maxItems;
+    let prefilter : {[key:string]:any}|undefined = undefined;
+    if (options?.prefilter && table && !col) {
+        if (table in options.prefilter) {
+            prefilter = options.prefilter[table]
+        } else if ("_all" in options.prefilter) {
+            prefilter = options.prefilter["_all"]
+        }
+    } else if (options?.prefilter && table && col) {
+        if (table + "." + col in options.prefilter) {
+            prefilter = options.prefilter[table + "." + col]
+        } else if (table + "._all" in options.prefilter) {
+            prefilter = options.prefilter[table + "._all"]
+        } else if (table in options.prefilter) {
+            prefilter = options.prefilter[table]
+        } else if ("_all" in options.prefilter) {
+            prefilter = options.prefilter["_all"]
+        }
+    }
 
     if (table && col && cols ) {
         if (!(table in cols)) {
@@ -79,6 +106,9 @@ export async function autocomplete(client : any, event : RequestEvent, cols? : {
             include = {[parts[i]]: include};
             where = {[parts[i]]: where}; 
         }
+    }
+    if (prefilter) {
+        where = {...where, prefilter}
     }
     const distinct = (parts.length == 1)  ? [parts[0]] : undefined;
     const query : {[key:string]:any} = {

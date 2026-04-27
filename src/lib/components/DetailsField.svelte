@@ -106,6 +106,7 @@
     const detailsfieldset = getContext<DetailsFieldSet>("detailsfieldset");
 
     function isEmpty(field : any) {
+        if (col.type == "hidden") return false;
         if ((col.type == "integer" || col.type == "select:integer" || col.type == "boolean")) {
             if (field === undefined || field === "" || field === null) return true;
         } else if (col.type.startsWith("array")) {
@@ -116,6 +117,7 @@
 
     
     function getValue() : {value: any, col: CombiTableColumn} {
+        if (col.type == "hidden") return {value, col};
         if (col.type == "array:string") {
             if (extraValue) {
                 return {value: [...(value as string[]), extraValue], col}
@@ -206,6 +208,7 @@
     }
 
     function getFieldError() : string|undefined {
+        if (col.type == "hidden") return undefined;
         let errors : string[] = [];
             if (!col.nullable && !col.readOnly && isEmpty(value)) {
                 return "Must enter a value for " + col.name;
@@ -823,7 +826,7 @@
                 </ul>
             {/if}
         </div>
-    {:else if col.type != "select:string" && col.type != "select:integer" && col.type != "boolean" && col.type != "array:string"}
+    {:else if col.type != "select:string" && col.type != "select:integer" && col.type != "boolean" && col.type != "array:string" && col.type != "hidden"}
         {#if col.editHeight}
             {#if col.default}
                 <textarea class="textarea bg-base-200 align-top {bg(col)} resize {divClasses} {inputClasses}" disabled={updateDisabled} style="{cwidth(col)} {cheight(col)} {divStyles} {inputStyles}" onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
