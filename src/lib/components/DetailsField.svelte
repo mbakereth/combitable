@@ -632,7 +632,6 @@
                 const body = await resp.json() as string[];
                 autoCompleteData = [...body];
             }
-
             if (autoCompleteData.length > 0) {
                 let target = autoCompleteList;
                 if (target instanceof Element) {
