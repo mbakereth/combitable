@@ -14,7 +14,11 @@ export declare type CombiTablePrismaClient = PrismaClient;
  * @param defaultSearch If no search field is given in the command line,
  *     sort by this.
  * @param columns column configuration for all filterable/sortable columns
- * @returns 
+ * @param tz the IANA timezone name to user-passed dates are in, for example if the
+ *     user entered "2026-05-01 12:00" in Zurich time, pass "Europe/Zurich" as
+ *     time timezone.  When comparing with the database, it will use this in UTC,
+ *     ie "2026-05-01 10:00".  Default is UTC (so the date remains unchanged)
+ * @returns an object that can be passed straight to a prisma findMany call.
  */
 export function getPrismaFields(
     su: SearchUrl, 

@@ -279,6 +279,19 @@ export const GET = async (event : RequestEvent) => {
 }
  ```
 
+Prisma and Timezones
+--------------------
+
+The only function which has any timezone dependency is `getPrismaFields`.  If you only have one timezone
+in your application, with time in that zone also stored in the databse, everything should work without
+any special manipulation.
+
+If you need to deal with multiple timezones, eg the client in a different timezone from the server,
+it is best sto store everything in the database as UTC.  This also means, for example, that when
+storing a data without a time, for example 2026-05-01, and you are in a central europe timezone, your databse should have 2025-04-30 22:00:00.  When calling `getPrismaFields`, pass the timezone the date is for, 
+for example if the user entered "2026-05-01" in Zurich time, pass this value with tz set to "Europe/Zurich".
+
+
 
 Other Features
 --------------
