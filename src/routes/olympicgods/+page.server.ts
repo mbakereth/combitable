@@ -14,7 +14,7 @@ export async function load({ params, url, depends }) {
     const searchUrl = new SearchUrl(url, 5);
     searchUrl.setDefaultSortCol("name");
     searchUrl.setPreFilters({"home.name": "Olympus"})
-    const fields = getPrismaFields(searchUrl, prisma, "God", "name");
+    const fields = getPrismaFields(searchUrl, prisma, "God", {defaultSearch: "name"});
     const gods = await prisma.god.findMany({
         include: {
             father: true,

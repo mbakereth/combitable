@@ -16,7 +16,18 @@ export declare type CombiTablePrismaClient = PrismaClient;
  * @param columns column configuration for all filterable/sortable columns
  * @returns 
  */
-export function getPrismaFields(su: SearchUrl, prisma : PrismaClient|null, modelName: string, defaultSearch : string = "", columns: CombiTableColumn[]|undefined = undefined) : PrismaFields {
+export function getPrismaFields(
+    su: SearchUrl, 
+    prisma : PrismaClient|null, 
+    modelName: string, {
+        defaultSearch = "", 
+        columns = undefined,
+        tz = undefined,
+    } : {
+        defaultSearch? : string, 
+        columns?: CombiTableColumn[]
+        tz? : string,
+    } = {}) : PrismaFields {
 
     let models = prisma == null ? {} : (prisma as {[key:string]:any})._runtimeDataModel.models as Record<string, RuntimeModel> //RuntimeDataModel
     
@@ -68,10 +79,10 @@ export function getPrismaFields(su: SearchUrl, prisma : PrismaClient|null, model
     let prefilters = su.getPreFilters();
     let where : {[key:string]:any} = {}
     for (let filter in filters) {
-        where = {...where, ...SearchUrl.makePrismaWhere(filter, filters[filter], map, modelName, su.suffix, su.emptySearch, columns, su.insensitive)};
+        where = {...where, ...SearchUrl.makePrismaWhere(filter, filters[filter], map, modelName, {suffix: su.suffix, emptySearch: su.emptySearch, columns, insensitive: su.insensitive, tz})};
     }
     for (let filter in prefilters) {
-        where = {...where, ...SearchUrl.makePrismaWhere(filter, prefilters[filter], map, modelName, su.suffix, su.emptySearch, columns, su.insensitive)};
+        where = {...where, ...SearchUrl.makePrismaWhere(filter, prefilters[filter], map, modelName, {suffix: su.suffix, emptySearch: su.emptySearch, columns, insensitive: su.insensitive, tz})};
     }
     //console.log(JSON.stringify(where, null, 4))
     const ids = su.getIds();

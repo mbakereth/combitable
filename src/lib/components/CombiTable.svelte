@@ -602,7 +602,20 @@
         rowHeights = Array(rows.length).fill(0)
         rowOffsets = Array(rows.length).fill(0)
         filterCheckBoxValues = filterCheckBoxes.map((el) => url.getFilters()[el.tag] === "t" ? true : (url.getFilters()[el.tag] === "f" ? false : el.default));
+        let changed = false;
+        let allFilters = searchUrl.getFilters();
+        for (let i=0; i<filterCheckBoxes.length; ++i) {
+            let box = filterCheckBoxes[i];
+            if (!(box.tag in allFilters) || asBoolean(allFilters[box.tag]) != filterCheckBoxValues[i]) {
+                changed = true;
+                searchUrl.setFilterComponent(box.tag, filterCheckBoxValues[i]?"t":"f");
+            }
+        }
+        if (changed && searchUrl.url) {
+            //console.log("goto", searchUrl.url?.href)
+            invalidateAll().then(() => {goto(searchUrl.url?.href??"")})
 
+        }
         resize();
         assignPercentageWidths();		
     });

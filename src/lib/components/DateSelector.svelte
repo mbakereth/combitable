@@ -385,10 +385,10 @@
         {/each}
         {#each { length: numberOfWeeks }, rowIdx}
             {#each dayAbbrebiations as dayAbbrev, dayIdx}
-                <div tabindex="{getDateForCalendar(rowIdx, dayIdx)===null ? -1 : 0}" style="{zIndexStyle}" class="cursor-pointer px-0 py-0 m-0 font-normal {getDateForCalendar(rowIdx, dayIdx) == day ? 'text-primary' : 'text-content-base'}"
-                    onclick={() => dayClicked(rowIdx, dayIdx)}
+                <div tabindex="{getDateForCalendar(rowIdx, dayIdx)===null ? -1 : 0}" style="{zIndexStyle}" class="{"cursor-pointer"} px-0 py-0 m-0 font-normal {getDateForCalendar(rowIdx, dayIdx) == day ? 'text-primary' : 'text-content-base'}"
+                    onclick={() => {dayClicked(rowIdx, dayIdx)}}
                     role="button" onkeyup={(e) => {keyEvent(e, () => dayClicked(rowIdx, dayIdx))}}
-                    ><span class="text-base p-1 pr-2 rounded-field {getDateForCalendar(rowIdx, dayIdx) == day ? 'bg-base-300 border' : ''}">{getDateForCalendar(rowIdx, dayIdx)}</span></div>
+                    ><span class="text-base p-1 pr-2 rounded-field {getDateForCalendar(rowIdx, dayIdx) == day && day ? 'bg-base-300 border' : ''}">{getDateForCalendar(rowIdx, dayIdx)}</span></div>
             {/each}
         {/each}
         {#if numberOfWeeks < 5}

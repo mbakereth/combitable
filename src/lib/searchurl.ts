@@ -3,7 +3,11 @@
 import type { CombiTableColumn } from "./combitabletypes";
 import { env } from '$env/dynamic/public';
 import { PartialDateType } from "./types";
-import { PartialDateMonth_Day, PartialDateYear_Day, PartialDateYear_Month } from "./utils";
+import { 
+    parseLuxonDate, 
+    parseLuxonDateTime, 
+    parseLuxonTime } from "./utils";
+import { DateTime } from "luxon";
 
 //declare type RuntimeModel = Omit<DMMF.Model, 'name'>;
 
@@ -515,7 +519,24 @@ export class SearchUrl {
         return new SearchUrl(newUrl, this.defaultTake); 
     }
 
-    static makePrismaWhere(name : string, value : string, models : PrismaModelMaps, modelName: string, suffix : string="", emptySearch : string|undefined = undefined, columns: CombiTableColumn[]|undefined = undefined, insensitive : boolean = false) : {[key:string]:any} {
+    static makePrismaWhere(
+        name : string, 
+        value : string, 
+        models : PrismaModelMaps, 
+        modelName: string, {
+            suffix = "", 
+            emptySearch = undefined, 
+            columns = undefined, 
+            insensitive = false,
+            tz=undefined 
+        } : {
+            suffix? : string, 
+            emptySearch? : string,
+            columns?: CombiTableColumn[], 
+            insensitive? : boolean,
+            tz?: string
+        } = {}) : {[key:string]:any} {
+
         if (name == "") return {};
         const colMatch = columns?.filter((val : {[key:string]:any}) => val.col == name);
         if (colMatch && colMatch.length > 0 && colMatch[0].prismaWhere) {
@@ -558,6 +579,8 @@ export class SearchUrl {
         }
         let value1 : string|number|boolean|Date|null = value;
         let value2: Date|null = null;
+        let lvalue1 : DateTime|null = null;
+        let lvalue2 : DateTime|null = null;
         if (type == "Boolean") {
             value1 = ["1", "yes", "y", "true", "t"+suffix, "on"].includes(value.toLocaleLowerCase());
         } else if (type == "Int") {
@@ -568,32 +591,52 @@ export class SearchUrl {
             value1 = null;
             if (value != "") {
                 let parts1 = value.split("_");
-                value1 = new Date(parts1[0]);
+                lvalue1 = parseLuxonDate(parts1[0], {dateFormat: "yyyy-mm-dd", tz: tz ?? "UTC"})
+                //value1 = new Date(parts1[0]);
+                value1 = lvalue1.setZone("UTC").toJSDate();
                 if (parts1.length > 0) {
                     if (parts1[1] == PartialDateType.month + "") { 
-                        value2 = new Date(parts1[0]);
-                        value1.setDate(1);
-                        value2.setDate(1);
-                        if (value2.getMonth() < 12) {
-                            value2.setMonth(value2.getMonth()+1)
-                        } else {
-                            value2.setMonth(0);
-                            value2.setFullYear(value2.getFullYear()+1)
-                        }
+                        lvalue1 = lvalue1.set({day: 1})
+                        lvalue2 = lvalue1.plus({months: 1})
+                        value1 = lvalue1.setZone("UTC").toJSDate();
+                        value2 = lvalue2.setZone("UTC").toJSDate();
+                        //value2 = new Date(parts1[0]);
+                        //value1.setDate(1);
+                        //value2.setDate(1);
+                        //if (value2.getMonth() < 12) {
+                        //    value2.setMonth(value2.getMonth()+1)
+                        //} else {
+                        //    value2.setMonth(0);
+                        //    value2.setFullYear(value2.getFullYear()+1)
+                        //}
                     } else if (parts1[1] == PartialDateType.year + "") { 
-                        value2 = new Date(parts1[0]);
+                        /*value2 = new Date(parts1[0]);
                         value1.setDate(1);
                         value1.setMonth(0);
                         value2.setDate(1);
                         value2.setMonth(0);
-                        value2.setFullYear(value2.getFullYear()+1);
+                        value2.setFullYear(value2.getFullYear()+1);*/
+                        lvalue1 = lvalue1.set({month: 1, day: 1})
+                        lvalue2 = lvalue1.plus({years: 1})
+                        value1 = lvalue1.setZone("UTC").toJSDate();
+                        value2 = lvalue2.setZone("UTC").toJSDate();
+
                     }
                 }
             }
             if (value2 == null) {
-                value2 = getNextDay(value1 as Date);
-                
+                //value2 = getNextDay(value1 as Date);
+                lvalue2 = lvalue1?.plus({days: 1}) ?? null;
+                value2 = lvalue2?.toJSDate() ?? null
             }
+            console.log("lvalue1", lvalue1, "value1", value1, "lvalue2", lvalue2, "value2", value2)
+
+            /*if (tz) {
+                console.log("TZ", tz, "before", value1, value2)
+                value1 = value1 ? DateTime.fromJSDate(value1, {zone: tz}).setZone("UTC").toJSDate() : null;
+                value2 = value2 ? DateTime.fromJSDate(value2, {zone: tz}).setZone("UTC").toJSDate() : null;
+                console.log("TZ", tz, "after", value1, value2)
+            }*/
         } else {
             if (value1.length > 1 && value1.endsWith("*") && !(value1.substring(0, value1.length-1).includes("*"))) {
                 // escape special characters _ and %
@@ -630,7 +673,7 @@ export class SearchUrl {
             } else {
                 return {AND: [
                     {[name]: {gte: approxDayMinus(value1 as Date)}},
-                    {[name]: {lt: approxDayMinus(value2 as Date)}},
+                    {[name]: {lt: value2 as Date}},
                 ]}
             }
         }

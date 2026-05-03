@@ -2,6 +2,7 @@ import { json, type RequestEvent } from '@sveltejs/kit';
 import type { CombiTableColumn, ColumnType } from '$lib/combitabletypes';
 import { env } from '$env/dynamic/public';
 import { PartialDateType } from '$lib/types'
+import { DateTime } from 'luxon';
 
 export interface AutoCompleteOptions {
     insensitive? : boolean,
@@ -294,6 +295,26 @@ export function parseDate(val : string, dateFormat="yyyy-mm-dd") : Date {
         dateStr = parts[1] + "-" + parts[0] + "-" + parts[2];
     }
     return parseISODate(dateStr );
+}
+
+export function parseLuxonDateTime(date: string, {dateFormat="yyyy-mm-dd", tz=undefined} : {dateFormat?: string, tz?: string|undefined}) {
+    let parts = date.split(" ");
+    let parts1 = parts[1].split(":")
+    let hasSeconds = parts1.length == 3
+    let lDateFormat = hasSeconds ?  "yyyy-MM-dd HH:mm:ss" : "yyyy-MM-dd HH:mm";
+    if (dateFormat=="dd-mm-yyyy") lDateFormat = hasSeconds ?  "dd-MM-yyyy HH:mm:ss" : "dd-MM-yyyy HH:mm";
+    else if (dateFormat=="mm-dd-yyyy") lDateFormat = hasSeconds ?  "MM-dd-yyyy HH:mm:ss" : "MM-dd-yyyy HH:mm";
+    lDateFormat += " z";
+    let localTime = DateTime.fromFormat(date + " " + (tz? tz : "UTC"), lDateFormat, {zone: tz ?? "UTC"})
+    return localTime;
+}
+
+export function parseLuxonTime(date: string, {dateFormat="yyyy-mm-dd", tz=undefined} : {dateFormat?: string, tz?: string|undefined}) {
+    return parseLuxonDateTime("1900-01-01 " + date, {dateFormat, tz})
+}
+
+export function parseLuxonDate(date: string, {dateFormat="yyyy-mm-dd", tz=undefined} : {dateFormat?: string, tz?: string|undefined}) {
+    return parseLuxonDateTime(date + " 00:00", {dateFormat, tz})
 }
 
 export function splitPartialDate(val : string, dateFormat="yyyy-mm-dd") : {year: number, month: number|null, day: number|null} {
