@@ -853,7 +853,7 @@
                     {#if !col.readOnly}
                         <button class="btn btn-neutral btn-small h-8 text-lg w-8 mr-2" disabled={extraValue==""} onclick={() => addElement()}>+</button>
                             {#if col.autoCompleteLink}
-                                <div class="acdropdown overflow:visible" style="width: 100%">
+                                <div class="inline acdropdown overflow:visible" style="">
                                     <input role="button" class="input m-0 -mb-1 w-full cursor-text {bg(col)} {inputClasses}" disabled={updateDisabled} style="width: 100%; {cwidth(col)} {inputStyles}"  tabindex="0"
                                         onkeyup={(evt) => {if (evt.key == "Escape") {autoCompleteOpen = false} else {autoCompleteKeyPress(evt)}}}
                                          onblur={(evt) => handleACBlur(evt)}
