@@ -352,7 +352,7 @@
         tableStyles = "",
         zebra = false,
         extraRowLinks = [],
-        detailsField,
+        detailsField = undefined,
         filterCheckBoxes = []
     } : Props = $props();
 
@@ -621,9 +621,9 @@
     });
 
     function visibilitychange() {
-        if (lastDivWidth == 0 && div.offsetWidth != 0) {
-        resize();
-        lastDivWidth = div.offsetWidth;
+        if (div && lastDivWidth == 0 && div.offsetWidth != 0) {
+            resize();
+            lastDivWidth = div.offsetWidth;
 
             if (widthType == "fixed" && div.offsetWidth != 0) {
                 assignPercentageWidths();
@@ -1517,10 +1517,13 @@
                     if (col.type == "partialdate" && typeof(val) == "object" && "type" in val) {
                         dateType = val.type
                     }
-                    if (col.type == "date" || col.type == "partialdate")
+                    if (col.type == "date") {
+                        editRowText[colName] = asString(printPartialDate(val, dateType, true), col.type, dateType);
+                    } else if (col.type == "partialdate") {
                         editRowText[colName] = asString(printPartialDate(val.date, dateType, true), col.type, dateType);
-                    else
+                    } else {
                         editRowText[colName] = asString(val, undefined, PartialDateType.date, true);
+                    }
                 }
                 editRowText = {...editRowText}
             }
@@ -1683,7 +1686,7 @@
         } else {
             let url = editRow == -1 ? addUrl : (editRow == -2 ? linkUrl : editUrl);
             let isAdd = editRow == -1;
-            if ((isAdd && !detailsField?.enableAdd) || (!isAdd && !detailsField?.enableEdit)) {
+            if ((isAdd && !detailsField?.enableAdd && !addUrl) || (!isAdd && !detailsField?.enableEdit && !editUrl)) {
                 console.log("saveEdit called but edit/add url is not set");
                 return;
             }
@@ -2703,11 +2706,11 @@
                                                 </div>
                                             {:else if col.type == "date" || col.type == "partialdate"}    
                                                 <div class="join">
-                                                    <input type="text join-item" class="input bg-base-200 w-full" style="{eminw(col)} {emaxw(col)}" 
+                                                    <input type="text join-item" class="input bg-base-200 w-full {bg(col)}" style="{eminw(col)} {emaxw(col)}" 
                                                         onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col]=false} else {editInputUpdate(evt, col)}}}
                                                         bind:value={editRowText[col.col]} 
                                                     />
-                                                    <button class="btn join-item btn-outline px-1 border-gray-600" 
+                                                    <button class="btn join-item btn-outline px-1 border-gray-600 {bg(col)}" 
                                                         onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}
                                                         onclick={() => toggleEditRowDateDialog(col.col)} >{@html calendarIcon}</button>
                                                     <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]} 
@@ -3012,11 +3015,11 @@
                                             </div>
                                         {:else if col.type == "date" || col.type == "partialdate"}    
                                             <div class="join">
-                                                <input type="text join-item" class="input bg-base-200 w-full" style="{eminw(col)} {emaxw(col)}" 
+                                                <input type="text join-item" class="input bg-base-200 w-full {bg(col)}" style="{eminw(col)} {emaxw(col)}" 
                                                     bind:value={editRowText[col.col]} 
                                                     onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col] = false} else {editInputUpdate(evt, col)}}}
                                                 />
-                                                <button class="btn join-item btn-outline px-1 border-gray-600" 
+                                                <button class="btn join-item btn-outline px-1 border-gray-600 {bg(col)}" 
                                                     onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col] = false} }}
                                                     onclick={() => toggleEditRowDateDialog(col.col)} >{@html calendarIcon}</button>
                                                 <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]} 
@@ -3089,7 +3092,7 @@
                         {:else if enableFilter}
                             <td class="w-4 last:sticky last:right-0 z-10">
                             </td>
-                {/if}
+                        {/if}
                     {:else if editRow == rowidx}
                         <td class="w-4 last:sticky last:right-0 z-10 bg-base-100 pl-0 ml-0 pr-0 mr-0">
                             {#if internalDirty}

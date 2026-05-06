@@ -111,7 +111,6 @@ export async function autocomplete(client : any, event : RequestEvent, cols? : {
     if (prefilter) {
         where = {...where, ...prefilter}
     }
-    console.log("Where", where)
     const distinct = (parts.length == 1)  ? [parts[0]] : undefined;
     const query : {[key:string]:any} = {
         distinct,
