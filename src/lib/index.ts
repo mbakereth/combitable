@@ -34,6 +34,7 @@ export {
     asString, 
     printDate, 
     parsePartialDate, 
+    parsePartialDateOrNull,
     printPartialDate,
     parseLuxonDateTime,
     parseLuxonDate,

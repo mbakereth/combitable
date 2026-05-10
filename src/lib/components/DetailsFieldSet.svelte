@@ -156,6 +156,8 @@
 
     let uuid = crypto.randomUUID();
 
+    let ask_create = $state<{col: string, title: string, value: string}[]>([])
+
     //$: persist = browser && columns ? new PersistedFields(page.url, columns) : undefined;
 
     setContext("detailsfieldset", { registerGetAndSetValue, registerGetFieldError, registerIsDirty, registerSetUpdateDisabled, updateDirty, registerResetValue, registerPersist, newItemWithPersistanceLink });
@@ -350,6 +352,9 @@
                 }
             }
             if (prev) {
+                if ("Save" in afterButtonClick) {
+                    await afterButtonClick.Save();
+                }
                 await invalidateAll();
                 goto(prev);
             }
@@ -405,7 +410,7 @@
                     showError("Error saving data");
                 } else {
                     const body = await resp.json();
-                    if (body.errors) {
+                    if (body.errors && body.errors.length > 0) {
                         showError(body.errors);
                     } else {
                         internalDirty = false;
@@ -434,9 +439,6 @@
                 console.log(e);
                 showError("Couldn't call save function");
             } finally {
-                if ("Cancel" in afterButtonClick) {
-                    await afterButtonClick.Cancel();
-                }
             }
         }
     }
@@ -532,6 +534,7 @@
 
     //page.subscribe((value) => {
     afterNavigate(() => {
+        ask_create = [];
         const value = page;
         if (persistance) {
             if (!columns) {

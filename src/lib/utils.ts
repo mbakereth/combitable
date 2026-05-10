@@ -445,6 +445,11 @@ export const PartialDateYear_Month = 7;
 export const PartialDateYear_Day = 1;
 export const PartialDateMonth_Day = 15;
 
+export function parsePartialDateOrNull(val : string|undefined|null, dateFormat: string) : {date: Date|null, type: PartialDateType|null} {
+    if (!val) return{date: null, type: null};
+    return  parsePartialDate(val, dateFormat);
+}
+
 export function parsePartialDate(val : string, dateFormat: string) : {date: Date, type: PartialDateType} {
     val = val.trim();
     if (val.indexOf("T") > 0) {
