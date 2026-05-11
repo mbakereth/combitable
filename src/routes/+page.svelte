@@ -17,6 +17,7 @@
         {name: "Father", col: "father.name", type: "string", nullable: true, editMinWidth: "6rem", autoCompleteLink:"/autocomplete/god/name"},
         {name: "Mother", col: "mother.name", type: "string", nullable: true, editMinWidth: "6rem", autoCompleteLink:"/autocomplete/god/name"},
         {name: "Birth Date", col: "birth_date", type: "partialdate", nullable: true, minWidth: "11rem", editMaxWidth: "11rem"},
+        {name: "Home", col: "home.name", type: "combi:string", names: data.homeNames, nullable: true, minWidth: "11rem", editMaxWidth: "11rem"},
     ]
 
     $: rows = data.gods;

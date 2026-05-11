@@ -12,17 +12,22 @@ export async function load({ params, url, depends }) {
     const prisma = new PrismaClient({adapter});
     const searchUrl = new SearchUrl(url);
     searchUrl.setDefaultSortCol("name"); // if no sort parameter is given on the command line, sort by this field
-    const fields = getPrismaFields(searchUrl, prisma, "God", "name");
+    const fields = getPrismaFields(searchUrl, prisma, "God", {defaultSearch: "name"});
+    const homes = await prisma.home.findMany({orderBy: {name: "asc"}});
     const gods = await prisma.god.findMany({
         include: {
             father: true,
             mother: true,
+            home: true,
           },
           ...fields
     });
 
     // the havePrevious and haveNext buttons are passed to the CombiTable to activate their respective buttons
-    return {gods: gods, 
+    return {
+        gods: gods, 
+        homeIds: homes.map((el) => el.id),
+        homeNames: homes.map((el) => el.name),
         havePrevious: searchUrl.defaultTake > 0 && searchUrl.getSkip()>0, 
         haveNext: searchUrl.defaultTake > 0 && gods.length >= searchUrl.getTake()
     };

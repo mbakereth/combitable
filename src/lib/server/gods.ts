@@ -152,6 +152,7 @@ export class GodsOps extends Ops {
             if (![0,1,2].includes(n)) errors.push("Type is invalid");
         }
 
+        console.log(body);
         let have_father = false;
         let have_mother = false;
         let father_id = 0;

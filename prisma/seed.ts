@@ -148,6 +148,9 @@ const godsData : God[] = [
 const homeData : Home[] = [
     {
         name: "Olympus"
+    },
+    {
+        name: "Arcadia"
     }
 ];
 

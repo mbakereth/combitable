@@ -784,7 +784,7 @@
     let selectMap : {[key:string] : {[key:string|number]:string}} = $derived.by(() => {
         let ret : {[key:string] : {[key:string|number]:string}} = {}
         for (let column of columns) {
-            if ((column.type == "select:string" || column.type == "select:integer") && column.names && column.values) {
+            if ((column.type == "select:string" || column.type == "select:integer" || column.type == "combi:string") && column.names && column.values) {
                 ret[column.col] = {};
                 for (let i=0; i<column.values.length; ++i) {
                     ret[column.col][column.values[i]] = column.names[i];
@@ -796,7 +796,7 @@
     let selectReverseMap : {[key:string] : {[key:string]:string|number}} = $derived.by(() => {
         let ret :  {[key:string] : {[key:string]:string|number}} = {};
         for (let column of columns) {
-            if ((column.type == "select:string" || column.type == "select:integer") && column.names && column.values) {
+            if ((column.type == "select:string" || column.type == "select:integer" || column.type == "combi:string") && column.names && column.values) {
                 selectReverseMap[column.col] = {};
                 for (let i=0; i<column.values.length; ++i) {
                     selectReverseMap[column.col][column.names[i]] = column.values[i];
@@ -943,6 +943,7 @@
                 }
             }
         }
+        //console.log("getColumn", col, res, obj)
         return res;
     }
     
@@ -972,7 +973,7 @@
                 //return val.toISOString();
             }
         }
-        if (col.type == "select:integer" || col.type == "select:string" && col.col in selectMap) {
+        if ((col.type == "select:integer" || col.type == "select:string" || col.type == "combi:string") && col.col in selectMap) {
             return selectMap[col.col][val];
         }
         if (col.type == "array:string") {
@@ -1092,7 +1093,7 @@
                 filters[col.col] = value ? "t" : "f";
                 filters = {...filters};
             }
-        } else if (col.type == "select:string" || col.type == "select:integer") {
+        } else if (col.type == "select:string" || col.type == "select:integer" || col.type == "combi:string") {
             if (col.values) {
                 if (value == "") {
                     filterValues[col.col] = value;
@@ -1299,7 +1300,7 @@
                                     } 
                                 }
 
-                            } else if (columns[i].type == "select:string" || columns[i].type == "select:integer") {
+                            } else if (columns[i].type == "select:string" || columns[i].type == "select:integer" || columns[i].type == "combi:string") {
                                     let values = columns[i].values ?? [];
                                     let names = columns[i].names ?? values;
                                     for (let j=0; j<values.length; ++j) {
@@ -1481,12 +1482,17 @@
                 if (col.type == "boolean") {
                     editRowText[colName] = asString(rrows[rowidx][colName]);
                     editRowSelectValue[colName] = rrows[rowidx][colName];
-                } else if (col.type == "select:string" || col.type == "select:integer") {
+                } else if (col.type == "select:string" || col.type == "select:integer" || col.type == "combi:string") {
                     if (col.names && col.values) {
                         const val = getColumn(rrows[rowidx], col);
                         if (val == undefined || (typeof(val) == "string" && val == "")) {
-                            editRowText[colName] = "";
-                            editRowSelectValue[colName] = "";
+                            if (col.type != "combi:string") {
+                                editRowText[colName] = "";
+                                editRowSelectValue[colName] = "";
+                            } else {
+                                let val = getColumn(rrows[rowidx], col)
+                                editRowText[colName] = val;
+                            }
                         } else {
                             for (let i=0; i<col.names.length; ++i) {
                                 if (val == col.values[i]) {
@@ -1509,6 +1515,26 @@
 
                             }  
                         }
+                    } else if (col.names) {
+                        const val = getColumn(rrows[rowidx], col);
+                        console.log("Got val", val)
+                        if (val == undefined || (typeof(val) == "string" && val == "")) {
+                            if (col.type != "combi:string") {
+                                editRowText[colName] = "";
+                                editRowSelectValue[colName] = "";
+                            } else {
+                                let val = getColumn(rrows[rowidx], col)
+                                editRowText[colName] = val;
+                            }
+                        } else {
+                            for (let i=0; i<col.names.length; ++i) {
+                                if (val == col.names[i]) {
+                                    editRowText[colName] = col.names[i];
+                                    editRowSelectValue[colName] = col.names[i];
+                                }
+                            }  
+                        }
+
                     }
 
                 } else {
@@ -1607,7 +1633,7 @@
                 editRowSelectValue[col.col] = value;
                 editRowSelectValue = {...editRowSelectValue};
             }
-        } else if (col.type == "select:string" || col.type == "select:integer") {
+        } else if (col.type == "select:string" || col.type == "select:integer" || col.type == "combi:string") {
             if (col.values) {
                 if (value == undefined || value == null || value == "") {
                     editRowSelectValue[col.col] = "";
@@ -1699,6 +1725,8 @@
                     if (editRow == -2 && col.col != primaryKey) continue;
                     if (col.type == "select:string") {
                         data[col.col] = editRowSelectValue[col.col];
+                    } else if (col.type == "combi:string") {
+                        if (editRowSelectValue[col.col]) data[col.col] = editRowSelectValue[col.col];
                     } else if (col.type == "select:integer") {
                         data[col.col] = asNumberOrUndefined(editRowSelectValue[col.col]);
                     } else if (col.type == "boolean") {
@@ -2404,9 +2432,9 @@
                                         </ul>
                                         </details>
                                     </div>
-                            {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
+                            {:else if (col.type == "select:string" || col.type == "select:integer" || col.type == "combi:string") && col.names != undefined}    
                                     <div tabindex="-1" class="join bg-base-200">
-                                        <input readonly tabindex="-1" class="input bg-base-200 join-item" style="{eminw(col)} {emaxw(col)}"
+                                        <input readonly={col.type != "combi:string"} tabindex="-1" class="input bg-base-200 join-item" style="{eminw(col)} {emaxw(col)}" 
                                         onblur={(evt) => closeFilter(evt, col)} bind:value={filterText[col.col]}/>
                                         <details class="dropdown dropdown-end join-item" bind:open={filterMenusOpen[col.col]}>
                                             <summary id={"filter_select_summary_"+uuid+"_"+col.col} class="btn px-2 join-item btn-outline border-gray-600" 
@@ -2618,10 +2646,12 @@
                                                     </details>
                                                 </div>
 
-                                            {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
+                                            {:else if (col.type == "select:string" || col.type == "select:integer" || col.type == "combi:string") && col.names != undefined}    
 
                                             <div tabindex="-1" class="join bg-base-200">
-                                                <input readonly tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg(col)}" style="{eminw(col)} {emaxw(col)}"/>
+                                                <input readonly={col.type != "combi:string"} tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg(col)}" style="{eminw(col)} {emaxw(col)} "
+                                                    onkeyup={(evt) => {if (col.type == "combi:string") editInputUpdate(evt, col)}}
+                                                />
 
                                                 <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
                                                 <summary class="btn btn-outline px-2 border-gray-600 {bg(col)} join-item" 
@@ -2927,10 +2957,12 @@
                                                 </details>
                                             </div>
 
-                                        {:else if (col.type == "select:string" || col.type == "select:integer") && col.names != undefined}    
+                                        {:else if (col.type == "select:string" || col.type == "select:integer" || col.type == "combi:string") && col.names != undefined}    
 
                                             <div tabindex="-1" class="join bg-base-200">
-                                                <input readonly tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg(col)}" style="{eminw(col)} {emaxw(col)}"/>
+                                                <input readonly={col.type != "combi:string"} tabindex="-1" bind:value={editRowText[col.col]} class="input join-item bg-base-200 {bg(col)}" style="{eminw(col)} {emaxw(col)}"
+                                                    onkeyup={(evt) => {if (col.type == "combi:string") editInputUpdate(evt, col)}}
+                                                />
 
                                                 <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]}>
                                                 <summary class="btn btn-outline px-2 border-gray-600 {bg(col)} join-item" 

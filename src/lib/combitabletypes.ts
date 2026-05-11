@@ -3,7 +3,7 @@
 /**
  * Supported types for columns
  */
-export type ColumnType = "string"|"boolean"|"integer"|"float"|"partialdate"|"date"|"datetime"|"select:string"|"select:integer"|"array:string"|"time"|"object"|"hidden";
+export type ColumnType = "string"|"boolean"|"integer"|"float"|"partialdate"|"date"|"datetime"|"select:string"|"select:integer"|"array:string"|"time"|"object"|"hidden"|"combi:string";
 
 export type PrismaWhereFunction = (value : string) => {[key:string]:any};
 
