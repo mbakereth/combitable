@@ -1,4 +1,4 @@
-import { PrismaClient, type God } from '$lib/generated/prisma/client';
+import { PrismaClient, type God, type Home } from '$lib/generated/prisma/client';
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 
 function errorMessage(e : any) : string {
@@ -14,10 +14,13 @@ export async function load({ params, url, depends }) {
     const adapter = new PrismaBetterSqlite3({ url: connectionString });
     const prisma = new PrismaClient({adapter});
 
+    const homes = await prisma.home.findMany({orderBy: {name: "asc"}});
+
     if (params.id == "new") {
         let rec : Partial<God & {
             mother?: God, 
             father?: God, 
+            home?: Home,
             children_as_father: God[], 
             children_as_mother: God[],
             children: string[]}> =
@@ -34,6 +37,7 @@ export async function load({ params, url, depends }) {
                 include: { 
                     father: true, 
                     mother: true,
+                    home: true,
                     children_as_father: true,
                     children_as_mother: true
                 },
@@ -42,6 +46,7 @@ export async function load({ params, url, depends }) {
                 children: (data.gender == "m" ? data.children_as_father : data.children_as_mother).map((x) => x.name)};
             return {
                 rec,
+                homeNames: homes.map((el) => el.name),
                 isAdd: false,
             };
         }

@@ -157,9 +157,6 @@
     function resetValue() {
         if (Array.isArray(origValue)) {
             value = [...origValue]
-        } else if (col.type.startsWith("select:")) {
-            value = origValue;
-
         } else {
             value = origValue;
         }
@@ -255,7 +252,7 @@
     let displayValue = $state(value);
     $effect(() => {
 
-        if (col.type == "select:string" || col.type == "select:integer") {
+        if (col.type == "select:string" || col.type == "select:integer" || col.type == "combi:string") {
             if (col.names && col.values) {
                 for (let i=0; i<col.names.length; ++i) {
                     if (valueMap[col.values[i]] != col.names[i]) valueMap[col.values[i]] = col.names[i]
@@ -266,19 +263,27 @@
         extraValue = "";
         if (value === undefined || value === null ||  value === "") { 
             displayValue = "";
-        } else if (col.type == "select:string" || col.type == "select:integer") {
+        } else if (col.type == "select:string" || col.type == "select:integer" || col.type == "combi:string") {
             if (col.names && col.values) {
                 if (value in valueMap) {
                     displayValue = valueMap[value];
-                } else {
+                } else if (col.type != "combi:string") {
                     displayValue = "";
                 }
             } else if (col.names) {
-                let matches = col.names.filter((val, i) => col.names && col.names[i] == val);
-                displayValue = matches && matches.length > 0 ? matches[0] : "";
+                let matches = col.names.filter((val) => val == value);
+                if (matches && matches.length > 0) {
+                    displayValue = matches[0]
+                } else if (col.type != "combi:string") {
+                    displayValue = "";
+                }
             } else if (col.values) {
-                let matches = col.values.filter((val, i) => col.values && col.values[i] == val);
-                displayValue = matches && matches.length > 0 ? matches[0] : "";
+                let matches = col.values.filter((val) => val == value);
+                if (matches && matches.length > 0) {
+                    displayValue = matches[0]
+                } else if (col.type != "combi:string") {
+                    displayValue = "";
+                }
             }
         } else if (col.type == "date" && typeof(value) != "string") {
             displayValue = printDate(value, "")
@@ -310,16 +315,19 @@
                         }
                     }
                 }
-            } else if (col.type.startsWith("select:")) {               
+            } else if (col.type.startsWith("select:") || col.type == "combi:string") {               
                  if (col.names && col.values) {
                     let matches = col.values.filter((val, idx) => (col.values??[])[idx] == origValue)
                     if (matches && matches.length > 0 && matches[0] != value) newDirty = true;
+                    else if (col.type == "combi:string" && (!matches || matches.length == 0)) newDirty = true;
                 } else if (col.names) {
                     let matches = col.names.filter((val, idx) => (col.names??[])[idx] == origValue)
                     if (matches && matches.length > 0 && matches[0] != value) newDirty = true;
+                    else if (col.type == "combi:string" && (!matches || matches.length == 0)) newDirty = true;
                 } else if (col.values) {
                     let matches = col.values.filter((val, idx) => (col.values??[])[idx] == origValue)
                     if (matches && matches.length > 0 && matches[0] != value) newDirty = true;
+                    else if (col.type == "combi:string" && (!matches || matches.length == 0)) newDirty = true;
                 }
             } else {
                 if (value != recField) {
@@ -341,7 +349,6 @@
     let updateDisabled = $state(false);
     function setUpdateDisabled(val : boolean) {
         updateDisabled = val;
-        console.log("Set updateDisabled=", updateDisabled)
     }
 
     //export let dirty = false;
@@ -468,7 +475,7 @@
                     saveValue = false;
                 }
             }
-        } else if (col.type == "select:string" || col.type == "select:integer") {
+        } else if (col.type == "select:string" || col.type == "select:integer" || col.type == "combi:string") {
             if (newValue == undefined || newValue == null || newValue == "") {
                 saveValue = null;
             } else {
@@ -498,7 +505,7 @@
                         }
                     }
                 }
-                if (!found) {
+                if (!found && col.type != "combi:string") {
                     value = null;
                     displayValue = "";
                 }
@@ -539,7 +546,7 @@
 
     function fieldKeyPress(evt: KeyboardEvent) {
         let newDirty = dirty;
-        if (col.type == "string" || (typeof(value) == "string")) {
+        if (col.type == "string" || (typeof(value) == "string") || col.type == "combi:string") {
             newDirty = displayValue !== value;
             if (newDirty) value = displayValue;
         } else if (col.type == "integer") {
@@ -827,7 +834,7 @@
             </ul>
         {/if}
     </div>
-{:else if col.type != "select:string" && col.type != "select:integer" && col.type != "boolean" && col.type != "array:string" && col.type != "hidden"}
+{:else if col.type != "select:string" && col.type != "select:integer" && col.type != "combi:string" && col.type != "boolean" && col.type != "array:string" && col.type != "hidden"}
     {#if col.editHeight}
         {#if col.default}
             <textarea class="textarea bg-base-200 align-top {bg(col)} resize {divClasses} {inputClasses}" readonly={updateDisabled} style="{cwidth(col)} {cheight(col)} {divStyles} {inputStyles}" onkeyup={(evt) => fieldKeyPress(evt)} bind:value={displayValue}  tabindex="0"></textarea>
@@ -968,10 +975,14 @@
         {/if}
     </div>
 {:else if col.names} <!-- select:string and select:integer-->
-    {@const disabled = updateDisabled ? "disabled" : ""}
 
     <div tabindex="-1" class="join bg-base-200 {divClasses}" style="{cwidth(col)} {divStyles}">
-        <input readonly tabindex="-1" bind:value={displayValue} class="input join-item bg-base-200 {bg(col)} {inputClasses}" style="width: 100%; {inputStyles}" />
+        <input readonly={col.type != "combi:string" || updateDisabled} tabindex="-1" 
+            bind:value={displayValue} 
+            onkeyup={(evt) => {if (col.type == "combi:string") fieldKeyPress(evt)}} 
+            class="input join-item bg-base-200 {bg(col)} {inputClasses}" 
+            style="width: 100%; {inputStyles}" 
+        />
 
         {#if !updateDisabled}
         <details class="dropdown dropdown-end" bind:open={editMenuOpen}>
@@ -1043,7 +1054,11 @@
     {@const disabled = updateDisabled ? "disabled" : ""}
 
     <div tabindex="-1" class="join bg-base-200 {divClasses}" style="{cwidth(col)} {divStyles}">
-        <input readonly tabindex="-1" bind:value={displayValue} class="input join-item bg-base-200 {bg(col)} {inputClasses}" style="width: 100%; {inputStyles}" />
+        <input readonly={col.type != "combi:string" || updateDisabled}  tabindex="-1" 
+            bind:value={displayValue} 
+            onkeyup={(evt) => {if (col.type == "combi:string") fieldKeyPress(evt)}} 
+            class="input join-item bg-base-200 {bg(col)} {inputClasses}" 
+            style="width: 100%; {inputStyles}" />
 
         {#if !updateDisabled}
         <details class="dropdown dropdown-end" bind:open={editMenuOpen}>
@@ -1106,7 +1121,7 @@
     </div>
 {/if}
 
-    <div class="hidden bg-base-200"></div>
+<div class="hidden bg-base-200"></div>
 <div class="hidden bg-required"></div>
 <div class="hidden dropdown-start"></div>
 <div class="hidden dropdown-end"></div>

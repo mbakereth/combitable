@@ -286,10 +286,13 @@
     import EditIcon from './icons/EditIcon.svelte';
     import exitIcon from "$lib/assets/bitcoin-icons--exit-outline.svg?raw"
     import calendarIcon from "$lib/assets/bitcoin-icons--calendar-outline.svg?raw"
+
     import CombiTableDiscardChanges from '$lib/components/CombiTableDiscardChanges.svelte';
     import CombiTableValidateDialog from '$lib/components/CombiTableErrorDialog.svelte';
     import CombiTableInfoDialog from '$lib/components/CombiTableInfoDialog.svelte';
     import CombiTableConfirmDeleteDialog from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
+    import CombiTableCreate from './CombiTableCreate.svelte';
+
     import { updated } from '$app/state';
     import { PartialDateType } from '$lib/types';
     import { getContext } from 'svelte';
@@ -376,6 +379,7 @@
     let NotSavedInPreview = $derived(lang == "de" ? "Data not saved in preview mode" : (lang == "el" ? "Η Τα δεδομένα δεν αποθηκεύτηκαν στη λειτουργία προεπισκόπησης" : "Data not saved in preview mode"));
     let ErrorTitle = $derived(lang == "de" ? "Bitte korrigieren Sie Folgendes:" : (lang == "el" ? "Παρακαλώ διορθώστε τα εξής:" : "Please correct the following:"));
     let filterCheckBoxValues = $state<boolean[]>([]);
+    let CreateTitle = $derived(lang == "de" ? "Die folgenden Datensätze erstellen?" : (lang == "el" ? "Δημιουργήστε τις ακόλουθες εγγραφές;" : "Create the following records?"));
 
     function normalize(str : string) : string {
         return str.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
@@ -1176,7 +1180,6 @@
     }
 
     async function filterCheckBoxToggle(idx: number) {
-        console.log("filterCheckBoxToggle", filterCheckBoxValues[idx]);
         let val = !filterCheckBoxValues[idx]; // because onclick is calleed before reactive value update
         if (val) {
             filters[filterCheckBoxes[idx].tag] = "t"
@@ -1517,7 +1520,6 @@
                         }
                     } else if (col.names) {
                         const val = getColumn(rrows[rowidx], col);
-                        console.log("Got val", val)
                         if (val == undefined || (typeof(val) == "string" && val == "")) {
                             if (col.type != "combi:string") {
                                 editRowText[colName] = "";
@@ -1693,7 +1695,9 @@
     let validationErrors = $state(undefined as string[]|string|undefined);
     let opInfo = $state("");
 
-    export async function saveEdit() {
+    let confirmItems : {col: string, title: string, value: string}[] = $state([])
+
+    export async function saveEdit(confirm: {col: string, title: string, value: string}[] = []) {
         if (preview) {
             clearEdit();
             editRow = undefined;
@@ -1726,7 +1730,8 @@
                     if (col.type == "select:string") {
                         data[col.col] = editRowSelectValue[col.col];
                     } else if (col.type == "combi:string") {
-                        if (editRowSelectValue[col.col]) data[col.col] = editRowSelectValue[col.col];
+                        if (editRowSelectValue[col.col] == editRowText[col.col]) data[col.col] = editRowSelectValue[col.col];
+                        else data[col.col] = editRowText[col.col];
                     } else if (col.type == "select:integer") {
                         data[col.col] = asNumberOrUndefined(editRowSelectValue[col.col]);
                     } else if (col.type == "boolean") {
@@ -1747,6 +1752,9 @@
                         data[col.col] = editRowText[col.col];
                     }
                 }
+                if (confirm.length > 0) {
+                    data._confirm = confirm;
+                } 
                 if (editRow !== undefined && editRow >= 0) data._pk = rrows[editRow][pk];
                 if (typeof(url) == "string") {
                     const resp = await fetch(url, {
@@ -1760,6 +1768,9 @@
                         const body = await resp.json();
                         if (body.errors) {
                             showError(body.errors);
+                        } else if (body.confirm) {
+                            confirmItems = [...body.confirm];
+                            (document.querySelector('#confirmCreateTable_'+uuid) as HTMLDialogElement)?.showModal(); 
                         } else {
                             for (let column of columns) {
                                 if (column.type == "date" && typeof(body.row[column.col]) == "string") {
@@ -1883,6 +1894,10 @@
             editRow = undefined;
             internalDirty = false;
             dirty = internalDirty;
+    }
+
+    function confirmCreateTable(confirm: {col: string, title: string, value: string}[]) {
+        saveEdit(confirm);
     }
 
     /////
@@ -3188,6 +3203,9 @@
 
 <!-- Modal to confirm discarding edit -->
 <CombiTableDiscardChanges id={"confirmEditDiscard_"+uuid} title={DiscardChanges} okFn={confirmCancelEdit}/>
+
+<!-- Modal to confirm creating new subrecords -->
+<CombiTableCreate id={"confirmCreateTable_"+uuid} title={CreateTitle} okFn={confirmCreateTable} confirm={confirmItems}/>
 
 <!-- Modal to confirm discarding edit when clicking previous -->
 <CombiTableDiscardChanges id={"confirmPreviousDiscard_"+uuid} title={DiscardChanges} okFn={confirmPrevious}/>

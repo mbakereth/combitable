@@ -120,10 +120,13 @@
 
     import { goto, invalidateAll, afterNavigate } from '$app/navigation';
     import type { CombiTableColumn, CombiTablePresets } from '$lib/combitabletypes';
+
     import CombiTableValidateDialog from '$lib/components/CombiTableErrorDialog.svelte';
     import CombiTableDiscardChanges from '$lib/components/CombiTableDiscardChanges.svelte';
     import CombiTableInfoDialog from '$lib/components/CombiTableInfoDialog.svelte';
     import CombiTableConfirmDeleteDialog from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
+    import CombiTableCreate from './CombiTableCreate.svelte';
+
     import { page } from '$app/state';
     import { setContext } from 'svelte';
     import { SvelteSet, SvelteMap } from 'svelte/reactivity';
@@ -372,7 +375,9 @@
     }
 
     let urlToLoad = "";
-    async function saveEdit() {
+    let confirmItems : {col: string, title: string, value: string}[] = $state([])
+
+    async function saveEdit(confirm: {col: string, title: string, value: string}[] = []) {
         if ("Save" in beforeButtonClick) {
             let ret = await beforeButtonClick.Save();
             if (ret === false) return;
@@ -401,6 +406,9 @@
                     let field = fn();
                     body[field.col.col] = field.value;
                 };
+                if (confirm.length > 0) {
+                    body._confirm = confirm;
+                } 
                 const resp = await fetch(url, {
                     method: "POST",
                     headers: {"content-type": "application/json"},
@@ -412,9 +420,12 @@
                     const body = await resp.json();
                     if (body.errors && body.errors.length > 0) {
                         showError(body.errors);
+                    } else if (body.confirm) {
+                        confirmItems = [...body.confirm];
+                        (document.querySelector('#confirmCreateTable_'+uuid) as HTMLDialogElement)?.showModal(); 
                     } else {
                         internalDirty = false;
-                        let infoText = "Record saved";
+                        let infoText = lang == "de" ? "Gespeichert" : (lang == "el" ? "Αποθηκεύτηκε" : "Record saved");
                         if (body.info) {
                             let info : string[] = Array.isArray(body.info) ? body.info : [body.info];
                             infoText += '<ul class="list-disc">\n';
@@ -441,6 +452,10 @@
             } finally {
             }
         }
+    }
+
+    function confirmCreateTable(confirm: {col: string, title: string, value: string}[]) {
+        saveEdit(confirm);
     }
 
     async function deleteRow() {
@@ -610,6 +625,7 @@
     let DiscardChanges = $derived(lang == "de" ? "Möchtest du die Änderungen verwerfen?" : (lang == "el" ? "Θέλεις να απορρίψεις τις αλλαγές;" : "Do you want to discard changes?"));
     let ErrorTitle = $derived(lang == "de" ? "Bitte korrigieren Sie Folgendes:" : (lang == "el" ? "Παρακαλώ διορθώστε τα εξής:" : "Please correct the following:"));
     let ReallyDelete = $derived(lang == "de" ? "Wirklich löschen?" : (lang == "el" ? "Πραγματικά να διαγραφεί;" : "Really delete?"));
+    let CreateTitle = $derived(lang == "de" ? "Die folgenden Datensätze erstellen?" : (lang == "el" ? "Δημιουργήστε τις ακόλουθες εγγραφές;" : "Create the following records?"));
 
 </script>
 
@@ -655,3 +671,6 @@
 
 <!-- Modal to display delete confirmation -->
 <CombiTableConfirmDeleteDialog id={"confirmDelete1_"+uuid} text={ReallyDelete} okFn={confirmDeleteRow}/>
+
+<!-- Modal to confirm creating new subrecords -->
+<CombiTableCreate id={"confirmCreateTable_"+uuid} title={CreateTitle} okFn={confirmCreateTable} confirm={confirmItems}/>

@@ -3,7 +3,7 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import { PrismaClient, type Prisma } from '$lib/generated/prisma/client'
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
-import type { God } from '$lib/generated/prisma/client'
+import type { God, Home } from '$lib/generated/prisma/client'
 import { Ops } from './ops';
 
 export class GodsOps extends Ops {
@@ -47,14 +47,21 @@ export class GodsOps extends Ops {
         }
     }
 
-    static async addOrUpdateGod(event : RequestEvent, add: boolean)  : Promise<{row? : God, errors?: string[]|string, info? : string}>  {
+    static async addOrUpdateGod(event : RequestEvent, add: boolean)  : Promise<{row? : God, errors?: string[]|string, info? : string, confirm? : {col: string, title: string, value: string}[]}>  {
         const body =  await event.request.json();
         if (!add && (Ops.isEmpty(body._pk))) {
             return {errors: "Primary key missing or invalid"};
         }
 
-        const {errors, god, children} = await GodsOps.validate(body);
+        const {errors, god, children, createHome} = await GodsOps.validate(body);
         if (errors) return {errors};
+        if (createHome) {
+            if (!("_confirm" in body && body._confirm.map((el:any) => el.col).includes("home"))) {
+                return {
+                    confirm: [{col: "home", title: "Home", value: createHome}]
+                }
+            }
+        }
         let info : string|undefined = undefined;
 
         if (god) {
@@ -66,6 +73,11 @@ export class GodsOps extends Ops {
                 if (add) {
                     delete god.father_id;
                     delete god.mother_id;
+                    let home : Home|undefined = undefined;
+                    if (createHome) {
+                        home = await prisma.home.create({data: {name: createHome}})
+                    }
+                    if (home) god.home_id = home.id;
                     newGod = await prisma.god.create({
                         data: god as Prisma.GodCreateInput
                     });
@@ -73,6 +85,11 @@ export class GodsOps extends Ops {
                     delete god.father;
                     delete god.mother;
                     let editGod : Prisma.GodUncheckedUpdateInput = {...god};
+                    let home : Home|undefined = undefined;
+                    if (createHome) {
+                        home = await prisma.home.create({data: {name: createHome}})
+                    }
+                    if (home) editGod.home_id = home.id;
                     const res = await prisma.god.updateMany({
                         data: editGod,
                         where: {id: body._pk}
@@ -84,6 +101,7 @@ export class GodsOps extends Ops {
                     include: {
                         father: true,
                         mother: true,
+                        home: true,
                       },
                 });
 
@@ -141,7 +159,13 @@ export class GodsOps extends Ops {
 
     }
 
-    static async validate(body: {[key:string]:any}) : Promise<{errors? : string[]|string, god? : Prisma.GodCreateInput&Prisma.GodUncheckedCreateInput, children? : string[]}> {
+    static async validate(body: {[key:string]:any}) : Promise<{
+        errors? : string[]|string, 
+        god? : Prisma.GodCreateInput&Prisma.GodUncheckedCreateInput, 
+        children? : string[],
+        createHome?: string
+
+    }> {
         let errors : string[] = [];
         if (!Ops.isEmpty(body.gender) && (body.gender != "m" && body.gender != "f")) errors.push("Gender is invalid");
         if (Ops.isEmpty(body["died"])) errors.push("Died not given");
@@ -152,11 +176,14 @@ export class GodsOps extends Ops {
             if (![0,1,2].includes(n)) errors.push("Type is invalid");
         }
 
-        console.log(body);
         let have_father = false;
         let have_mother = false;
         let father_id = 0;
         let mother_id = 0;
+        let home_name = "";
+        let home_id = -1;
+        let have_home = false;
+        let createHome: string|undefined = undefined;
 
         const connectionString = `${process.env.DATABASE_URL}`;
         const adapter = new PrismaBetterSqlite3({ url: connectionString });
@@ -177,7 +204,19 @@ export class GodsOps extends Ops {
             } catch {}
         }
         if (!Ops.isEmpty(body["father.name"]) && !have_father) errors.push("Father doesn't exist")
-            if (!Ops.isEmpty(body["mother.name"]) && !have_mother) errors.push("Mother doesn't exist")
+        if (!Ops.isEmpty(body["mother.name"]) && !have_mother) errors.push("Mother doesn't exist")
+
+        if (body["home.name"]) {
+            try {
+                const res = await prisma.home.findUnique({where: {name: body["home.name"]}});
+                if (res) {
+                    home_id = res.id;
+                    home_name = res.name;
+                } else {
+                    createHome = body["home.name"]
+                }
+            } catch {}
+        }
 
         if (errors.length > 0) return {errors};
 
@@ -191,7 +230,8 @@ export class GodsOps extends Ops {
             father_id: Ops.isEmpty(body["father.name"]) ? null : father_id,
             mother_id: Ops.isEmpty(body["mother.name"]) ? null : mother_id,
         }
-        return { god, children: body.children };
+        if (home_id > 0) god.home_id = home_id;
+        return { god, children: body.children, createHome };
     }
 
     static async killGodsPost(event : RequestEvent)  : Promise<Response>  {
