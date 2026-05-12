@@ -626,6 +626,8 @@
     let ErrorTitle = $derived(lang == "de" ? "Bitte korrigieren Sie Folgendes:" : (lang == "el" ? "Παρακαλώ διορθώστε τα εξής:" : "Please correct the following:"));
     let ReallyDelete = $derived(lang == "de" ? "Wirklich löschen?" : (lang == "el" ? "Πραγματικά να διαγραφεί;" : "Really delete?"));
     let CreateTitle = $derived(lang == "de" ? "Die folgenden Datensätze erstellen?" : (lang == "el" ? "Δημιουργήστε τις ακόλουθες εγγραφές;" : "Create the following records?"));
+    let ErrorDialogTitle = $derived(lang == "de" ? "Fehler" : (lang == "el" ? "Λάθος" : "Error"));
+    let WarningDialogTitle = $derived(lang == "de" ? "Warnung" : (lang == "el" ? "Προειδοποίηση" : "Warning"));
 
 </script>
 
@@ -670,7 +672,7 @@
 <CombiTableInfoDialog id={"infoDialog2_"+uuid} info={opInfo} okFn={pageOnSave}/>
 
 <!-- Modal to display delete confirmation -->
-<CombiTableConfirmDeleteDialog id={"confirmDelete1_"+uuid} text={ReallyDelete} okFn={confirmDeleteRow}/>
+<CombiTableConfirmDeleteDialog id={"confirmDelete1_"+uuid} text={ReallyDelete} title={WarningDialogTitle} okFn={confirmDeleteRow}/>
 
 <!-- Modal to confirm creating new subrecords -->
 <CombiTableCreate id={"confirmCreateTable_"+uuid} title={CreateTitle} okFn={confirmCreateTable} confirm={confirmItems}/>

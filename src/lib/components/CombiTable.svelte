@@ -375,6 +375,8 @@
     let DiscardChanges = $derived(lang == "de" ? "Möchtest du die Änderungen verwerfen?" : (lang == "el" ? "Θέλεις να απορρίψεις τις αλλαγές;" : "Do you want to discard changes?"));
     let UnknwonError = $derived(lang == "de" ? "Es ist ein unbekannter Fehler aufgetreten." : (lang == "el" ? "Παρουσιάστηκε ένα άγνωστο σφάλμα" : "An unknown error occurred"));
     let ReallyDelete = $derived(lang == "de" ? "Wirklich löschen?" : (lang == "el" ? "Πραγματικά να διαγραφεί;" : "Really delete?"));
+    let ErrorDialogTitle = $derived(lang == "de" ? "Fehler" : (lang == "el" ? "Λάθος" : "Error"));
+    let WarningDialogTitle = $derived(lang == "de" ? "Warnung" : (lang == "el" ? "Προειδοποίηση" : "Warning"));
     let ErrorDeleting = $derived(lang == "de" ? "Fehler beim löschen" : (lang == "el" ? "Λάυος με διαγραφεί;" : "Error deleting"));
     let OperationSuccessful = $derived(lang == "de" ? "Aktion erfolgreich" : (lang == "el" ? "Η ενέργεια ήταν επιτυχής" : "Operation successful"));
     let NotSavedInPreview = $derived(lang == "de" ? "Data not saved in preview mode" : (lang == "el" ? "Η Τα δεδομένα δεν αποθηκεύτηκαν στη λειτουργία προεπισκόπησης" : "Data not saved in preview mode"));
@@ -3227,7 +3229,7 @@
 <CombiTableInfoDialog id={"reloadDialog_"+uuid} info={opInfo} okFn={reload}/>
 
 <!-- Modal to request user to confirm deletion -->
-<CombiTableConfirmDeleteDialog id={"confirmDelete_"+uuid} text={ReallyDelete} okFn={confirmDeleteRow}/>
+<CombiTableConfirmDeleteDialog id={"confirmDelete_"+uuid} text={ReallyDelete} title={WarningDialogTitle} okFn={confirmDeleteRow}/>
 
 <!-- To instantiate tailwind classes that are in variables therefore not seen by the preprocessor -->
 <div class="hidden w-full"></div>

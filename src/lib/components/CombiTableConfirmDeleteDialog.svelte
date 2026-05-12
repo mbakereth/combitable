@@ -8,12 +8,13 @@
     export let okFn : () => void;
     export let id : string;
     export let text: string = "Really delete?";
+    export let title: string = "Warning";
 </script>
     
     
 <dialog id={id} class="modal">
     <div class="modal-box">
-        <div class="p-2 bg-warning text-warning-content rounded"><b>Warning</b></div>
+        <div class="p-2 bg-warning text-warning-content rounded"><b>{title}</b></div>
             <p>{text}</p>
             <div class="modal-action">
             <form method="dialog">
