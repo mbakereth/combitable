@@ -273,7 +273,7 @@
     filterCheckBoxes? : {title: string, tag: string, default: boolean}[]
 
     }
-    import { onMount, untrack } from 'svelte';
+    import { onMount, untrack, tick } from 'svelte';
     import { page } from '$app/state';
     import { goto, invalidateAll, afterNavigate } from '$app/navigation'
     import type { CombiTableColumn, CombiTableOp, CombiTableExtraButton , CombiTablePresets } from '$lib/combitabletypes';
@@ -383,6 +383,7 @@
     let ErrorTitle = $derived(lang == "de" ? "Bitte korrigieren Sie Folgendes:" : (lang == "el" ? "Παρακαλώ διορθώστε τα εξής:" : "Please correct the following:"));
     let filterCheckBoxValues = $state<boolean[]>([]);
     let CreateTitle = $derived(lang == "de" ? "Die folgenden Datensätze erstellen?" : (lang == "el" ? "Δημιουργήστε τις ακόλουθες εγγραφές;" : "Create the following records?"));
+    let DuplicateTitle = $derived(lang == "de" ? "Die folgenden existiert schon. Erstellen?" : (lang == "el" ? "Έχετε τις ακόλουθες εγγραφές. Δημιουργήστε;" : "The following already exist.  Create?"));
 
     function normalize(str : string) : string {
         return str.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
@@ -451,6 +452,7 @@
 
     function resize() {
         resizing = true;
+        actualPaginate = 100;
         maxHeight = restOfScreenHeight ? innerHeight - restOfScreenHeight : undefined;
         tableHeightStyle = maxHeight ? "display: block; max-height:" + maxHeight + "px; min-height: " + maxHeight + "px;" : "";
         if (typeof(paginate) == "number") {
@@ -598,7 +600,8 @@
 			window.removeEventListener('resize', resize);
 		}
     });
-    afterNavigate(() => {
+    afterNavigate(async () => {
+        if (paginate == "auto") {actualPaginate = 100; await tick();}
         searchUrl = new SearchUrl(page.url, actualPaginate);
         //rrows = $state.snapshot(rows);
         if (detailsField) orig_rrows = $state.snapshot(rows);
@@ -1698,9 +1701,9 @@
     let validationErrors = $state(undefined as string[]|string|undefined);
     let opInfo = $state("");
 
-    let confirmItems : {col: string, title: string, value: string}[] = $state([])
+    let confirmItems : {col: string, title: string, value: string, type: string}[] = $state([])
 
-    export async function saveEdit(confirm: {col: string, title: string, value: string}[] = []) {
+    export async function saveEdit(confirm: {col: string, title: string, value: string, type: string}[] = []) {
         if (preview) {
             clearEdit();
             editRow = undefined;
@@ -1899,7 +1902,7 @@
             dirty = internalDirty;
     }
 
-    function confirmCreateTable(confirm: {col: string, title: string, value: string}[]) {
+    function confirmCreateTable(confirm: {col: string, title: string, value: string, type: string}[]) {
         saveEdit(confirm);
     }
 
@@ -3208,7 +3211,7 @@
 <CombiTableDiscardChanges id={"confirmEditDiscard_"+uuid} title={DiscardChanges} okFn={confirmCancelEdit}/>
 
 <!-- Modal to confirm creating new subrecords -->
-<CombiTableCreate id={"confirmCreateTable_"+uuid} title={CreateTitle} okFn={confirmCreateTable} confirm={confirmItems}/>
+<CombiTableCreate id={"confirmCreateTable_"+uuid} createTitle={CreateTitle} duplicateTitle={DuplicateTitle} okFn={confirmCreateTable} confirm={confirmItems}/>
 
 <!-- Modal to confirm discarding edit when clicking previous -->
 <CombiTableDiscardChanges id={"confirmPreviousDiscard_"+uuid} title={DiscardChanges} okFn={confirmPrevious}/>

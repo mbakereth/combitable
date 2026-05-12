@@ -47,7 +47,7 @@ export class GodsOps extends Ops {
         }
     }
 
-    static async addOrUpdateGod(event : RequestEvent, add: boolean)  : Promise<{row? : God, errors?: string[]|string, info? : string, confirm? : {col: string, title: string, value: string}[]}>  {
+    static async addOrUpdateGod(event : RequestEvent, add: boolean)  : Promise<{row? : God, errors?: string[]|string, info? : string, confirm? : {col: string, title: string, value: string, type: string}[]}>  {
         const body =  await event.request.json();
         if (!add && (Ops.isEmpty(body._pk))) {
             return {errors: "Primary key missing or invalid"};
@@ -58,7 +58,7 @@ export class GodsOps extends Ops {
         if (createHome) {
             if (!("_confirm" in body && body._confirm.map((el:any) => el.col).includes("home"))) {
                 return {
-                    confirm: [{col: "home", title: "Home", value: createHome}]
+                    confirm: [{col: "home", title: "Home", value: createHome, type: "create"}]
                 }
             }
         }

@@ -153,7 +153,7 @@ export function stringIsPartialDate(val : string, dateFormat="yyyy-mm-dd") {
     return stringIsDate(val, dateFormat) || stringIsDateMonth(val, dateFormat) || stringIsDateYear(val, dateFormat);
 }
 
-export function validateField(col : CombiTableColumn, value: string|number|Date|null|boolean|undefined, {dateFormat = "yyyy-mm-dd", lang="en"} : {dateFormat? : string, lang? : string}) {
+export function validateField(col : CombiTableColumn, value: string|number|Date|null|boolean|undefined, dateFormat = "yyyy-mm-dd") {
     let error : string|undefined = undefined;
     if (!col.nullable && !col.readOnly && col.type != "string" && (value === "" || value === undefined || value === null)) {
         error = "Must enter a value for " + col.name;

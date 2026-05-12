@@ -159,8 +159,6 @@
 
     let uuid = crypto.randomUUID();
 
-    let ask_create = $state<{col: string, title: string, value: string}[]>([])
-
     //$: persist = browser && columns ? new PersistedFields(page.url, columns) : undefined;
 
     setContext("detailsfieldset", { registerGetAndSetValue, registerGetFieldError, registerIsDirty, registerSetUpdateDisabled, updateDirty, registerResetValue, registerPersist, newItemWithPersistanceLink });
@@ -375,9 +373,9 @@
     }
 
     let urlToLoad = "";
-    let confirmItems : {col: string, title: string, value: string}[] = $state([])
+    let confirmItems : {col: string, title: string, value: string, type: string}[] = $state([])
 
-    async function saveEdit(confirm: {col: string, title: string, value: string}[] = []) {
+    async function saveEdit(confirm: {col: string, title: string, value: string, type: string}[] = []) {
         if ("Save" in beforeButtonClick) {
             let ret = await beforeButtonClick.Save();
             if (ret === false) return;
@@ -420,7 +418,7 @@
                     const body = await resp.json();
                     if (body.errors && body.errors.length > 0) {
                         showError(body.errors);
-                    } else if (body.confirm) {
+                    } else if (body.confirm && body.confirm.length > 0) {
                         confirmItems = [...body.confirm];
                         (document.querySelector('#confirmCreateTable_'+uuid) as HTMLDialogElement)?.showModal(); 
                     } else {
@@ -454,7 +452,7 @@
         }
     }
 
-    function confirmCreateTable(confirm: {col: string, title: string, value: string}[]) {
+    function confirmCreateTable(confirm: {col: string, title: string, value: string, type: string}[]) {
         saveEdit(confirm);
     }
 
@@ -549,7 +547,6 @@
 
     //page.subscribe((value) => {
     afterNavigate(() => {
-        ask_create = [];
         const value = page;
         if (persistance) {
             if (!columns) {
@@ -626,6 +623,7 @@
     let ErrorTitle = $derived(lang == "de" ? "Bitte korrigieren Sie Folgendes:" : (lang == "el" ? "Παρακαλώ διορθώστε τα εξής:" : "Please correct the following:"));
     let ReallyDelete = $derived(lang == "de" ? "Wirklich löschen?" : (lang == "el" ? "Πραγματικά να διαγραφεί;" : "Really delete?"));
     let CreateTitle = $derived(lang == "de" ? "Die folgenden Datensätze erstellen?" : (lang == "el" ? "Δημιουργήστε τις ακόλουθες εγγραφές;" : "Create the following records?"));
+    let DuplicateTitle = $derived(lang == "de" ? "Die folgenden existiert schon. Erstellen?" : (lang == "el" ? "Έχετε τις ακόλουθες εγγραφές. Δημιουργήστε;" : "The following already exist.  Create?"));
     let ErrorDialogTitle = $derived(lang == "de" ? "Fehler" : (lang == "el" ? "Λάθος" : "Error"));
     let WarningDialogTitle = $derived(lang == "de" ? "Warnung" : (lang == "el" ? "Προειδοποίηση" : "Warning"));
 
@@ -675,4 +673,4 @@
 <CombiTableConfirmDeleteDialog id={"confirmDelete1_"+uuid} text={ReallyDelete} title={WarningDialogTitle} okFn={confirmDeleteRow}/>
 
 <!-- Modal to confirm creating new subrecords -->
-<CombiTableCreate id={"confirmCreateTable_"+uuid} title={CreateTitle} okFn={confirmCreateTable} confirm={confirmItems}/>
+<CombiTableCreate id={"confirmCreateTable_"+uuid} createTitle={CreateTitle} duplicateTitle={DuplicateTitle} okFn={confirmCreateTable} confirm={confirmItems}/>
