@@ -375,6 +375,7 @@
     let DiscardChanges = $derived(lang == "de" ? "Möchtest du die Änderungen verwerfen?" : (lang == "el" ? "Θέλεις να απορρίψεις τις αλλαγές;" : "Do you want to discard changes?"));
     let UnknwonError = $derived(lang == "de" ? "Es ist ein unbekannter Fehler aufgetreten." : (lang == "el" ? "Παρουσιάστηκε ένα άγνωστο σφάλμα" : "An unknown error occurred"));
     let ReallyDelete = $derived(lang == "de" ? "Wirklich löschen?" : (lang == "el" ? "Πραγματικά να διαγραφεί;" : "Really delete?"));
+    let ErrorDeleting = $derived(lang == "de" ? "Fehler beim löschen" : (lang == "el" ? "Λάυος με διαγραφεί;" : "Error deleting"));
     let OperationSuccessful = $derived(lang == "de" ? "Aktion erfolgreich" : (lang == "el" ? "Η ενέργεια ήταν επιτυχής" : "Operation successful"));
     let NotSavedInPreview = $derived(lang == "de" ? "Data not saved in preview mode" : (lang == "el" ? "Η Τα δεδομένα δεν αποθηκεύτηκαν στη λειτουργία προεπισκόπησης" : "Data not saved in preview mode"));
     let ErrorTitle = $derived(lang == "de" ? "Bitte korrigieren Sie Folgendes:" : (lang == "el" ? "Παρακαλώ διορθώστε τα εξής:" : "Please correct the following:"));
@@ -1923,11 +1924,11 @@
                     body: JSON.stringify(data),
                 });
                 if (!resp.ok) {
-                    showError("Error deleting row");
+                    showError(ErrorDeleting);
                 } else {
                     const body = await resp.json();
                     if (body.error) {
-                        showError("Error deleting row");
+                        showError(ErrorDeleting);
                     } else {
                         rrows = rrows.filter((_el, i) => i != deleteIdx);
                         rowChecked = rowChecked.filter((_el, i) => i != deleteIdx);
@@ -3225,7 +3226,7 @@
 <!-- Modal to display info message then reload -->
 <CombiTableInfoDialog id={"reloadDialog_"+uuid} info={opInfo} okFn={reload}/>
 
-<!-- Modal to display validation errors -->
+<!-- Modal to request user to confirm deletion -->
 <CombiTableConfirmDeleteDialog id={"confirmDelete_"+uuid} text={ReallyDelete} okFn={confirmDeleteRow}/>
 
 <!-- To instantiate tailwind classes that are in variables therefore not seen by the preprocessor -->

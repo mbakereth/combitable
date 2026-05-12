@@ -204,38 +204,45 @@
         return stringIsDate(val) || stringIsDateMonth(val) || stringIsDateYear(val);
     }
 
-    function getFieldError() : string|undefined {
+    function getFieldError(lang = "en") : string|undefined {
+        const mustEnter1 = lang == "de" ? "Ein Wert muss für " : (lang == "el" ? "Πρέπει να δοθεί μια τιμή για " : "A value must be given for ");
+        const mustEnter2 = lang == "de" ? " gegeben werden" : (lang == "el" ? "" : "");
+        const mustBeInt = lang == "de" ? " muss eine ganze Zahl sein" : (lang == "el" ? " πρέπει να είναι ακέραιος αριθμός" : " must be an integer");
+        const mustBeNum = lang == "de" ? " muss eine Zahl sein" : (lang == "el" ? " πρέπει να είναι αριθμός" : " must be a number");
+        const mustHaveForm1 = lang == "de" ? " muss die Form " : (lang == "el" ? " πρέπει να έχει τη μορφή " : " must be in the form ");
+        const mustHaveForm2 = lang == "de" ? " haben" : (lang == "el" ? "" : "");
+        const or = lang == "de" ? " oder" : (lang == "el" ? "ή" : "or");
         if (col.type == "hidden") return undefined;
         let errors : string[] = [];
             if (!col.nullable && !col.readOnly && isEmpty(value)) {
-                return "Must enter a value for " + col.name;
+                return mustEnter1 + col.name + mustEnter2;
             } else if (value) {
                 if (col.type == "integer") {
                     if (!/^ *([+-]?[0-9]+) *$/.test(value)) {
-                        return col.name + " must be an integer";
+                        return col.name + mustBeInt;
                     }
                 } else if (col.type == "float") {
                     if (!/^ *[-+]?([0-9]*[.])?[0-9]+([eE][-+]?\d+)? *$/.test(value)) {
-                        return col.name + " must be a number";
+                        return col.name + mustBeNum;
                     }
                 } else if (col.type == "date") {
                     if (!stringIsDate(value)) {
-                        return col.name + " must be in the form " + dateFormat;
+                        return col.name + mustHaveForm1 + dateFormat + mustHaveForm2;
                     }
 
                 } else if (col.type == "partialdate") {
                     if (!stringIsPartialDate(value)) {
-                        return col.name + " must be in the form " + dateFormat;
+                        return col.name + mustHaveForm1 + dateFormat + mustHaveForm2;
                     }
 
                 } else if (col.type == "time") {
                     if (!stringIsTime(value)) {
-                        return col.name + " must be in the form hh:mm:ss or hh:mm" ;
+                        return col.name + mustHaveForm1 + " hh:mm:ss " + or + " hh:mm " + mustHaveForm2;
                     }
 
                 } else if (col.type == "datetime") {
                     if (!stringIsDateTime(value)) {
-                        return col.name + " must be in the form " + dateFormat + " hh:mm:ss or hh:mm" ;
+                        return col.name + mustHaveForm1 + dateFormat + " hh:mm:ss " + or + " hh:mm " + mustHaveForm2;
                     }
 
                 }
@@ -974,7 +981,7 @@
         </details>
         {/if}
     </div>
-{:else if col.names} <!-- select:string and select:integer-->
+{:else if col.names} <!-- combi:string, select:string and select:integer-->
 
     <div tabindex="-1" class="join bg-base-200 {divClasses}" style="{cwidth(col)} {divStyles}">
         <input readonly={col.type != "combi:string" || updateDisabled} tabindex="-1" 

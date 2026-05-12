@@ -177,8 +177,8 @@
         setOriginalValueFns.set(col.col, setOriginalFn)
     }
 
-    let getFieldErrorFns = new SvelteSet<() => string|undefined>();
-    export function registerGetFieldError(fn: () => string|undefined) {
+    let getFieldErrorFns = new SvelteSet<(lang? : string) => string|undefined>();
+    export function registerGetFieldError(fn: (lang? : string) => string|undefined) {
         getFieldErrorFns.add(fn);
     }
 
@@ -368,7 +368,7 @@
         let errors : string[] = [];
         let error : string|undefined = undefined;
         for (let fn of getFieldErrorFns) {
-            error = fn(); 
+            error = fn(lang); 
             if (error) errors.push(error);
         }
         return errors;
