@@ -309,7 +309,7 @@ export function parseLuxonDateTime(date: string, {dateFormat="yyyy-mm-dd", tz=un
 }
 
 export function parseLuxonTime(date: string, {dateFormat="yyyy-mm-dd", tz=undefined} : {dateFormat?: string, tz?: string|undefined}) {
-    return parseLuxonDateTime("1900-01-01 " + date, {dateFormat, tz})
+    return parseLuxonDateTime("1900-01-01 " + date, {dateFormat: "yyyy-mm-dd", tz})
 }
 
 export function parseLuxonDate(date: string, {dateFormat="yyyy-mm-dd", tz=undefined} : {dateFormat?: string, tz?: string|undefined}) {
