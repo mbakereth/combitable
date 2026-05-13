@@ -272,6 +272,8 @@
 
     filterCheckBoxes? : {title: string, tag: string, default: boolean}[]
 
+    buttonLabels? : {[key:string] : any}
+
     }
     import { onMount, untrack, tick } from 'svelte';
     import { page } from '$app/state';
@@ -356,7 +358,8 @@
         zebra = false,
         extraRowLinks = [],
         detailsField = undefined,
-        filterCheckBoxes = []
+        filterCheckBoxes = [],
+        buttonLabels = {},
     } : Props = $props();
 
     let actualPaginate = $state(1)
@@ -364,13 +367,13 @@
     let No = $derived(lang == "de" ? "Nein" : (lang == "el" ? "Όχι" : "No"));
     let Yes = $derived(lang == "de" ? "Ja" : (lang == "el" ? "Ναι" : "Yes"));
     let Unset = $derived(lang == "de" ? "Ungefasst" : (lang == "el" ? "Άδιο" : "Unset"));
-    let Previous = $derived(lang == "de" ? "Vorherige" : (lang == "el" ? "Προηγούμενο" : "Previous"));
-    let Next = $derived(lang == "de" ? "Nächste" : (lang == "el" ? "Επόμενο" : "Next"));
-    let Add = $derived(lang == "de" ? "Hinzufügen" : (lang == "el" ? "Προσθέση" : "Add"));
-    let Filter = $derived(lang == "de" ? "Filter" : (lang == "el" ? "Φίλτρο" : "Filter"));
-    let New = $derived(lang == "de" ? "Neu" : (lang == "el" ? "Νέο" : "New"));
-    let Link = $derived(lang == "de" ? "Link" : (lang == "el" ? "Σύνδεση" : "Link"));
-    let Unlink = $derived(lang == "de" ? "Unlink" : (lang == "el" ? "Αποσύνδεση" : "Unlink"));
+    let Previous = $derived("Previous" in buttonLabels ? buttonLabels.Previous : (lang == "de" ? "Vorherige" : (lang == "el" ? "Προηγούμενο" : "Previous")));
+    let Next = $derived("Next" in buttonLabels ? buttonLabels.Next : (lang == "de" ? "Nächste" : (lang == "el" ? "Επόμενο" : "Next")));
+    let Add = $derived("Add" in buttonLabels ? buttonLabels.Add : (lang == "de" ? "Hinzufügen" : (lang == "el" ? "Προσθέση" : "Add")));
+    let Filter = $derived("Filter" in buttonLabels ? buttonLabels.Filter : (lang == "de" ? "Filter" : (lang == "el" ? "Φίλτρο" : "Filter")));
+    let New = $derived("New" in buttonLabels ? buttonLabels.New : (lang == "de" ? "Neu" : (lang == "el" ? "Νέο" : "New")));
+    let Link = $derived("Link" in buttonLabels ? buttonLabels.Link : (lang == "de" ? "Link" : (lang == "el" ? "Σύνδεση" : "Link")));
+    let Unlink = $derived("Unlink" in buttonLabels ? buttonLabels.Unlink : (lang == "de" ? "Unlink" : (lang == "el" ? "Αποσύνδεση" : "Unlink")));
     let QuestionMark = $derived(lang == "de" ? "?" : (lang == "el" ? ";" : "?")); 
     let DiscardChanges = $derived(lang == "de" ? "Möchtest du die Änderungen verwerfen?" : (lang == "el" ? "Θέλεις να απορρίψεις τις αλλαγές;" : "Do you want to discard changes?"));
     let UnknwonError = $derived(lang == "de" ? "Es ist ein unbekannter Fehler aufgetreten." : (lang == "el" ? "Παρουσιάστηκε ένα άγνωστο σφάλμα" : "An unknown error occurred"));
@@ -449,10 +452,13 @@
     let rowHeights = $state([] as number[]);
     let rowOffsets = $state([] as number[]);
     let resizing = $state(false)
+    let resizedToHeight = 0;
 
     function resize() {
+        if (resizedToHeight == innerHeight) return;
         resizing = true;
-        actualPaginate = 100;
+        let actualPaginate1 = 100;
+        let adjustPagination = true;
         maxHeight = restOfScreenHeight ? innerHeight - restOfScreenHeight : undefined;
         tableHeightStyle = maxHeight ? "display: block; max-height:" + maxHeight + "px; min-height: " + maxHeight + "px;" : "";
         if (typeof(paginate) == "number") {
@@ -468,21 +474,26 @@
                 actualPaginate = 10;
             }*/
             if (maxHeight) {
-                actualPaginate = rows.length;
+                actualPaginate1 = rows.length;
                 for (let i=0; i<rows.length; ++i) {
                     const el = document.getElementById("datarow_"+uuid+"_"+i);
                     rowHeights[i] = el?.offsetHeight ?? 0;
                     rowOffsets[i] = el?.offsetTop ?? 0;
+                    if (rowHeights[i] == 0 || rowOffsets[i] == 0) adjustPagination = false;
+                    //console.log(i, el?.offsetHeight, el?.offsetTop, maxHeight)
                     if (rowOffsets[i] + rowHeights[i] < maxHeight) {
-                        actualPaginate = i;
+                        actualPaginate1 = i+1;
                     }
                 }
 
             } else {
-                actualPaginate = 10;
+                actualPaginate1 = 10;
             }
         }
         resizing = false;
+        if (adjustPagination || true) actualPaginate = actualPaginate1;
+        resizedToHeight = innerHeight;
+        //console.log("actualPaginate", actualPaginate, rrows.length, haveNext)
     }
     
     let lastDivWidth = 0;
@@ -601,6 +612,7 @@
 		}
     });
     afterNavigate(async () => {
+        resizedToHeight = 0;
         if (paginate == "auto") {actualPaginate = 100; await tick();}
         searchUrl = new SearchUrl(page.url, actualPaginate);
         //rrows = $state.snapshot(rows);
@@ -626,12 +638,16 @@
             invalidateAll().then(() => {goto(searchUrl.url?.href??"")})
 
         }
+        actualPaginate = 100;
+        await tick();
         resize();
         assignPercentageWidths();		
     });
 
-    function visibilitychange() {
+    async function visibilitychange() {
         if (div && lastDivWidth == 0 && div.offsetWidth != 0) {
+            actualPaginate = 100;
+            await tick();
             resize();
             lastDivWidth = div.offsetWidth;
 
@@ -2295,13 +2311,13 @@
 
 <svelte:window bind:innerWidth bind:innerHeight />
 
-<div class="{loading ? "cursor-wait" : "cursor-auto"} {widthType=="auto" ? "overflow-x-auto": "w-full"} overflow-y-visible" bind:this={div}>
+<div class="{loading ? "cursor-wait" : "cursor-auto"} {widthType=="auto" || widthType=="fixed" ? "overflow-x-auto": "w-full overflow-x-auto"} overflow-y-visible" bind:this={div}>
     <table class="table table-{widthType} {zebra? "table-zebra" : ""} {tableClasses} overflow-y-visible {widthType=="auto" ? "overflow-x-auto": "w-full"} {link? "cursor-pointer" : ""}" style="{tableHeightStyle} bg-base-100 {tableStyles}" 
         bind:this={table}>
-        <thead class="{stickyHeadRowClass} z-10">
+        <thead class="{stickyHeadRowClass} z-20">
 
             <!-- header row -->
-            <tr class="bg-base-100 z-10 ">
+            <tr class="bg-base-100 z-20 ">
                 {#if select}
                     <!-- checkbox column -->
                     <td id={"table_"+uuid+"_header_-1"} class="bg-base-200 " style="width: 40px;"></td>
@@ -2454,8 +2470,8 @@
                                         </details>
                                     </div>
                             {:else if (col.type == "select:string" || col.type == "select:integer" || col.type == "combi:string") && col.names != undefined}    
-                                    <div tabindex="-1" class="join bg-base-200">
-                                        <input readonly={col.type != "combi:string"} tabindex="-1" class="input bg-base-200 join-item" style="{eminw(col)} {emaxw(col)}" 
+                                    <div tabindex="-1" class="join bg-base-200 {col.maxWidth ? "" : "w-full" }  ">
+                                        <input readonly={col.type != "combi:string"} tabindex="-1" class="input bg-base-200 join-item {col.maxWidth ? "" : "w-full" }" style="{eminw(col)} {emaxw(col)}" 
                                         onblur={(evt) => closeFilter(evt, col)} bind:value={filterText[col.col]}/>
                                         <details class="dropdown dropdown-end join-item" bind:open={filterMenusOpen[col.col]}>
                                             <summary id={"filter_select_summary_"+uuid+"_"+col.col} class="btn px-2 join-item btn-outline border-gray-600" 
@@ -2573,7 +2589,7 @@
                         {/if}
                     {/each}
                     {#if enableFilter || ((addUrl || detailsField?.enableAdd) && editable) || ((editUrl || detailsField?.enableEdit) && editable) || (deleteUrl || detailsField?.enableDelete) || linkUrl || extraRowLinks.length > 0}
-                        <td class="last:sticky last:right-0 z-10 ml-0 pl-0 pr-0 mr-0">
+                        <td class="last:sticky last:right-0 ml-0 pl-0 pr-0 mr-0 z-10">
                             {#if haveFilters}
                             <span tabindex="0" role="button" onkeyup={(evt) => {if (evt.key == "Enter") load(() => clearFilters())}}
                             class=" mt-1.5 -flex {loading ? 'cursor-wait' : 'cursor-pointer'}" onclick={() => load(() => clearFilters())}><CrossIcon></CrossIcon></span>
@@ -2841,7 +2857,7 @@
                 <tr class="{rowLinkClass}"  
                 onclick={() => {if (link) goto(link(row))}} 
                 id={"datarow_"+uuid+"_"+rowidx}
-                hidden={maxHeight ? (!resizing && paginate=="auto" && rowidx > actualPaginate) : false}
+                hidden={maxHeight ? (!resizing && paginate=="auto" && rowidx >= actualPaginate) : false}
             >
                     {#if select}
                         <!-- checkbox column -->
@@ -3183,7 +3199,7 @@
         {:else}
             <button class="btn btn-disabled mt-2 mr-2">{Previous}</button>
         {/if}
-        {#if haveNext}
+        {#if haveNext || rrows.length > actualPaginate}
             <button class="btn btn-primary mt-2 mr-2" onclick={() => next()}>{Next}</button>
         {:else}
             <button class="btn btn-disabled mt-2 mr-2">{Next}</button>
