@@ -17,7 +17,7 @@
         <div class="modal-action">
             <form method="dialog">
                 <!-- if there is a button in form, it will close the modal -->
-                <button class="btn btn-neutral" on:click={() => okFn()}>OK</button>&nbsp;
+                <button class="btn btn-default" on:click={() => okFn()}>OK</button>&nbsp;
             </form>
         </div>
     </div>

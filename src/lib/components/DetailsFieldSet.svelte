@@ -115,6 +115,11 @@
          */
         lang? : string,
 
+        /**
+         * Override the Save, Cancel, New and Delete button names
+         */
+        buttonLabels? : {[key:string]:string}
+
        children : Snippet
     }
 
@@ -153,6 +158,7 @@
         cancelAwaysActive = false,
         lang="en",
         extraDirty,
+        buttonLabels = {},
         children
     } : Props = $props();
 
@@ -615,10 +621,10 @@
         }
     });
 
-    let Cancel = $derived(lang == "de" ? "Abbrechen" : (lang == "el" ? "Ακύρωση" : "Cancel"));
-    let Save = $derived(lang == "de" ? "Speichen" : (lang == "el" ? "Αποθήκευση" : "Save"));
-    let New = $derived(lang == "de" ? "Neu" : (lang == "el" ? "Νέο" : "New"));
-    let Delete = $derived(lang == "de" ? "Löschen" : (lang == "el" ? "Διαγραφή" : "Delete"));
+    let Cancel = $derived("Cancel" in buttonLabels ? buttonLabels.Cancel : (lang == "de" ? "Abbrechen" : (lang == "el" ? "Ακύρωση" : "Cancel")));
+    let Save = $derived("Save" in buttonLabels ? buttonLabels.Save : (lang == "de" ? "Speichen" : (lang == "el" ? "Αποθήκευση" : "Save")));
+    let New = $derived("New" in buttonLabels ? buttonLabels.New : (lang == "de" ? "Neu" : (lang == "el" ? "Νέο" : "New")));
+    let Delete = $derived("Delete" in buttonLabels ? buttonLabels.Delete : (lang == "de" ? "Löschen" : (lang == "el" ? "Διαγραφή" : "Delete")));
     let DiscardChanges = $derived(lang == "de" ? "Möchtest du die Änderungen verwerfen?" : (lang == "el" ? "Θέλεις να απορρίψεις τις αλλαγές;" : "Do you want to discard changes?"));
     let ErrorTitle = $derived(lang == "de" ? "Bitte korrigieren Sie Folgendes:" : (lang == "el" ? "Παρακαλώ διορθώστε τα εξής:" : "Please correct the following:"));
     let ReallyDelete = $derived(lang == "de" ? "Wirklich löschen?" : (lang == "el" ? "Πραγματικά να διαγραφεί;" : "Really delete?"));
@@ -637,7 +643,7 @@
                 {#if addUrl || editUrl }
                     <button class="btn btn-success mt-0 mb-0" disabled={updateDisabled || !internalDirty} on:click={() => saveEdit()}>{Save}</button>
 
-                    <button class="btn btn-neutral mt-0 mb-0 ml-2" disabled={!cancelAwaysActive && (updateDisabled || (!internalDirty && !isAdd))} on:click={() => cancelEdit()}>{Cancel}</button>
+                    <button class="btn btn-default mt-0 mb-0 ml-2" disabled={!cancelAwaysActive && (updateDisabled || (!internalDirty && !isAdd))} on:click={() => cancelEdit()}>{Cancel}</button>
                 {/if}               
 
                 {#if addUrl && newUrl }

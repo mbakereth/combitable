@@ -29,7 +29,7 @@
         <div class="modal-action">
             <form method="dialog">
                 <!-- if there is a button in form, it will close the modal -->
-                <button class="btn btn-neutral">OK</button>&nbsp;
+                <button class="btn btn-default">OK</button>&nbsp;
             </form>
         </div>
     </div>

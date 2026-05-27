@@ -20,7 +20,7 @@
             <form method="dialog">
                 <!-- if there is a button in form, it will close the modal -->
                 <button class="btn btn-primary" on:click={() => okFn()}>OK</button>&nbsp;
-                <button class="btn btn-neutral pl-4">Cancel</button>
+                <button class="btn btn-default pl-4">Cancel</button>
             </form>
         </div>
     </div>

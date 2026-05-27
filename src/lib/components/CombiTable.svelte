@@ -3210,7 +3210,7 @@
             {#each ops as op}
                 <button class="btn  mt-2 mr-2 {op.highlight === true ? "btn-secondary" : "btn-default"} {disabled}" onclick={() => execOp(op) }>{op.label}</button>
             {/each}
-            <button class="btn btn-neutral mr-2 mt-2 {disabled}" onclick={() => clearSelection() }>Clear Selection</button>
+            <button class="btn btn-default mr-2 mt-2 {disabled}" onclick={() => clearSelection() }>Clear Selection</button>
         {/if}
 
         {#if haveNavExtra}

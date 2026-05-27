@@ -860,14 +860,14 @@
             {#each displayValue as val, i}
                 <div class="mb-2">
                     {#if !col.readOnly && !updateDisabled}
-                        <button class="btn btn-neutral btn-small h-8 text-lg w-8 mr-2" onclick={() => removeElement(i)}>-</button>
+                        <button class="btn btn-default btn-small h-8 text-lg w-8 mr-2" onclick={() => removeElement(i)}>-</button>
                     {/if}
                     {val}
                 </div>
             {/each}
             <div style="width: 100%">
                 {#if !col.readOnly && !updateDisabled}
-                    <button class="btn btn-neutral btn-small h-8 text-lg w-8 mr-2" disabled={extraValue==""} onclick={() => addElement()}>+</button>
+                    <button class="btn btn-default btn-small h-8 text-lg w-8 mr-2" disabled={extraValue==""} onclick={() => addElement()}>+</button>
                         {#if col.autoCompleteLink}
                             <div class="inline acdropdown overflow:visible" style="">
                                 <input role="button" class="input m-0 -mb-1 w-full cursor-text {bg(col)} {inputClasses} disabled:text-base-content disabled:border-neutral-600" disabled={updateDisabled} style="width: 100%; {cwidth(col)} {inputStyles}"  tabindex="0"
