@@ -2469,7 +2469,7 @@
                                         </ul>
                                         </details>
                                     </div>
-                            {:else if (col.type == "select:string" || col.type == "select:integer" || col.type == "combi:string") && col.names != undefined}    
+                                {:else if (col.type == "select:string" || col.type == "select:integer" || col.type == "combi:string") && col.names != undefined}    
                                     <div tabindex="-1" class="join bg-base-200 {col.maxWidth ? "" : "w-full" }  ">
                                         <input readonly={col.type != "combi:string"} tabindex="-1" class="input bg-base-200 join-item {col.maxWidth ? "" : "w-full" }" style="{eminw(col)} {emaxw(col)}" 
                                         onblur={(evt) => closeFilter(evt, col)} bind:value={filterText[col.col]}/>
@@ -2554,8 +2554,8 @@
                                         {/if}                                                                            
                                     </div>
                                 {:else if col.type == "date" || col.type == "partialdate"}    
-                                    <div class="join">
-                                        <input type="text join-item" class="input bg-base-200 w-full" style="{eminw(col)} {emaxw(col)}" 
+                                    <div class="join w-full"  style="{eminw(col)} {emaxw(col)};">
+                                        <input type="text join-item" class="input bg-base-200 w-full" 
                                             bind:value={filterText[col.col]} 
                                             onkeypress={(evt) => {if (evt.key == "Escape") {filterMenusOpen[col.col]=false} else {filterKeyPress(evt, col, filterText[col.col])}}}/>
                                         <button class="btn join-item btn-outline px-1 border-gray-600" 
@@ -2780,13 +2780,13 @@
                                                     <button class="btn join-item btn-outline px-1 border-gray-600 {bg(col)}" 
                                                         onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col]=false}}}
                                                         onclick={() => toggleEditRowDateDialog(col.col)} >{@html calendarIcon}</button>
-                                                    <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]} 
+                                                    <details class="dropdown {col.side == "left" ? "dropdown-start": "dropdown-end"}" bind:open={editRowMenusOpen[col.col]} 
                                                         id={"editRow_date_"+col.col} 
                                                     >
                                                         <summary class="hidden" ></summary>
                                                             <DateSelector 
                                                                 id={"editRow_dateselector_"+col.col}
-                                                                classes="menu dropdown-content border rounded border-gray-600 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-2 shadow mt-12 ml-4" 
+                                                                classes="menu dropdown-content border rounded border-gray-600 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-2 shadow mt-12 {col.side == "left" ? "-ml-8" : "ml-4"}" 
                                                                 dateFormat={dateFormat as "yyyy-mm-dd"|"mm-dd-yyyy"|"dd-mm-yyyy"}
                                                                 year={editRowDateSelectorYear} 
                                                                 month={editRowDateSelectorMonth} 
@@ -3091,13 +3091,13 @@
                                                 <button class="btn join-item btn-outline px-1 border-gray-600 {bg(col)}" 
                                                     onkeyup={(evt) => {if (evt.key == "Escape") {editRowMenusOpen[col.col] = false} }}
                                                     onclick={() => toggleEditRowDateDialog(col.col)} >{@html calendarIcon}</button>
-                                                <details class="dropdown dropdown-end" bind:open={editRowMenusOpen[col.col]} 
+                                                <details class="dropdown {col.side == "left" ? "dropdown-start": "dropdown-end"}" bind:open={editRowMenusOpen[col.col]} 
                                                     id={"editRow_date_"+col.col} 
                                                 >
                                                     <summary class="hidden" ></summary>
                                                         <DateSelector 
                                                             id={"editRow_dateselector_"+col.col}
-                                                            classes="menu dropdown-content border rounded border-gray-600 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-2 shadow mt-12 ml-4" 
+                                                            classes="menu dropdown-content border rounded border-gray-600 max-h-0.3 overflow-auto bg-base-200 rounded-box z-1 p-2 mt-2 shadow mt-12 {col.side == "left" ? "-ml-8" : "ml-4"}" 
                                                             dateFormat={dateFormat as "yyyy-mm-dd"|"mm-dd-yyyy"|"dd-mm-yyyy"}
                                                             year={editRowDateSelectorYear} 
                                                             month={editRowDateSelectorMonth} 
