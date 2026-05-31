@@ -131,6 +131,7 @@
     import CombiTableInfoDialog from '$lib/components/CombiTableInfoDialog.svelte';
     import CombiTableConfirmDeleteDialog from '$lib/components/CombiTableConfirmDeleteDialog.svelte';
     import CombiTableCreate from './CombiTableCreate.svelte';
+    import DetailsButtons from './DetailsButtons.svelte';
 
     import { page } from '$app/state';
     import { setContext } from 'svelte';
@@ -166,7 +167,6 @@
     let uuid = crypto.randomUUID();
 
     //$: persist = browser && columns ? new PersistedFields(page.url, columns) : undefined;
-
     setContext("detailsfieldset", { registerGetAndSetValue, registerGetFieldError, registerIsDirty, registerSetUpdateDisabled, updateDirty, registerResetValue, registerPersist, newItemWithPersistanceLink });
 
     let getValueFns = new SvelteSet<() => {value: any, col: CombiTableColumn}>();
@@ -206,6 +206,8 @@
         persistFns.add(fn);
     }
 
+    let buttonsPresent = false;
+
     let internalDirty = $state(false);
     export function updateDirty() {
         internalDirty = returnDirty();
@@ -229,7 +231,9 @@
         const ed = (extraDirty? (typeof(extraDirty) == "boolean" ? extraDirty : extraDirty()) : false);
         let d = returnDirty();
         if (d != dirty) dirty = d;
-        if (d != internalDirty) internalDirty = d;
+        if (d != internalDirty) {
+            internalDirty = d;
+        }
     });
     // show dialogs
     let validationErrors = $state(undefined) as string[]|string|undefined;
@@ -551,7 +555,90 @@
         await goto(url.pathname + url.search);
     }
 
+    let Cancel = $derived("Cancel" in buttonLabels ? buttonLabels.Cancel : (lang == "de" ? "Abbrechen" : (lang == "el" ? "Ακύρωση" : "Cancel")));
+    let Save = $derived("Save" in buttonLabels ? buttonLabels.Save : (lang == "de" ? "Speichen" : (lang == "el" ? "Αποθήκευση" : "Save")));
+    let New = $derived("New" in buttonLabels ? buttonLabels.New : (lang == "de" ? "Neu" : (lang == "el" ? "Νέο" : "New")));
+    let Delete = $derived("Delete" in buttonLabels ? buttonLabels.Delete : (lang == "de" ? "Löschen" : (lang == "el" ? "Διαγραφή" : "Delete")));
+    let DiscardChanges = $derived(lang == "de" ? "Möchtest du die Änderungen verwerfen?" : (lang == "el" ? "Θέλεις να απορρίψεις τις αλλαγές;" : "Do you want to discard changes?"));
+    let ErrorTitle = $derived(lang == "de" ? "Bitte korrigieren Sie Folgendes:" : (lang == "el" ? "Παρακαλώ διορθώστε τα εξής:" : "Please correct the following:"));
+    let ReallyDelete = $derived(lang == "de" ? "Wirklich löschen?" : (lang == "el" ? "Πραγματικά να διαγραφεί;" : "Really delete?"));
+    let CreateTitle = $derived(lang == "de" ? "Die folgenden Datensätze erstellen?" : (lang == "el" ? "Δημιουργήστε τις ακόλουθες εγγραφές;" : "Create the following records?"));
+    let DuplicateTitle = $derived(lang == "de" ? "Die folgenden existiert schon. Erstellen?" : (lang == "el" ? "Έχετε τις ακόλουθες εγγραφές. Δημιουργήστε;" : "The following already exist.  Create?"));
+    let ErrorDialogTitle = $derived(lang == "de" ? "Fehler" : (lang == "el" ? "Λάθος" : "Error"));
+    let WarningDialogTitle = $derived(lang == "de" ? "Warnung" : (lang == "el" ? "Προειδοποίηση" : "Warning"));
+
+    let buttonState : {
+        addUrl : string|undefined,
+        newUrl : string|undefined,
+        editUrl : string|undefined,
+        deleteUrl : string|undefined,
+        updateDisabled : boolean|undefined,
+        isAdd : boolean,
+        internalDirty: boolean,
+        cancelAwaysActive: boolean,
+        saveEdit : (confirm: {col: string, title: string, value: string, type: string}[]) => Promise<void>,
+        cancelEdit: () => Promise<void>,
+        newEntry : (url : string) => Promise<void>,
+        deleteRow : () => Promise<void>,
+        extraButton : (button: {label: string, action: () => undefined}) => Promise<void>,
+        extraButtons : {label: string, action: () => undefined}[],
+        Save: string,
+        Delete : string,
+        Cancel: string,
+        New: string,
+        register: () => void,
+    } = $state({
+        addUrl,
+        newUrl,
+        editUrl,
+        deleteUrl,
+        updateDisabled,
+        isAdd,
+        internalDirty,
+        cancelAwaysActive,
+        saveEdit,
+        cancelEdit,
+        newEntry,
+        deleteRow,
+        extraButton,
+        extraButtons: {...extraButtons},
+        Save,
+        Delete,
+        Cancel,
+        New,
+        register: () => {buttonsPresent = true},
+    })
+
+    $effect(() => {
+        if (addUrl != buttonState.addUrl) buttonState.addUrl = addUrl;
+        if (newUrl != buttonState.newUrl) buttonState.newUrl = newUrl;
+        if (editUrl != buttonState.editUrl) buttonState.editUrl = editUrl;
+        if (deleteUrl != buttonState.deleteUrl) buttonState.deleteUrl = deleteUrl;
+        if (updateDisabled != buttonState.updateDisabled) buttonState.updateDisabled = updateDisabled;
+        if (isAdd != buttonState.isAdd) buttonState.isAdd = isAdd;
+        if (internalDirty != buttonState.internalDirty) buttonState.internalDirty = internalDirty;
+        if (cancelAwaysActive != buttonState.cancelAwaysActive) buttonState.cancelAwaysActive = cancelAwaysActive;
+        if (Object.keys(extraButtons).length != Object.keys(buttonState.extraButtons).length) buttonState.extraButtons = {...extraButtons};
+        else {
+            let extraButtonsChanged = false;
+            for (let k in extraButtons) {
+                if (extraButtons[k] != buttonState.extraButtons[k]) extraButtonsChanged = true;
+            }
+            if (!extraButtonsChanged) {
+                for (let k in buttonState.extraButtons) {
+                    if (extraButtons[k] != buttonState.extraButtons[k]) extraButtonsChanged = true;
+                }
+            }
+            if (extraButtonsChanged) buttonState.extraButtons = {...extraButtons};
+        }
+        if (Save != buttonState.Save) buttonState.Save = Save;
+        if (Cancel != buttonState.Cancel) buttonState.Cancel = Cancel;
+        if (Delete != buttonState.Delete) buttonState.Delete = Delete;
+        if (New != buttonState.New) buttonState.New = New;
+    })
+
     //page.subscribe((value) => {
+    setContext("detailsfieldset_buttons", buttonState);
     afterNavigate(() => {
         const value = page;
         if (persistance) {
@@ -621,45 +708,12 @@
         }
     });
 
-    let Cancel = $derived("Cancel" in buttonLabels ? buttonLabels.Cancel : (lang == "de" ? "Abbrechen" : (lang == "el" ? "Ακύρωση" : "Cancel")));
-    let Save = $derived("Save" in buttonLabels ? buttonLabels.Save : (lang == "de" ? "Speichen" : (lang == "el" ? "Αποθήκευση" : "Save")));
-    let New = $derived("New" in buttonLabels ? buttonLabels.New : (lang == "de" ? "Neu" : (lang == "el" ? "Νέο" : "New")));
-    let Delete = $derived("Delete" in buttonLabels ? buttonLabels.Delete : (lang == "de" ? "Löschen" : (lang == "el" ? "Διαγραφή" : "Delete")));
-    let DiscardChanges = $derived(lang == "de" ? "Möchtest du die Änderungen verwerfen?" : (lang == "el" ? "Θέλεις να απορρίψεις τις αλλαγές;" : "Do you want to discard changes?"));
-    let ErrorTitle = $derived(lang == "de" ? "Bitte korrigieren Sie Folgendes:" : (lang == "el" ? "Παρακαλώ διορθώστε τα εξής:" : "Please correct the following:"));
-    let ReallyDelete = $derived(lang == "de" ? "Wirklich löschen?" : (lang == "el" ? "Πραγματικά να διαγραφεί;" : "Really delete?"));
-    let CreateTitle = $derived(lang == "de" ? "Die folgenden Datensätze erstellen?" : (lang == "el" ? "Δημιουργήστε τις ακόλουθες εγγραφές;" : "Create the following records?"));
-    let DuplicateTitle = $derived(lang == "de" ? "Die folgenden existiert schon. Erstellen?" : (lang == "el" ? "Έχετε τις ακόλουθες εγγραφές. Δημιουργήστε;" : "The following already exist.  Create?"));
-    let ErrorDialogTitle = $derived(lang == "de" ? "Fehler" : (lang == "el" ? "Λάθος" : "Error"));
-    let WarningDialogTitle = $derived(lang == "de" ? "Warnung" : (lang == "el" ? "Προειδοποίηση" : "Warning"));
-
 </script>
 
 <div>
     {@render children()}
     <div class="">
-        {#if (addUrl && newUrl) || editUrl || deleteUrl}
-            <div class="m-4 mt-8 mb-0">
-                {#if addUrl || editUrl }
-                    <button class="btn btn-success mt-0 mb-0" disabled={updateDisabled || !internalDirty} on:click={() => saveEdit()}>{Save}</button>
-
-                    <button class="btn btn-default mt-0 mb-0 ml-2" disabled={!cancelAwaysActive && (updateDisabled || (!internalDirty && !isAdd))} on:click={() => cancelEdit()}>{Cancel}</button>
-                {/if}               
-
-                {#if addUrl && newUrl }
-                <button class="btn btn-primary mt-0 mb-0 ml-2" disabled={updateDisabled || internalDirty || isAdd} on:click={async () => {await newEntry(newUrl);}}>{New}</button>
-                {/if}   
-
-                {#if deleteUrl }
-                <button class="btn btn-error mt-0 mb-0 ml-2" disabled={updateDisabled || internalDirty} on:click={() => deleteRow()}>{Delete}</button>
-                {/if}    
-
-                {#each extraButtons as button}
-                <button class="btn mt-0 mb-0 ml-2" on:click={(ev) => extraButton(button)}>{button.label}</button>
-                {/each}          
-
-            </div>    
-        {/if}                 
+        <DetailsButtons></DetailsButtons>
     </div>
 
 </div>
