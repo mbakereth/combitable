@@ -18,7 +18,8 @@
         updateDisabled : boolean|undefined,
         isAdd : boolean,
         internalDirty: boolean,
-        cancelAwaysActive: boolean,
+        cancelAlwaysActive: boolean,
+        saveActive: boolean,
         saveEdit : (confirm: {col: string, title: string, value: string, type: string}[]) => Promise<void>,
         cancelEdit: () => Promise<void>,
         newEntry : (url : string) => Promise<void>,
@@ -38,9 +39,9 @@
 {#if (df.addUrl && df.newUrl) || df.editUrl || df.deleteUrl}
     <div class="m-4 mt-8 mb-0">
         {#if df.addUrl || df.editUrl }
-            <button class="btn btn-success mt-0 mb-0" disabled={df.updateDisabled || !df.internalDirty} onclick={() => df.saveEdit([])}>{df.Save}</button>
+            <button class="btn btn-success mt-0 mb-0" disabled={df.saveActive !== undefined ? !df.saveActive : df.updateDisabled || !df.internalDirty} onclick={() => df.saveEdit([])}>{df.Save}</button>
 
-            <button class="btn btn-default mt-0 mb-0 ml-2" disabled={!df.cancelAwaysActive && (df.updateDisabled || (!df.internalDirty && !df.isAdd))} onclick={() => df.cancelEdit()}>{df.Cancel}</button>
+            <button class="btn btn-default mt-0 mb-0 ml-2" disabled={!df.cancelAlwaysActive && (df.updateDisabled || (!df.internalDirty && !df.isAdd))} onclick={() => df.cancelEdit()}>{df.Cancel}</button>
         {/if}               
 
         {#if df.addUrl && df.newUrl }

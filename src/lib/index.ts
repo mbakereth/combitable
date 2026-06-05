@@ -2,6 +2,7 @@
 
 export { default as CombiTable } from '$lib/components/CombiTable.svelte';
 export { default as DetailsField } from '$lib/components/DetailsField.svelte';
+export { default as DetailsButtons } from '$lib/components/DetailsButtons.svelte';
 export { default as DetailsFieldSet } from '$lib/components/DetailsFieldSet.svelte';
 export { default as PersistedNewButton } from '$lib/components/PersistedNewButton.svelte';
 export type { CombiTableColumn, CombiTablePresets, PrismaWhereFunction, ColumnType } from '$lib/combitabletypes';

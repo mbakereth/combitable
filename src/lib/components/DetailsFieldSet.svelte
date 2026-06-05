@@ -103,7 +103,13 @@
          * If true, cancel button is always active.  Otherwise (the default)
          * it is only active when dirty
          */
-        cancelAwaysActive?: boolean,
+        cancelAlwaysActive?: boolean,
+
+        /**
+         * If true, cancel button is always active.  Otherwise (the default)
+         * it is only active when dirty
+         */
+        saveActive?: boolean,
 
         /**
          * Run after cancelling edit
@@ -120,7 +126,13 @@
          */
         buttonLabels? : {[key:string]:string}
 
+        /**
+         * If true, autoamtic validation before saving will be skipped
+         */
+        skipValidation?: boolean,
+
        children : Snippet
+       
     }
 
     import { goto, invalidateAll, afterNavigate } from '$app/navigation';
@@ -156,10 +168,12 @@
         extraButtons = [],
         beforeButtonClick = {},
         afterButtonClick = {},
-        cancelAwaysActive = false,
+        cancelAlwaysActive = false,
+        saveActive = undefined,
         lang="en",
         extraDirty,
         buttonLabels = {},
+        skipValidation = false,
         children
     } : Props = $props();
 
@@ -374,6 +388,7 @@
 
     function validate() {
         let errors : string[] = [];
+        if (skipValidation) return errors;
         let error : string|undefined = undefined;
         for (let fn of getFieldErrorFns) {
             error = fn(lang); 
@@ -575,7 +590,8 @@
         updateDisabled : boolean|undefined,
         isAdd : boolean,
         internalDirty: boolean,
-        cancelAwaysActive: boolean,
+        cancelAlwaysActive: boolean,
+        saveActive: boolean|undefined,
         saveEdit : (confirm: {col: string, title: string, value: string, type: string}[]) => Promise<void>,
         cancelEdit: () => Promise<void>,
         newEntry : (url : string) => Promise<void>,
@@ -595,7 +611,8 @@
         updateDisabled,
         isAdd,
         internalDirty,
-        cancelAwaysActive,
+        cancelAlwaysActive,
+        saveActive,
         saveEdit,
         cancelEdit,
         newEntry,
@@ -617,19 +634,22 @@
         if (updateDisabled != buttonState.updateDisabled) buttonState.updateDisabled = updateDisabled;
         if (isAdd != buttonState.isAdd) buttonState.isAdd = isAdd;
         if (internalDirty != buttonState.internalDirty) buttonState.internalDirty = internalDirty;
-        if (cancelAwaysActive != buttonState.cancelAwaysActive) buttonState.cancelAwaysActive = cancelAwaysActive;
-        if (Object.keys(extraButtons).length != Object.keys(buttonState.extraButtons).length) buttonState.extraButtons = {...extraButtons};
+        if (cancelAlwaysActive != buttonState.cancelAlwaysActive) buttonState.cancelAlwaysActive = cancelAlwaysActive;
+        if (saveActive != buttonState.saveActive) buttonState.saveActive = saveActive;
+        if (extraButtons.length != buttonState.extraButtons.length) buttonState.extraButtons = [...extraButtons];
         else {
             let extraButtonsChanged = false;
-            for (let k in extraButtons) {
-                if (extraButtons[k] != buttonState.extraButtons[k]) extraButtonsChanged = true;
-            }
-            if (!extraButtonsChanged) {
-                for (let k in buttonState.extraButtons) {
-                    if (extraButtons[k] != buttonState.extraButtons[k]) extraButtonsChanged = true;
+            for (let k=0; k<extraButtons.length; ++k) {
+                if (extraButtons[k].label != buttonState.extraButtons[k].label) {
+                    extraButtonsChanged = true;
                 }
             }
-            if (extraButtonsChanged) buttonState.extraButtons = {...extraButtons};
+            if (!extraButtonsChanged) {
+            for (let k=0; k<extraButtons.length; ++k) {
+                    if (extraButtons[k].label != buttonState.extraButtons[k].label) extraButtonsChanged = true;
+                }
+            }
+            if (extraButtonsChanged) {buttonState.extraButtons = [...extraButtons];}
         }
         if (Save != buttonState.Save) buttonState.Save = Save;
         if (Cancel != buttonState.Cancel) buttonState.Cancel = Cancel;
