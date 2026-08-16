@@ -491,7 +491,7 @@
             }
         }
         resizing = false;
-        if (adjustPagination || true) actualPaginate = actualPaginate1;
+        if (adjustPagination && (typeof(paginate) != "number" && paginate != "none")) actualPaginate = actualPaginate1;
         resizedToHeight = innerHeight;
         //console.log("actualPaginate", actualPaginate, rrows.length, haveNext)
     }

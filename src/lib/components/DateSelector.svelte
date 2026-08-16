@@ -215,7 +215,8 @@
         if (day === undefined) day = getToday().getUTCDate();
         if (!allowPartial && month === null) month = 0;
         if (!allowPartial && !day === null) day = 1;
-        if (month === undefined) currentMonth = getToday().getUTCMonth();
+        if (month === undefined || month === null) currentMonth = getToday().getUTCMonth();
+        else currentMonth = month;
     });
 
     function getNumberOfWeeks() {
@@ -251,7 +252,6 @@
     }
     
     function dayClicked(rowIdx : number, dayIdx : number) {
-        console.log("allowPartial", allowPartial)
         if (!allowPartial) {
             day = getDateForCalendar(rowIdx, dayIdx)
         } else {
