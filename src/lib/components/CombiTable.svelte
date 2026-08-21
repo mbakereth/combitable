@@ -490,6 +490,7 @@
                 actualPaginate1 = 10;
             }
         }
+        
         resizing = false;
         if (adjustPagination && (typeof(paginate) != "number" && paginate != "none")) actualPaginate = actualPaginate1;
         resizedToHeight = innerHeight;
@@ -614,6 +615,7 @@
     afterNavigate(async () => {
         resizedToHeight = 0;
         if (paginate == "auto") {actualPaginate = 100; await tick();}
+        else if (typeof(paginate) == "number") actualPaginate = paginate;
         searchUrl = new SearchUrl(page.url, actualPaginate);
         //rrows = $state.snapshot(rows);
         if (detailsField) orig_rrows = $state.snapshot(rows);
@@ -638,7 +640,7 @@
             invalidateAll().then(() => {goto(searchUrl.url?.href??"")})
 
         }
-        actualPaginate = 100;
+        //actualPaginate = 100;
         await tick();
         resize();
         assignPercentageWidths();		
@@ -646,7 +648,7 @@
 
     async function visibilitychange() {
         if (div && lastDivWidth == 0 && div.offsetWidth != 0) {
-            actualPaginate = 100;
+            //actualPaginate = 100;
             await tick();
             resize();
             lastDivWidth = div.offsetWidth;
